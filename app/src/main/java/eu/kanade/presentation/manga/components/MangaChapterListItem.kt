@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.manga.ChapterList
@@ -230,11 +229,9 @@ fun MangaChapterListItem(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceInset),
             ) {
-                val primaryId = versions.firstOrNull()?.id
                 versions.forEach { version ->
                     MangaChapterVersionItem(
                         version = version,
-                        isPrimary = version.id == primaryId,
                         downloadIndicatorEnabled = downloadIndicatorEnabled,
                         downloadProgressProvider = { versionDownloadProgressProvider?.invoke(version.id) ?: 0 },
                         onClick = { onVersionClick?.invoke(version) },
@@ -291,7 +288,6 @@ private fun ChapterVersionChip(
 @Composable
 private fun MangaChapterVersionItem(
     version: ChapterList.Item,
-    isPrimary: Boolean,
     downloadIndicatorEnabled: Boolean,
     downloadProgressProvider: () -> Int,
     onClick: () -> Unit,
@@ -348,20 +344,6 @@ private fun MangaChapterVersionItem(
                     ),
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (isPrimary) {
-                    Surface(
-                        shape = RoundedCornerShape(9999.dp),
-                        color = MaterialTheme.colorScheme.surfaceInset,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
-                    ) {
-                        Text(
-                            text = "preferred",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                        )
-                    }
-                }
             }
 
             val date = relativeDateText(version.chapter.dateUpload)

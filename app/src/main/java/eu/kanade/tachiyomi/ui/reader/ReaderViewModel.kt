@@ -702,23 +702,27 @@ class ReaderViewModel(
         updateTrackChapterRead(readerChapter)
         deleteChapterIfNeeded(readerChapter)
 
-        val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead.get()
-            .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
-        if (!markDuplicateAsRead) return
-
-        val duplicateUnreadChapters = getUnfilteredChapterList()
-            .mapNotNull { chapter ->
-                if (
-                    !chapter.read &&
-                    chapter.isRecognizedNumber &&
-                    chapter.chapterNumber == readerChapter.chapter.chapterNumber
-                ) {
-                    ChapterUpdate(chapter.id) { read = true }
-                } else {
-                    null
+        val chapterNumber = readerChapter.chapter.chapterNumber
+        if (chapterNumber > 0.0) {
+            val duplicateUnreadChapters = getUnfilteredChapterList()
+                .mapNotNull { chapter ->
+                    if (
+                        !chapter.read &&
+                        chapter.id != readerChapter.chapter.id &&
+                        chapter.chapterNumber == chapterNumber
+                    ) {
+                        ChapterUpdate(chapter.id) { read = true }
+                    } else {
+                        null
+                    }
+                }
+            if (duplicateUnreadChapters.isNotEmpty()) {
+                updateChapter.awaitAll(duplicateUnreadChapters)
+                unfilteredChapterList = unfilteredChapterList?.map { chapter ->
+                    if (duplicateUnreadChapters.any { it.id == chapter.id }) chapter.copy(read = true) else chapter
                 }
             }
-        updateChapter.awaitAll(duplicateUnreadChapters)
+        }
     }
 
     fun restartReadTimer() {
