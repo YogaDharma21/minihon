@@ -1,5 +1,6 @@
 package eu.kanade.presentation.updates
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +13,11 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -37,6 +41,7 @@ import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
+import kotlinx.datetime.LocalDate
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Circle
@@ -71,6 +76,7 @@ internal fun UpdatesLastUpdatedHeader(
         Text(
             text = stringResource(MR.strings.updates_last_update_info, relativeTimeSpanString(lastUpdated)),
             fontStyle = FontStyle.Italic,
+            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
         )
     }
 }
@@ -83,58 +89,83 @@ internal fun LazyListScope.updatesUiItems(
     onClickUpdate: (UpdatesItem) -> Unit,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
 ) {
-    items(
-        items = uiModels,
-        contentType = {
-            when (it) {
-                is UpdatesUiModel.Header -> "header"
-                is UpdatesUiModel.Item -> "item"
+    val groups = buildList<Pair<LocalDate?, List<UpdatesItem>>> {
+        var currentDate: LocalDate? = null
+        val currentItems = mutableListOf<UpdatesItem>()
+        for (uiModel in uiModels) {
+            when (uiModel) {
+                is UpdatesUiModel.Header -> {
+                    if (currentItems.isNotEmpty()) {
+                        add(currentDate to currentItems.toList())
+                        currentItems.clear()
+                    }
+                    currentDate = uiModel.date
+                }
+                is UpdatesUiModel.Item -> {
+                    currentItems.add(uiModel.item)
+                }
             }
-        },
-        key = {
-            when (it) {
-                is UpdatesUiModel.Header -> "updatesHeader-${it.hashCode()}"
-                is UpdatesUiModel.Item -> "updates-${it.item.update.mangaId}-${it.item.update.chapterId}"
-            }
-        },
-    ) { item ->
-        when (item) {
-            is UpdatesUiModel.Header -> {
+        }
+        if (currentItems.isNotEmpty()) {
+            add(currentDate to currentItems.toList())
+        }
+    }
+
+    groups.forEach { (date, items) ->
+        if (date != null) {
+            item(
+                key = "updatesHeader-$date",
+                contentType = "header",
+            ) {
                 ListGroupHeader(
                     modifier = Modifier.animateItem(),
-                    text = relativeDateText(item.date),
+                    text = relativeDateText(date),
                 )
             }
-            is UpdatesUiModel.Item -> {
-                val updatesItem = item.item
-                UpdatesUiItem(
-                    modifier = Modifier.animateItem(),
-                    update = updatesItem.update,
-                    selected = updatesItem.selected,
-                    readProgress = updatesItem.update.lastPageRead
-                        .takeIf { !updatesItem.update.read && it > 0L }
-                        ?.let {
-                            stringResource(
-                                MR.strings.chapter_progress,
-                                it + 1,
-                            )
-                        },
-                    onLongClick = {
-                        onUpdateSelected(updatesItem, !updatesItem.selected, true)
-                    },
-                    onClick = {
-                        when {
-                            selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
-                            else -> onClickUpdate(updatesItem)
-                        }
-                    },
-                    onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
-                    onDownloadChapter = { action: ChapterDownloadAction ->
-                        onDownloadChapter(listOf(updatesItem), action)
-                    }.takeIf { !selectionMode },
-                    downloadStateProvider = updatesItem.downloadStateProvider,
-                    downloadProgressProvider = updatesItem.downloadProgressProvider,
-                )
+        }
+        item(
+            key = "updates-card-${date ?: items.firstOrNull()?.update?.chapterId ?: 0}",
+            contentType = "card",
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .animateItem(),
+            ) {
+                Column {
+                    items.forEach { updatesItem ->
+                        UpdatesUiItem(
+                            update = updatesItem.update,
+                            selected = updatesItem.selected,
+                            readProgress = updatesItem.update.lastPageRead
+                                .takeIf { !updatesItem.update.read && it > 0L }
+                                ?.let {
+                                    stringResource(
+                                        MR.strings.chapter_progress,
+                                        it + 1,
+                                    )
+                                },
+                            onLongClick = {
+                                onUpdateSelected(updatesItem, !updatesItem.selected, true)
+                            },
+                            onClick = {
+                                when {
+                                    selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
+                                    else -> onClickUpdate(updatesItem)
+                                }
+                            },
+                            onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
+                            onDownloadChapter = { action: ChapterDownloadAction ->
+                                onDownloadChapter(listOf(updatesItem), action)
+                            }.takeIf { !selectionMode },
+                            downloadStateProvider = updatesItem.downloadStateProvider,
+                            downloadProgressProvider = updatesItem.downloadProgressProvider,
+                        )
+                    }
+                }
             }
         }
     }
@@ -217,7 +248,7 @@ private fun UpdatesUiItem(
                 Text(
                     text = update.chapterName,
                     maxLines = 1,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                     color = LocalContentColor.current.copy(alpha = textAlpha),
                     overflow = TextOverflow.Ellipsis,
                     onTextLayout = { textHeight = it.size.height },
@@ -229,6 +260,7 @@ private fun UpdatesUiItem(
                     Text(
                         text = readProgress,
                         maxLines = 1,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                         color = LocalContentColor.current.copy(alpha = DISABLED_ALPHA),
                         overflow = TextOverflow.Ellipsis,
                     )

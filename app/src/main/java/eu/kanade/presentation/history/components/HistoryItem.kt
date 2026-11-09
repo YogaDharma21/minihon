@@ -85,7 +85,7 @@ fun HistoryItem(
                     readAt
                 },
                 modifier = Modifier.padding(top = 4.dp),
-                style = textStyle,
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
             )
         }
 

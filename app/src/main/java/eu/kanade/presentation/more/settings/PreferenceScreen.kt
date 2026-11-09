@@ -1,14 +1,20 @@
 package eu.kanade.presentation.more.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
@@ -53,18 +59,27 @@ fun PreferenceScreen(
                     if (!preference.visible) return@fastForEachIndexed
 
                     item {
-                        Column {
-                            PreferenceGroupHeader(
-                                title = preference.title,
-                                highlighted = preference.title == highlightKey,
-                            )
-                        }
-                    }
-                    items(preference.preferenceItems) { item ->
-                        PreferenceItem(
-                            item = item,
-                            highlightKey = highlightKey,
+                        PreferenceGroupHeader(
+                            title = preference.title,
+                            highlighted = preference.title == highlightKey,
                         )
+                    }
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        ) {
+                            Column {
+                                preference.preferenceItems.forEach { item ->
+                                    PreferenceItem(
+                                        item = item,
+                                        highlightKey = highlightKey,
+                                    )
+                                }
+                            }
+                        }
                     }
                     item {
                         if (i < items.lastIndex) {
@@ -75,10 +90,17 @@ fun PreferenceScreen(
 
                 // Create Preference Item
                 is Preference.PreferenceItem<*, *> -> item {
-                    PreferenceItem(
-                        item = preference,
-                        highlightKey = highlightKey,
-                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) {
+                        PreferenceItem(
+                            item = preference,
+                            highlightKey = highlightKey,
+                        )
+                    }
                 }
             }
         }
@@ -86,15 +108,24 @@ fun PreferenceScreen(
 }
 
 private fun List<Preference>.findHighlightedIndex(highlightKey: String): Int {
-    return flatMap {
-        if (it is Preference.PreferenceGroup) {
-            buildList<String?> {
-                add(it.title) // Header
-                addAll(it.preferenceItems.map { groupItem -> groupItem.title })
-                add(null) // Spacer
+    var index = 0
+    forEachIndexed { i, preference ->
+        if (!preference.visible) return@forEachIndexed
+        when (preference) {
+            is Preference.PreferenceGroup -> {
+                if (preference.title == highlightKey) return index
+                index++
+                if (preference.preferenceItems.any { it.title == highlightKey }) return index
+                index++
+                if (i < lastIndex) {
+                    index++
+                }
             }
-        } else {
-            listOf(it.title)
+            is Preference.PreferenceItem<*, *> -> {
+                if (preference.title == highlightKey) return index
+                index++
+            }
         }
-    }.indexOfFirst { it == highlightKey }
+    }
+    return -1
 }

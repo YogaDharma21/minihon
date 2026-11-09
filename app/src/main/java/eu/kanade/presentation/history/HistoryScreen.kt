@@ -1,18 +1,25 @@
 package eu.kanade.presentation.history
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
@@ -115,37 +122,69 @@ private fun HistoryScreenContent(
         UiPreferences.timeFormat(timeFormat, locale.platformLocale, is24HourSystem)
     }
 
+    val groups = remember(history) {
+        buildList<Pair<LocalDate?, List<HistoryWithRelations>>> {
+            var currentDate: LocalDate? = null
+            val currentItems = mutableListOf<HistoryWithRelations>()
+            for (uiModel in history) {
+                when (uiModel) {
+                    is HistoryUiModel.Header -> {
+                        if (currentItems.isNotEmpty()) {
+                            add(currentDate to currentItems.toList())
+                            currentItems.clear()
+                        }
+                        currentDate = uiModel.date
+                    }
+                    is HistoryUiModel.Item -> {
+                        currentItems.add(uiModel.item)
+                    }
+                }
+            }
+            if (currentItems.isNotEmpty()) {
+                add(currentDate to currentItems.toList())
+            }
+        }
+    }
+
     FastScrollLazyColumn(
         contentPadding = contentPadding,
     ) {
-        items(
-            items = history,
-            key = { "history-${it.hashCode()}" },
-            contentType = {
-                when (it) {
-                    is HistoryUiModel.Header -> "header"
-                    is HistoryUiModel.Item -> "item"
-                }
-            },
-        ) { item ->
-            when (item) {
-                is HistoryUiModel.Header -> {
+        groups.forEach { (date, items) ->
+            if (date != null) {
+                item(
+                    key = "history-header-$date",
+                    contentType = "header",
+                ) {
                     ListGroupHeader(
                         modifier = Modifier.animateItem(),
-                        text = relativeDateText(item.date),
+                        text = relativeDateText(date),
                     )
                 }
-                is HistoryUiModel.Item -> {
-                    val value = item.item
-                    HistoryItem(
-                        modifier = Modifier.animateItem(),
-                        history = value,
-                        timeFormatter = timeFormatter,
-                        onClickCover = { onClickCover(value) },
-                        onClickResume = { onClickResume(value) },
-                        onClickDelete = { onClickDelete(value) },
-                        onClickFavorite = { onClickFavorite(value) },
-                    )
+            }
+            item(
+                key = "history-card-${date ?: items.firstOrNull()?.id ?: 0}",
+                contentType = "card",
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .animateItem(),
+                ) {
+                    Column {
+                        items.forEach { value ->
+                            HistoryItem(
+                                history = value,
+                                timeFormatter = timeFormatter,
+                                onClickCover = { onClickCover(value) },
+                                onClickResume = { onClickResume(value) },
+                                onClickDelete = { onClickDelete(value) },
+                                onClickFavorite = { onClickFavorite(value) },
+                            )
+                        }
+                    }
                 }
             }
         }
