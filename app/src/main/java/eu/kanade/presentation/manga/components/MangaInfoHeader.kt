@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -184,8 +185,6 @@ fun MangaActionRow(
     onEditCategory: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    val defaultActionButtonColor = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
-
     Row(
         modifier = modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -197,7 +196,6 @@ fun MangaActionRow(
                 stringResource(MR.strings.add_to_library)
             },
             icon = if (favorite) MaterialSymbols.RoundedFilled.Favorite else MaterialSymbols.Rounded.Favorite,
-            color = if (favorite) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
             active = favorite,
             onClick = onAddToLibraryClicked,
             onLongClick = onEditCategory,
@@ -209,20 +207,17 @@ fun MangaActionRow(
                 pluralStringResource(MR.plurals.num_trackers, count = trackingCount, trackingCount)
             },
             icon = if (trackingCount == 0) MaterialSymbols.Rounded.Sync else MaterialSymbols.Rounded.Check,
-            color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
             active = trackingCount > 0,
             onClick = onTrackingClicked,
         )
-        if (onWebViewClicked != null) {
-            MangaActionButton(
-                title = stringResource(MR.strings.action_web_view),
-                icon = MaterialSymbols.Rounded.Public,
-                color = defaultActionButtonColor,
-                active = false,
-                onClick = onWebViewClicked,
-                onLongClick = onWebViewLongClicked,
-            )
-        }
+        MangaActionButton(
+            title = stringResource(MR.strings.action_web_view),
+            icon = MaterialSymbols.Rounded.Public,
+            active = false,
+            enabled = onWebViewClicked != null,
+            onClick = onWebViewClicked ?: {},
+            onLongClick = onWebViewLongClicked,
+        )
     }
 }
 
@@ -239,7 +234,7 @@ fun ExpandableMangaDescription(
 ) {
     Surface(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = Color(0xFF121316),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0x12FFFFFF)),
     ) {
@@ -381,12 +376,11 @@ private fun MangaAndSourceTitlesSmall(
             .fillMaxWidth()
             .padding(start = 16.dp, top = appBarPadding + 16.dp, end = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         MangaCover.Book(
             modifier = Modifier
-                .sizeIn(maxWidth = 100.dp)
-                .align(Alignment.Top),
+                .sizeIn(maxWidth = 100.dp),
             data = ImageRequest.Builder(LocalContext.current)
                 .data(manga)
                 .crossfade(true)
@@ -395,6 +389,7 @@ private fun MangaAndSourceTitlesSmall(
             onClick = onCoverClick,
         )
         Column(
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             MangaContentInfo(
@@ -724,39 +719,61 @@ private fun TagsChip(
 private fun RowScope.MangaActionButton(
     title: String,
     icon: ImageVector,
-    color: Color,
     active: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
+    val containerColor = if (active) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        Color(0xFF17181C)
+    }
+    val contentColor = if (active) {
+        MaterialTheme.colorScheme.onPrimary
+    } else if (!enabled) {
+        Color(0xFF5F6065)
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val border = if (active) {
+        null
+    } else {
+        BorderStroke(1.dp, Color(0x12FFFFFF))
+    }
+
     TachiyomiSurface(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = Modifier.weight(1f),
+        enabled = enabled,
+        modifier = Modifier
+            .weight(1f)
+            .height(48.dp),
         shape = RoundedCornerShape(12.dp),
-        color = if (active) color.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, if (active) color.copy(alpha = 0.24f) else Color(0x12FFFFFF)),
+        color = containerColor,
+        border = border,
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (active) color else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+                tint = contentColor,
+                modifier = Modifier.size(18.dp),
             )
-            Spacer(Modifier.height(4.dp))
             Text(
                 text = title,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 11.sp,
+                color = contentColor,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
             )
         }
     }

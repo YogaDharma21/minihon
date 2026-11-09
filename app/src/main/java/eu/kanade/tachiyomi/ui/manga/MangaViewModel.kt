@@ -183,6 +183,8 @@ class MangaViewModel(
 
     private val isRefreshingData = MutableStateFlow(false)
 
+    private val searchQuery = MutableStateFlow("")
+
     private val downloadStates = MutableStateFlow(emptyMap<Long, Download.State>())
 
     // Progress ticks often, so only the download indicators that read it recompose instead of every tick rebuilding
@@ -251,13 +253,13 @@ class MangaViewModel(
         scanlators,
         trackers,
         combine(selectedChapterIds, queuedDownloadStates.pausedWhileUnsubscribed(), ::Pair),
-        combine(dialog, isRefreshingData, ::Pair),
+        combine(dialog, isRefreshingData, searchQuery, ::Triple),
     ) {
             mangaAndChapters,
             (availableScanlators, excludedScanlators),
             (trackingCount, hasLoggedInTrackers),
             (selectedIds, downloads),
-            (dialog, isRefreshingData),
+            (dialog, isRefreshingData, searchQuery),
         ->
         State.Success(
             manga = mangaAndChapters.manga,
@@ -279,6 +281,7 @@ class MangaViewModel(
             isRefreshingData = isRefreshingData,
             dialog = dialog,
             hideMissingChapters = hideMissingChapters,
+            searchQuery = searchQuery,
         )
     }
         // Composition would otherwise build these on first read, on the main thread, for every new state
@@ -1073,6 +1076,10 @@ class MangaViewModel(
         }
     }
 
+    fun searchChapters(query: String) {
+        searchQuery.value = query
+    }
+
     private data class MangaAndChapters(val manga: Manga, val source: Source, val chapters: List<ChapterList.Item>)
 
     sealed interface State {
@@ -1092,6 +1099,7 @@ class MangaViewModel(
             val isRefreshingData: Boolean = false,
             val dialog: Dialog? = null,
             val hideMissingChapters: Boolean = false,
+            val searchQuery: String = "",
         ) : State {
             val processedChapters by lazy {
                 chapters.applyFilters(manga).toList()
@@ -1114,12 +1122,12 @@ class MangaViewModel(
             }
 
             val missingChapterCount by lazy {
-                if (hideMissingChapters) return@lazy 0
+                if (hideMissingChapters || searchQuery.isNotBlank()) return@lazy 0
                 processedChapters.fastMap { it.chapter.chapterNumber }.missingChaptersCount()
             }
 
             val chapterListItems by lazy {
-                if (hideMissingChapters) {
+                if (hideMissingChapters || searchQuery.isNotBlank()) {
                     return@lazy processedChapters
                 }
 
@@ -1165,10 +1173,20 @@ class MangaViewModel(
                 val downloadedFilter = manga.downloadedFilter
                 val bookmarkedFilter = manga.bookmarkedFilter
                 val chapterSort = getChapterSort(manga)
+                val query = searchQuery.trim()
+                val queryDouble = query.toDoubleOrNull()
                 return asSequence()
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
+                    .filter { (chapter) ->
+                        if (query.isBlank()) return@filter true
+                        chapter.name.contains(query, ignoreCase = true) ||
+                            (queryDouble != null && chapter.chapterNumber == queryDouble) ||
+                            chapter.chapterNumber.toString().removeSuffix(".0") == query ||
+                            chapter.chapterNumber.toString() == query ||
+                            chapter.scanlator?.contains(query, ignoreCase = true) == true
+                    }
                     .sortedWith { (chapter1), (chapter2) -> chapterSort(chapter1, chapter2) }
             }
         }

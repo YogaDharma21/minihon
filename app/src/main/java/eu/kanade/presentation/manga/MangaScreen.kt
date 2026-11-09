@@ -123,6 +123,7 @@ fun MangaScreen(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val onCopyTagToClipboard: (tag: String) -> Unit = {
@@ -165,6 +166,7 @@ fun MangaScreen(
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
+            onSearchQueryChange = onSearchQueryChange,
         )
     } else {
         MangaScreenLargeImpl(
@@ -200,6 +202,7 @@ fun MangaScreen(
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
+            onSearchQueryChange = onSearchQueryChange,
         )
     }
 }
@@ -251,6 +254,7 @@ private fun MangaScreenSmallImpl(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
 ) {
     val chapterListState = rememberLazyListState()
 
@@ -409,6 +413,8 @@ private fun MangaScreenSmallImpl(
                             enabled = !isAnySelected,
                             chapterCount = chapters.size,
                             missingChapterCount = state.missingChapterCount,
+                            searchQuery = state.searchQuery,
+                            onSearchQueryChange = onSearchQueryChange,
                             onClick = onFilterClicked,
                         )
                     }
@@ -478,6 +484,7 @@ fun MangaScreenLargeImpl(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val density = LocalDensity.current
@@ -629,6 +636,8 @@ fun MangaScreenLargeImpl(
                                     enabled = !isAnySelected,
                                     chapterCount = chapters.size,
                                     missingChapterCount = state.missingChapterCount,
+                                    searchQuery = state.searchQuery,
+                                    onSearchQueryChange = onSearchQueryChange,
                                     onClick = onFilterButtonClicked,
                                 )
                             }
