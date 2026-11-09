@@ -1,7 +1,7 @@
 package eu.kanade.presentation.theme
 
 import androidx.compose.ui.graphics.Color
-import eu.kanade.presentation.theme.colorscheme.YogaColorScheme
+import eu.kanade.presentation.theme.colorscheme.MinimalistDarkColorScheme
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.presentation.core.theme.amber
@@ -11,11 +11,11 @@ import tachiyomi.presentation.core.theme.emerald
 import tachiyomi.presentation.core.theme.steelBlue
 import tachiyomi.presentation.core.theme.subtle
 
-class YogaColorSchemeTest {
+class MinimalistDarkColorSchemeTest {
 
     @Test
-    fun `yoga color scheme matches design tokens`() {
-        val scheme = YogaColorScheme.getColorScheme()
+    fun `minimalist dark color scheme matches design tokens`() {
+        val scheme = MinimalistDarkColorScheme.getColorScheme()
 
         scheme.background shouldBe Color(0xFF08090B)
         scheme.surfaceContainer shouldBe Color(0xFF121316)
@@ -24,8 +24,8 @@ class YogaColorSchemeTest {
 
     @Test
     fun `light scheme and amoled return identical dark tokens`() {
-        val lightScheme = YogaColorScheme.getColorScheme(isDark = false)
-        val amoledScheme = YogaColorScheme.getColorScheme(isDark = true, isAmoled = true)
+        val lightScheme = MinimalistDarkColorScheme.getColorScheme(isDark = false)
+        val amoledScheme = MinimalistDarkColorScheme.getColorScheme(isDark = true, isAmoled = true)
 
         lightScheme.background shouldBe Color(0xFF08090B)
         lightScheme.surfaceContainer shouldBe Color(0xFF121316)
@@ -38,7 +38,7 @@ class YogaColorSchemeTest {
 
     @Test
     fun `design token extensions return expected values`() {
-        val scheme = YogaColorScheme.getColorScheme()
+        val scheme = MinimalistDarkColorScheme.getColorScheme()
 
         scheme.emerald shouldBe Color(0xFFA9BFA9)
         scheme.crimson shouldBe Color(0xFFC99A90)

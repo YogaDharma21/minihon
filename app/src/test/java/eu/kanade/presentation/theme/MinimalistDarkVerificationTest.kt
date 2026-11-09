@@ -4,14 +4,14 @@ import androidx.compose.ui.graphics.Color
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.AppTheme
 import eu.kanade.domain.ui.model.ThemeMode
-import eu.kanade.presentation.theme.colorscheme.YogaColorScheme
+import eu.kanade.presentation.theme.colorscheme.MinimalistDarkColorScheme
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.base.delegate.ThemingDelegate
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 
-class YogaDesignSystemVerificationTest {
+class MinimalistDarkVerificationTest {
 
     @Test
     fun `ui preferences defaults to dark theme mode`() {
@@ -29,8 +29,8 @@ class YogaDesignSystemVerificationTest {
     }
 
     @Test
-    fun `yoga color scheme has dark background, dark card surface, and matte raised surface`() {
-        val scheme = YogaColorScheme.getColorScheme()
+    fun `minimalist dark color scheme has dark background, dark card surface, and matte raised surface`() {
+        val scheme = MinimalistDarkColorScheme.getColorScheme()
 
         scheme.background shouldBe Color(0xFF08090B)
         scheme.surfaceContainer shouldBe Color(0xFF121316)

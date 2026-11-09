@@ -3,7 +3,7 @@ package eu.kanade.presentation.theme.colorscheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 
-internal object YogaColorScheme : BaseColorScheme() {
+internal object MinimalistDarkColorScheme : BaseColorScheme() {
 
     override val darkScheme = darkColorScheme(
         primary = Color(0xFFF2F1EC),

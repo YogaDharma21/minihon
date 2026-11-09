@@ -3,7 +3,7 @@ package eu.kanade.presentation.theme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.runtime.Composable
 import eu.kanade.domain.ui.model.AppTheme
-import eu.kanade.presentation.theme.colorscheme.YogaColorScheme
+import eu.kanade.presentation.theme.colorscheme.MinimalistDarkColorScheme
 
 @Composable
 fun TachiyomiTheme(
@@ -28,7 +28,7 @@ private fun BaseTachiyomiTheme(
     content: @Composable () -> Unit,
 ) {
     MaterialExpressiveTheme(
-        colorScheme = YogaColorScheme.getColorScheme(),
+        colorScheme = MinimalistDarkColorScheme.getColorScheme(),
         content = content,
     )
 }
