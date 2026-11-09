@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -38,14 +39,18 @@ internal fun LibraryComfortableGrid(
             contentType = { "library_comfortable_grid_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga
+            val isSelected = manga.id in selection
             Surface(
                 modifier = Modifier.animateItem(),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
-                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                border = BorderStroke(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0x12FFFFFF),
+                ),
             ) {
                 MangaComfortableGridItem(
-                    isSelected = manga.id in selection,
+                    isSelected = isSelected,
                     title = manga.title,
                     coverData = MangaCover(
                         mangaId = manga.id,

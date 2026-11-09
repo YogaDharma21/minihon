@@ -118,34 +118,13 @@ fun BrowseSourceContent(
         return
     }
 
-    when (displayMode) {
-        LibraryDisplayMode.ComfortableGrid -> {
-            BrowseSourceComfortableGrid(
-                mangaList = mangaList,
-                columns = columns,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-        LibraryDisplayMode.List -> {
-            BrowseSourceList(
-                mangaList = mangaList,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-        LibraryDisplayMode.CompactGrid, LibraryDisplayMode.CoverOnlyGrid -> {
-            BrowseSourceCompactGrid(
-                mangaList = mangaList,
-                columns = columns,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-    }
+    BrowseSourceComfortableGrid(
+        mangaList = mangaList,
+        columns = columns,
+        contentPadding = contentPadding,
+        onMangaClick = onMangaClick,
+        onMangaLongClick = onMangaLongClick,
+    )
 }
 
 @Composable

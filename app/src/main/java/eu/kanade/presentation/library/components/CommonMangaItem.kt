@@ -199,6 +199,7 @@ fun MangaComfortableGridItem(
                             .fillMaxWidth()
                             .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
                         data = coverData,
+                        shape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp),
                     )
                 },
                 badgesStart = coverBadgeStart,
@@ -217,7 +218,7 @@ fun MangaComfortableGridItem(
                 },
             )
             GridItemTitle(
-                modifier = Modifier.padding(4.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                 title = title,
                 style = MaterialTheme.typography.titleSmall,
                 minLines = 2,
@@ -303,8 +304,7 @@ private fun GridItemSelectable(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .selectedOutline(isSelected = isSelected, color = MaterialTheme.colorScheme.secondary)
-            .padding(4.dp),
+            .selectedOutline(isSelected = isSelected, color = MaterialTheme.colorScheme.secondary),
     ) {
         val contentColor = if (isSelected) {
             MaterialTheme.colorScheme.onSecondary

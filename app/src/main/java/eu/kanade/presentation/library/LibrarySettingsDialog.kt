@@ -206,52 +206,32 @@ private fun ColumnScope.SortPage(
     }
 }
 
-private val displayModes = listOf(
-    MR.strings.action_display_grid to LibraryDisplayMode.CompactGrid,
-    MR.strings.action_display_comfortable_grid to LibraryDisplayMode.ComfortableGrid,
-    MR.strings.action_display_cover_only_grid to LibraryDisplayMode.CoverOnlyGrid,
-    MR.strings.action_display_list to LibraryDisplayMode.List,
-)
-
 @Composable
 private fun ColumnScope.DisplayPage(
     viewModel: LibrarySettingsViewModel,
 ) {
-    val displayMode by viewModel.libraryPreferences.displayMode.collectAsState()
-    SettingsChipRow(MR.strings.action_display_mode) {
-        displayModes.map { (titleRes, mode) ->
-            FilterChip(
-                selected = displayMode == mode,
-                onClick = { viewModel.setDisplayMode(mode) },
-                label = { Text(stringResource(titleRes)) },
-            )
+    val configuration = LocalConfiguration.current
+    val columnPreference = remember {
+        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            viewModel.libraryPreferences.landscapeColumns
+        } else {
+            viewModel.libraryPreferences.portraitColumns
         }
     }
 
-    if (displayMode != LibraryDisplayMode.List) {
-        val configuration = LocalConfiguration.current
-        val columnPreference = remember {
-            if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                viewModel.libraryPreferences.landscapeColumns
-            } else {
-                viewModel.libraryPreferences.portraitColumns
-            }
-        }
-
-        val columns by columnPreference.collectAsState()
-        SliderItem(
-            value = columns,
-            valueRange = 0..10,
-            label = stringResource(MR.strings.pref_library_columns),
-            valueString = if (columns > 0) {
-                columns.toString()
-            } else {
-                stringResource(MR.strings.label_auto)
-            },
-            onChange = columnPreference::set,
-            pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        )
-    }
+    val columns by columnPreference.collectAsState()
+    SliderItem(
+        value = columns,
+        valueRange = 0..10,
+        label = stringResource(MR.strings.pref_library_columns),
+        valueString = if (columns > 0) {
+            columns.toString()
+        } else {
+            stringResource(MR.strings.label_auto)
+        },
+        onChange = columnPreference::set,
+        pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    )
 
     HeadingItem(MR.strings.overlay_header)
     CheckboxItem(
