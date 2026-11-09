@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -60,8 +61,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import mihon.app.di.appGraph
-import soup.compose.material.motion.animation.materialFadeThroughIn
-import soup.compose.material.motion.animation.materialFadeThroughOut
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -73,7 +72,7 @@ object HomeScreen : Screen() {
     private val showBottomNavEvent = Channel<Boolean>()
 
     @Suppress("ConstPropertyName")
-    private const val TabFadeDuration = 200
+    private const val TabFadeDuration = 120
 
     @Suppress("ConstPropertyName")
     private const val TabNavigatorKey = "HomeTabs"
@@ -125,10 +124,9 @@ object HomeScreen : Screen() {
                     AnimatedContent(
                         targetState = tabNavigator.current,
                         transitionSpec = {
-                            materialFadeThroughIn(
-                                initialScale = 1f,
-                                durationMillis = TabFadeDuration,
-                            ) togetherWith materialFadeThroughOut(durationMillis = TabFadeDuration)
+                            fadeIn(
+                                animationSpec = tween(TabFadeDuration),
+                            ) togetherWith fadeOut(animationSpec = tween(TabFadeDuration))
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
@@ -234,12 +232,14 @@ object HomeScreen : Screen() {
         selected: Boolean,
         onClick: () -> Unit,
     ) {
+        val options = tab.options
         val backgroundColor by animateColorAsState(
             targetValue = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
                 Color.Transparent
             },
+            animationSpec = tween(150),
             label = "dockItemBg",
         )
         val contentColor by animateColorAsState(
@@ -248,6 +248,7 @@ object HomeScreen : Screen() {
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
+            animationSpec = tween(150),
             label = "dockItemContent",
         )
 
@@ -272,15 +273,15 @@ object HomeScreen : Screen() {
                         badge = { badge() },
                     ) {
                         Icon(
-                            painter = tab.options.icon!!,
-                            contentDescription = tab.options.title,
+                            painter = options.icon!!,
+                            contentDescription = options.title,
                             tint = contentColor,
                         )
                     }
                 } else {
                     Icon(
-                        painter = tab.options.icon!!,
-                        contentDescription = tab.options.title,
+                        painter = options.icon!!,
+                        contentDescription = options.title,
                         tint = contentColor,
                     )
                 }
@@ -288,7 +289,7 @@ object HomeScreen : Screen() {
                 if (selected) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = tab.options.title,
+                        text = options.title,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = contentColor,
