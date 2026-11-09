@@ -10,6 +10,7 @@ import tachiyomi.presentation.core.theme.crimson
 import tachiyomi.presentation.core.theme.emerald
 import tachiyomi.presentation.core.theme.steelBlue
 import tachiyomi.presentation.core.theme.subtle
+import tachiyomi.presentation.core.theme.surfaceInset
 
 class MinimalistDarkColorSchemeTest {
 
@@ -20,6 +21,8 @@ class MinimalistDarkColorSchemeTest {
         scheme.background shouldBe Color(0xFF08090B)
         scheme.surfaceContainer shouldBe Color(0xFF121316)
         scheme.primary shouldBe Color(0xFFF2F1EC)
+        scheme.secondary shouldBe Color(0xFFA6B0BD)
+        scheme.onSecondary shouldBe Color(0xFF0A0A0B)
     }
 
     @Test
@@ -30,10 +33,14 @@ class MinimalistDarkColorSchemeTest {
         lightScheme.background shouldBe Color(0xFF08090B)
         lightScheme.surfaceContainer shouldBe Color(0xFF121316)
         lightScheme.primary shouldBe Color(0xFFF2F1EC)
+        lightScheme.secondary shouldBe Color(0xFFA6B0BD)
+        lightScheme.onSecondary shouldBe Color(0xFF0A0A0B)
 
         amoledScheme.background shouldBe Color(0xFF08090B)
         amoledScheme.surfaceContainer shouldBe Color(0xFF121316)
         amoledScheme.primary shouldBe Color(0xFFF2F1EC)
+        amoledScheme.secondary shouldBe Color(0xFFA6B0BD)
+        amoledScheme.onSecondary shouldBe Color(0xFF0A0A0B)
     }
 
     @Test
@@ -46,5 +53,6 @@ class MinimalistDarkColorSchemeTest {
         scheme.steelBlue shouldBe Color(0xFFA6B0BD)
         scheme.subtle shouldBe Color(0xFF5F6065)
         scheme.borderHairline shouldBe Color(0xFFFFFFFF).copy(alpha = 0.07f)
+        scheme.surfaceInset shouldBe Color(0x09FFFFFF)
     }
 }

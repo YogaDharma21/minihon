@@ -28,3 +28,6 @@ val ColorScheme.subtle: Color
 
 val ColorScheme.borderHairline: Color
     get() = Color(0xFFFFFFFF).copy(alpha = 0.07f)
+
+val ColorScheme.surfaceInset: Color
+    get() = Color(0x09FFFFFF)
