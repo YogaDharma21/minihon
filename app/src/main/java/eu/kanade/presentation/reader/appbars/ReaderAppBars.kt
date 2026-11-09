@@ -74,8 +74,9 @@ fun ReaderAppBars(
     cropEnabled: Boolean,
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
+    onClickChapterList: (() -> Unit)? = null,
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
+    val backgroundColor = Color(0xFF121316)
 
     Column(modifier = Modifier.fillMaxHeight()) {
         AnimatedVisibility(
@@ -85,7 +86,7 @@ fun ReaderAppBars(
         ) {
             ReaderTopBar(
                 modifier = Modifier
-                    .clickable(onClick = onClickTopAppBar),
+                    .clickable(onClick = onClickChapterList ?: onClickTopAppBar),
                 mangaTitle = mangaTitle,
                 chapterTitle = chapterTitle,
                 navigateUp = navigateUp,
@@ -94,6 +95,7 @@ fun ReaderAppBars(
                 onOpenInWebView = onOpenInWebView,
                 onOpenInBrowser = onOpenInBrowser,
                 onShare = onShare,
+                onClickChapterList = onClickChapterList,
             )
         }
 
@@ -166,6 +168,7 @@ fun ReaderAppBars(
                     cropEnabled = cropEnabled,
                     onClickCropBorder = onClickCropBorder,
                     onClickSettings = onClickSettings,
+                    onClickChapterList = onClickChapterList,
                 )
             }
         }

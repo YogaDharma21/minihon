@@ -67,6 +67,7 @@ import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
+import eu.kanade.presentation.reader.ReaderChapterListSheet
 import eu.kanade.presentation.reader.ReaderContentOverlay
 import eu.kanade.presentation.reader.ReaderNavigationOverlay
 import eu.kanade.presentation.reader.ReaderNavigationOverlayState
@@ -319,6 +320,17 @@ class ReaderActivity : BaseActivity() {
                         onSave = viewModel::saveImage,
                     )
                 }
+                is ReaderViewModel.Dialog.ChapterList -> {
+                    ReaderChapterListSheet(
+                        chapters = viewModel.getChapters(),
+                        currentChapterId = state.currentChapter?.chapter?.id,
+                        onDismissRequest = onDismissRequest,
+                        onChapterClicked = { chapter ->
+                            onDismissRequest()
+                            loadChapter(chapter)
+                        },
+                    )
+                }
                 null -> {}
             }
         }
@@ -560,7 +572,8 @@ class ReaderActivity : BaseActivity() {
             mangaTitle = state.manga?.title,
             chapterTitle = state.currentChapter?.chapter?.name,
             navigateUp = onBackPressedDispatcher::onBackPressed,
-            onClickTopAppBar = ::openMangaScreen,
+            onClickTopAppBar = viewModel::openChapterListDialog,
+            onClickChapterList = viewModel::openChapterListDialog,
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
             onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
@@ -745,6 +758,13 @@ class ReaderActivity : BaseActivity() {
     private fun loadPreviousChapter() {
         lifecycleScope.launch {
             viewModel.loadPreviousChapter()
+            moveToPageIndex(0)
+        }
+    }
+
+    private fun loadChapter(chapter: ReaderChapter) {
+        lifecycleScope.launch {
+            viewModel.loadChapter(chapter)
             moveToPageIndex(0)
         }
     }

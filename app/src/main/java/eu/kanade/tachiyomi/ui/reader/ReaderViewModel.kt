@@ -932,6 +932,18 @@ class ReaderViewModel(
         mutableState.update { it.copy(dialog = Dialog.Settings) }
     }
 
+    fun openChapterListDialog() {
+        mutableState.update { it.copy(dialog = Dialog.ChapterList) }
+    }
+
+    fun getChapters(): List<ReaderChapter> {
+        return if (::chapterList.isInitialized) chapterList else emptyList()
+    }
+
+    suspend fun loadChapter(chapter: ReaderChapter) {
+        loadAdjacent(chapter)
+    }
+
     fun closeDialog() {
         mutableState.update { it.copy(dialog = null) }
     }
@@ -1113,6 +1125,7 @@ class ReaderViewModel(
         data object ReadingModeSelect : Dialog
         data object OrientationModeSelect : Dialog
         data class PageActions(val page: ReaderPage) : Dialog
+        data object ChapterList : Dialog
     }
 
     sealed interface Event {

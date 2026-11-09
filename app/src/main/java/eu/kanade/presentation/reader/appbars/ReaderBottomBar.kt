@@ -24,6 +24,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import mihon.icons.custommaterialsymbols.CustomMaterialSymbols
 import mihon.icons.custommaterialsymbols.rounded.CropOff
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.FormatListBulleted
 import mihon.icons.materialsymbols.rounded.Crop
 import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
@@ -39,10 +40,11 @@ fun ReaderBottomBar(
     cropEnabled: Boolean,
     onClickCropBorder: () -> Unit,
     onClickSettings: () -> Unit,
+    onClickChapterList: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = Color(0xFF121316),
         modifier = modifier.drawBehind {
             val strokeWidth = 1.dp.toPx()
             drawLine(
@@ -62,6 +64,15 @@ fun ReaderBottomBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (onClickChapterList != null) {
+                IconButton(onClick = onClickChapterList) {
+                    Icon(
+                        imageVector = MaterialSymbols.AutoMirroredRounded.FormatListBulleted,
+                        contentDescription = stringResource(MR.strings.chapters),
+                    )
+                }
+            }
+
             IconButton(onClick = onClickReadingMode) {
                 Icon(
                     imageVector = readingMode.icon,

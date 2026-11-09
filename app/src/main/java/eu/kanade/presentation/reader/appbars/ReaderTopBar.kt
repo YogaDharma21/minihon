@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.FormatListBulleted
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import tachiyomi.i18n.MR
@@ -26,11 +27,12 @@ fun ReaderTopBar(
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
+    onClickChapterList: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     AppBar(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(Color(0xFF121316))
             .drawBehind {
                 val strokeWidth = 1.dp.toPx()
                 drawLine(
@@ -47,6 +49,15 @@ fun ReaderTopBar(
         actions = {
             AppBarActions(
                 actions = buildList {
+                    if (onClickChapterList != null) {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(MR.strings.chapters),
+                                icon = MaterialSymbols.AutoMirroredRounded.FormatListBulleted,
+                                onClick = onClickChapterList,
+                            ),
+                        )
+                    }
                     add(
                         AppBar.Action(
                             title = stringResource(
