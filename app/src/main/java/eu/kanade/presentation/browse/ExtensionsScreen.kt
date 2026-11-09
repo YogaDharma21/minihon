@@ -1,6 +1,7 @@
 package eu.kanade.presentation.browse
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,10 +11,12 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -155,7 +159,7 @@ private fun ExtensionContent(
     val installGranted = rememberRequestPackageInstallsPermissionState(initialValue = true)
 
     FastScrollLazyColumn(
-        contentPadding = contentPadding + topSmallPaddingValues,
+        contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
     ) {
         if (!installGranted && state.installer?.requiresSystemPermission == true) {
             item(key = "extension-permissions-warning") {
@@ -305,29 +309,37 @@ private fun ExtensionItem(
         is Extension.Installed -> extension.store
     }
 
-    BaseBrowseItem(
-        modifier = modifier,
-        onClickItem = { onClickItem(extension) },
-        onLongClickItem = { onLongClickItem(extension) },
-        icon = {
-            ExtensionItemIcon(extension = extension, installStep = installStep)
-        },
-        action = {
-            ExtensionItemActions(
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF121316),
+        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+    ) {
+        BaseBrowseItem(
+            onClickItem = { onClickItem(extension) },
+            onLongClickItem = { onLongClickItem(extension) },
+            icon = {
+                ExtensionItemIcon(extension = extension, installStep = installStep)
+            },
+            action = {
+                ExtensionItemActions(
+                    extension = extension,
+                    installStep = installStep,
+                    onClickItemCancel = onClickItemCancel,
+                    onClickItemAction = onClickItemAction,
+                    onClickItemSecondaryAction = onClickItemSecondaryAction,
+                )
+            },
+        ) {
+            ExtensionItemContent(
                 extension = extension,
                 installStep = installStep,
-                onClickItemCancel = onClickItemCancel,
-                onClickItemAction = onClickItemAction,
-                onClickItemSecondaryAction = onClickItemSecondaryAction,
+                store = store,
+                modifier = Modifier.weight(1f),
             )
-        },
-    ) {
-        ExtensionItemContent(
-            extension = extension,
-            installStep = installStep,
-            store = store,
-            modifier = Modifier.weight(1f),
-        )
+        }
     }
 }
 
@@ -418,36 +430,68 @@ private fun ExtensionItemMetadata(
         )
         if (facts.isNotEmpty()) {
             Text(
-                text = facts.joinToString(" \u2022 "),
+                text = facts.joinToString(" • "),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        val notable = listOfNotNull(
-            when (installStep) {
-                InstallStep.Pending -> MR.strings.ext_pending
-                InstallStep.Downloading -> MR.strings.ext_downloading
-                InstallStep.Installing -> MR.strings.ext_installing
-                else -> null
-            }?.let { it to MaterialTheme.colorScheme.primary },
-            when {
-                extension is Extension.NotLoaded ->
-                    extension.reason.labelRes?.let { it to MaterialTheme.colorScheme.error }
-                extension is Extension.Loaded && extension.isObsolete ->
-                    MR.strings.ext_obsolete to MaterialTheme.colorScheme.error
-                else -> null
-            },
-            extension.contentWarning.label?.let { it.title to it.color },
-            (extension as? Extension.Loaded)
-                ?.takeIf { !it.isShared }
-                ?.let { MR.strings.ext_installer_private to MaterialTheme.colorScheme.onSurfaceVariant },
-        )
-        notable.forEach { (label, color) ->
-            ExtensionPill(text = stringResource(label), color = color)
+        val installStepTag = when (installStep) {
+            InstallStep.Pending -> MR.strings.ext_pending to MaterialTheme.colorScheme.primary
+            InstallStep.Downloading -> MR.strings.ext_downloading to MaterialTheme.colorScheme.primary
+            InstallStep.Installing -> MR.strings.ext_installing to MaterialTheme.colorScheme.primary
+            else -> null
         }
+
+        val statusTag = when {
+            extension is Extension.NotLoaded -> {
+                val label = extension.reason.labelRes ?: MR.strings.ext_untrusted
+                Triple(label, Color(0xFFC99A90), Color(0x1FC99A90))
+            }
+            extension is Extension.Loaded && extension.isObsolete -> {
+                Triple(MR.strings.ext_obsolete, Color(0xFFC99A90), Color(0x1FC99A90))
+            }
+            extension is Extension.Loaded -> {
+                Triple(MR.strings.ext_installed, Color(0xFFA9BFA9), Color(0x1FA9BFA9))
+            }
+            extension is Extension.Available -> {
+                Triple(MR.strings.ext_install, Color(0xFFA6B0BD), Color(0x1FA6B0BD))
+            }
+            else -> null
+        }
+
+        if (installStepTag != null) {
+            ExtensionPill(
+                text = stringResource(installStepTag.first),
+                color = installStepTag.second,
+                backgroundColor = installStepTag.second.copy(alpha = 0.12f),
+            )
+        } else if (statusTag != null) {
+            ExtensionPill(
+                text = stringResource(statusTag.first),
+                color = statusTag.second,
+                backgroundColor = statusTag.third,
+            )
+        }
+
+        extension.contentWarning.label?.let {
+            ExtensionPill(
+                text = stringResource(it.title),
+                color = it.color,
+                backgroundColor = it.color.copy(alpha = 0.12f),
+            )
+        }
+
+        (extension as? Extension.Loaded)
+            ?.takeIf { !it.isShared }
+            ?.let {
+                ExtensionPill(
+                    text = stringResource(MR.strings.ext_installer_private),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
     }
 }
 
