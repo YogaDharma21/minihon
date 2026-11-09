@@ -1,11 +1,16 @@
 package eu.kanade.presentation.reader.appbars
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +27,7 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Crop
 import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -35,48 +41,54 @@ fun ReaderBottomBar(
     onClickSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .drawBehind {
-                val strokeWidth = 1.dp.toPx()
-                drawLine(
-                    color = Color(0x12FFFFFF),
-                    start = Offset(0f, strokeWidth / 2),
-                    end = Offset(size.width, strokeWidth / 2),
-                    strokeWidth = strokeWidth,
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = modifier.drawBehind {
+            val strokeWidth = 1.dp.toPx()
+            drawLine(
+                color = Color(0x12FFFFFF),
+                start = Offset(0f, strokeWidth / 2),
+                end = Offset(size.width, strokeWidth / 2),
+                strokeWidth = strokeWidth,
+            )
+        },
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = MaterialTheme.padding.small)
+                .pointerInput(Unit) {},
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onClickReadingMode) {
+                Icon(
+                    imageVector = readingMode.icon,
+                    contentDescription = stringResource(MR.strings.viewer),
                 )
             }
-            .pointerInput(Unit) {},
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onClickReadingMode) {
-            Icon(
-                imageVector = readingMode.icon,
-                contentDescription = stringResource(MR.strings.viewer),
-            )
-        }
 
-        IconButton(onClick = onClickOrientation) {
-            Icon(
-                imageVector = orientation.icon,
-                contentDescription = stringResource(MR.strings.rotation_type),
-            )
-        }
+            IconButton(onClick = onClickOrientation) {
+                Icon(
+                    imageVector = orientation.icon,
+                    contentDescription = stringResource(MR.strings.rotation_type),
+                )
+            }
 
-        IconButton(onClick = onClickCropBorder) {
-            Icon(
-                imageVector = if (cropEnabled) MaterialSymbols.Rounded.Crop else CustomMaterialSymbols.Rounded.CropOff,
-                contentDescription = stringResource(MR.strings.pref_crop_borders),
-            )
-        }
+            IconButton(onClick = onClickCropBorder) {
+                Icon(
+                    imageVector = if (cropEnabled) MaterialSymbols.Rounded.Crop else CustomMaterialSymbols.Rounded.CropOff,
+                    contentDescription = stringResource(MR.strings.pref_crop_borders),
+                )
+            }
 
-        IconButton(onClick = onClickSettings) {
-            Icon(
-                imageVector = MaterialSymbols.Rounded.Settings,
-                contentDescription = stringResource(MR.strings.action_settings),
-            )
+            IconButton(onClick = onClickSettings) {
+                Icon(
+                    imageVector = MaterialSymbols.Rounded.Settings,
+                    contentDescription = stringResource(MR.strings.action_settings),
+                )
+            }
         }
     }
 }
