@@ -41,7 +41,7 @@ fun ChapterHeader(
             } else {
                 pluralStringResource(MR.plurals.manga_num_chapters, count = chapterCount, chapterCount)
             },
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             color = MaterialTheme.colorScheme.onBackground,
         )
 
@@ -59,7 +59,7 @@ private fun MissingChaptersWarning(count: Int) {
         text = pluralStringResource(MR.plurals.missing_chapters, count = count, count),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        style = MaterialTheme.typography.bodySmall,
+        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
         color = MaterialTheme.colorScheme.error.copy(alpha = SECONDARY_ALPHA),
     )
 }

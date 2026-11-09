@@ -1,8 +1,13 @@
 package eu.kanade.presentation.reader.appbars
 
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -24,7 +29,17 @@ fun ReaderTopBar(
     modifier: Modifier = Modifier,
 ) {
     AppBar(
-        modifier = modifier,
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .drawBehind {
+                val strokeWidth = 1.dp.toPx()
+                drawLine(
+                    color = Color(0x12FFFFFF),
+                    start = Offset(0f, size.height - strokeWidth / 2),
+                    end = Offset(size.width, size.height - strokeWidth / 2),
+                    strokeWidth = strokeWidth,
+                )
+            },
         backgroundColor = Color.Transparent,
         title = mangaTitle,
         subtitle = chapterTitle,

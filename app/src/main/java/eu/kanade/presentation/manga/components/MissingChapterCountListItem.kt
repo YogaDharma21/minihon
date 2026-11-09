@@ -35,7 +35,7 @@ fun MissingChapterCountListItem(
         HorizontalDivider(modifier = Modifier.weight(1f))
         Text(
             text = pluralStringResource(MR.plurals.missing_chapters, count = count, count),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
         )
         HorizontalDivider(modifier = Modifier.weight(1f))
     }

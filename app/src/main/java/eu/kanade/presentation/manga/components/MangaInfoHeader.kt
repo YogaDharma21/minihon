@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.DropdownMenuItem
@@ -33,6 +35,8 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -57,6 +61,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
@@ -101,6 +106,7 @@ import org.intellij.markdown.ast.findChildOfType
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
+import tachiyomi.presentation.core.components.material.Surface as TachiyomiSurface
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -198,7 +204,10 @@ fun MangaActionRow(
         }
     }
 
-    Row(modifier = modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp)) {
+    Row(
+        modifier = modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         MangaActionButton(
             title = if (favorite) {
                 stringResource(MR.strings.in_library)
@@ -207,6 +216,7 @@ fun MangaActionRow(
             },
             icon = if (favorite) MaterialSymbols.RoundedFilled.Favorite else MaterialSymbols.Rounded.Favorite,
             color = if (favorite) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
+            active = favorite,
             onClick = onAddToLibraryClicked,
             onLongClick = onEditCategory,
         )
@@ -222,6 +232,7 @@ fun MangaActionRow(
             },
             icon = MaterialSymbols.Rounded.HourglassEmpty,
             color = if (isUserIntervalMode) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
+            active = isUserIntervalMode,
             onClick = { onEditIntervalClicked?.invoke() },
         )
         MangaActionButton(
@@ -232,6 +243,7 @@ fun MangaActionRow(
             },
             icon = if (trackingCount == 0) MaterialSymbols.Rounded.Sync else MaterialSymbols.Rounded.Check,
             color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
+            active = trackingCount > 0,
             onClick = onTrackingClicked,
         )
         if (onWebViewClicked != null) {
@@ -239,6 +251,7 @@ fun MangaActionRow(
                 title = stringResource(MR.strings.action_web_view),
                 icon = MaterialSymbols.Rounded.Public,
                 color = defaultActionButtonColor,
+                active = false,
                 onClick = onWebViewClicked,
                 onLongClick = onWebViewLongClicked,
             )
@@ -257,32 +270,38 @@ fun ExpandableMangaDescription(
     onEditNotes: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        val (expanded, onExpanded) = rememberSaveable {
-            mutableStateOf(defaultExpandState)
-        }
-        val desc =
-            description.takeIf { !it.isNullOrBlank() } ?: stringResource(MR.strings.description_placeholder)
+    Surface(
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+    ) {
+        Column(modifier = Modifier.padding(bottom = 12.dp)) {
+            val (expanded, onExpanded) = rememberSaveable {
+                mutableStateOf(defaultExpandState)
+            }
+            val desc =
+                description.takeIf { !it.isNullOrBlank() } ?: stringResource(MR.strings.description_placeholder)
 
-        MangaSummary(
-            description = desc,
-            expanded = expanded,
-            notes = notes,
-            onEditNotesClicked = onEditNotes,
-            modifier = Modifier
-                .padding(top = 8.dp)
-                .padding(horizontal = 16.dp)
-                .clickableNoIndication { onExpanded(!expanded) },
-        )
-        val tags = tagsProvider()
-        if (!tags.isNullOrEmpty()) {
-            Box(
+            MangaSummary(
+                description = desc,
+                expanded = expanded,
+                notes = notes,
+                onEditNotesClicked = onEditNotes,
                 modifier = Modifier
-                    .padding(top = 8.dp)
-                    .padding(vertical = 12.dp)
-                    .animateContentSize(animationSpec = spring())
-                    .fillMaxWidth(),
-            ) {
+                    .padding(top = 12.dp)
+                    .padding(horizontal = 16.dp)
+                    .clickableNoIndication { onExpanded(!expanded) },
+            )
+            val tags = tagsProvider()
+            if (!tags.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .padding(vertical = 4.dp)
+                        .animateContentSize(animationSpec = spring())
+                        .fillMaxWidth(),
+                ) {
                 var showMenu by remember { mutableStateOf(false) }
                 var tagSelected by remember { mutableStateOf("") }
                 DropdownMenu(
@@ -340,6 +359,7 @@ fun ExpandableMangaDescription(
             }
         }
     }
+}
 }
 
 @Composable
@@ -529,7 +549,7 @@ private fun ColumnScope.MangaContentInfo(
                 .padding(end = 4.dp)
                 .size(16.dp),
         )
-        ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+        ProvideTextStyle(MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum")) {
             Text(
                 text = when (status) {
                     SManga.ONGOING.toLong() -> stringResource(MR.strings.ongoing)
@@ -662,7 +682,7 @@ private fun MangaSummary(
                 }
             },
             {
-                val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
+                val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surfaceContainer)
                 Box(
                     modifier = Modifier.background(Brush.verticalGradient(colors = colors)),
                     contentAlignment = Alignment.Center,
@@ -673,7 +693,7 @@ private fun MangaSummary(
                         contentDescription = stringResource(
                             if (expanded) MR.strings.manga_info_collapse else MR.strings.manga_info_expand,
                         ),
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.background(Brush.radialGradient(colors = colors.asReversed())),
                     )
                 }
@@ -713,7 +733,22 @@ private fun TagsChip(
         SuggestionChip(
             modifier = modifier,
             onClick = onClick,
-            label = { Text(text = text, style = MaterialTheme.typography.bodySmall) },
+            label = {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                )
+            },
+            shape = RoundedCornerShape(8.dp),
+            colors = SuggestionChipDefaults.suggestionChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                labelColor = MaterialTheme.colorScheme.onSurface,
+            ),
+            border = SuggestionChipDefaults.suggestionChipBorder(
+                enabled = true,
+                borderColor = Color(0x12FFFFFF),
+                borderWidth = 1.dp,
+            ),
         )
     }
 }
@@ -723,26 +758,37 @@ private fun RowScope.MangaActionButton(
     title: String,
     icon: ImageVector,
     color: Color,
+    active: Boolean = false,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
-    TextButton(
+    TachiyomiSurface(
         onClick = onClick,
-        modifier = Modifier.weight(1f),
         onLongClick = onLongClick,
+        modifier = Modifier.weight(1f),
+        shape = RoundedCornerShape(12.dp),
+        color = if (active) color.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, if (active) color.copy(alpha = 0.24f) else Color(0x12FFFFFF)),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = color,
+                tint = if (active) color else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = title,
-                color = color,
-                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
         }

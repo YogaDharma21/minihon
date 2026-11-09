@@ -128,7 +128,7 @@ fun MangaChapterListItem(
                     }
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         onTextLayout = { textHeight = it.size.height },
@@ -142,6 +142,7 @@ fun MangaChapterListItem(
                             color = LocalContentColor.current
                                 .copy(alpha = if (read) DISABLED_ALPHA else SECONDARY_ALPHA),
                         )
+                        .copy(fontFeatureSettings = "tnum")
                     ProvideTextStyle(value = subtitleStyle) {
                         if (date != null) {
                             Text(
