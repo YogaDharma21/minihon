@@ -3,8 +3,7 @@ package eu.kanade.tachiyomi.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -29,9 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -100,10 +99,19 @@ object HomeScreen : Screen() {
                 }
             }
 
-            val bottomPadding by animateDpAsState(
-                targetValue = if (showBottomNav) 88.dp else 0.dp,
-                label = "bottomPadding",
-            )
+            val context = LocalContext.current
+            val graph = remember { context.appGraph }
+            val updatesBadgeCount by remember(graph) {
+                combine(
+                    graph.libraryPreferences.newShowUpdatesCount.changes(),
+                    graph.libraryPreferences.newUpdatesCount.changes(),
+                ) { show, count ->
+                    if (show) count else 0
+                }
+            }.collectAsState(initial = 0)
+            val extensionBadgeCount by remember(graph) {
+                graph.sourcePreferences.extensionUpdatesCount.changes()
+            }.collectAsState(initial = 0)
 
             // Provide usable navigator to content screen
             CompositionLocalProvider(LocalNavigator provides navigator) {
@@ -118,9 +126,7 @@ object HomeScreen : Screen() {
                                 durationMillis = TabFadeDuration,
                             ) togetherWith materialFadeThroughOut(durationMillis = TabFadeDuration)
                         },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = bottomPadding),
+                        modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
                     ) {
                         tabNavigator.saveableState(key = "currentTab", it) {
@@ -151,8 +157,14 @@ object HomeScreen : Screen() {
                             ) {
                                 TABS.fastForEach { tab ->
                                     val selected = tabNavigator.current::class == tab::class
+                                    val badgeCount = when (tab) {
+                                        is UpdatesTab -> updatesBadgeCount
+                                        is BrowseTab -> extensionBadgeCount
+                                        else -> 0
+                                    }
                                     FloatingDockItem(
                                         tab = tab,
+                                        badgeCount = badgeCount,
                                         selected = selected,
                                         onClick = {
                                             if (!selected) {
@@ -214,19 +226,26 @@ object HomeScreen : Screen() {
     @Composable
     private fun FloatingDockItem(
         tab: eu.kanade.presentation.util.Tab,
+        badgeCount: Int,
         selected: Boolean,
         onClick: () -> Unit,
     ) {
-        val backgroundColor = if (selected) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            Color.Transparent
-        }
-        val contentColor = if (selected) {
-            MaterialTheme.colorScheme.onPrimary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        }
+        val backgroundColor by animateColorAsState(
+            targetValue = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                Color.Transparent
+            },
+            label = "dockItemBg",
+        )
+        val contentColor by animateColorAsState(
+            targetValue = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            label = "dockItemContent",
+        )
 
         Surface(
             selected = selected,
@@ -234,17 +253,16 @@ object HomeScreen : Screen() {
             shape = CircleShape,
             color = backgroundColor,
             contentColor = contentColor,
-            modifier = Modifier.animateContentSize(),
         ) {
             Row(
                 modifier = Modifier.padding(
-                    horizontal = if (selected) 14.dp else 10.dp,
+                    horizontal = 12.dp,
                     vertical = 8.dp,
                 ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                val badge = tabBadge(tab)
+                val badge = tabBadge(tab, badgeCount)
                 if (badge != null) {
                     BadgedBox(
                         badge = { badge() },
@@ -278,29 +296,7 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun tabBadge(tab: eu.kanade.presentation.util.Tab): (@Composable () -> Unit)? {
-        val context = LocalContext.current
-        val count by produceState(initialValue = 0, tab) {
-            val graph = context.appGraph
-            when (tab) {
-                is UpdatesTab -> {
-                    combine(
-                        graph.libraryPreferences.newShowUpdatesCount.changes(),
-                        graph.libraryPreferences.newUpdatesCount.changes(),
-                    ) { show, count ->
-                        if (show) count else 0
-                    }
-                        .collectLatest { value = it }
-                }
-
-                is BrowseTab -> {
-                    graph.sourcePreferences.extensionUpdatesCount.changes()
-                        .collectLatest { value = it }
-                }
-
-                else -> value = 0
-            }
-        }
+    private fun tabBadge(tab: eu.kanade.presentation.util.Tab, count: Int): (@Composable () -> Unit)? {
         if (count <= 0) return null
         return {
             Badge {

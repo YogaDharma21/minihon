@@ -2,6 +2,7 @@ package eu.kanade.presentation.updates
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import eu.kanade.presentation.components.AppBar
@@ -44,6 +46,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
+import tachiyomi.presentation.core.util.plus
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -135,7 +138,7 @@ fun UpdateScreen(
                         }
                     } else {
                         FastScrollLazyColumn(
-                            contentPadding = contentPadding,
+                            contentPadding = contentPadding + PaddingValues(bottom = 96.dp),
                         ) {
                             updatesLastUpdatedItem(lastUpdated)
 
