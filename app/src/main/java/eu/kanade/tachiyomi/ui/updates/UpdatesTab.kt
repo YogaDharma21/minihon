@@ -24,6 +24,7 @@ import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel.Event
 import kotlinx.coroutines.flow.collectLatest
@@ -78,6 +79,7 @@ data object UpdatesTab : Tab {
             onCalendarClicked = { navigator.push(UpcomingScreen()) },
             onFilterClicked = viewModel::showFilterDialog,
             hasActiveFilters = state.hasActiveFilters,
+            onClickSettings = { navigator.push(MoreTab) },
         )
 
         val onDismissDialog = { viewModel.setDialog(null) }

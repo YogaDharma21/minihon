@@ -5,6 +5,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.ui.more.DownloadQueueState
@@ -40,10 +41,21 @@ fun MoreScreen(
     onClickSettings: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
+    onNavigateUp: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
 
-    Scaffold { contentPadding ->
+    Scaffold(
+        topBar = { scrollBehavior ->
+            if (onNavigateUp != null) {
+                AppBar(
+                    title = stringResource(MR.strings.label_more),
+                    navigateUp = onNavigateUp,
+                    scrollBehavior = scrollBehavior,
+                )
+            }
+        },
+    ) { contentPadding ->
         ScrollbarLazyColumn(contentPadding = contentPadding) {
             item {
                 LogoHeader(

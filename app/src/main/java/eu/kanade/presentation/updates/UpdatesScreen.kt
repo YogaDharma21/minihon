@@ -35,6 +35,7 @@ import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.SelectAll
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -63,6 +64,7 @@ fun UpdateScreen(
     onOpenChapter: (UpdatesItem) -> Unit,
     onFilterClicked: () -> Unit,
     hasActiveFilters: Boolean,
+    onClickSettings: (() -> Unit)? = null,
 ) {
     BackHandler(enabled = state.selectionMode) {
         onSelectAll(false)
@@ -82,6 +84,7 @@ fun UpdateScreen(
                 onInvertSelection = { onInvertSelection() },
                 onCancelActionMode = { onSelectAll(false) },
                 scrollBehavior = scrollBehavior,
+                onClickSettings = onClickSettings,
             )
         },
         bottomBar = {
@@ -165,30 +168,46 @@ private fun UpdatesAppBar(
     onCancelActionMode: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
     modifier: Modifier = Modifier,
+    onClickSettings: (() -> Unit)? = null,
 ) {
     AppBar(
         modifier = modifier,
         title = stringResource(MR.strings.label_recent_updates),
         actions = {
             AppBarActions(
-                listOf(
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_filter),
-                        icon = MaterialSymbols.Rounded.FilterList,
-                        iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
-                        onClick = onFilterClicked,
-                    ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_view_upcoming),
-                        icon = MaterialSymbols.Rounded.CalendarMonth,
-                        onClick = onCalendarClicked,
-                    ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_update_library),
-                        icon = MaterialSymbols.Rounded.Refresh,
-                        onClick = onUpdateLibrary,
-                    ),
-                ),
+                buildList {
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_filter),
+                            icon = MaterialSymbols.Rounded.FilterList,
+                            iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                            onClick = onFilterClicked,
+                        ),
+                    )
+                    if (onClickSettings != null) {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(MR.strings.label_settings),
+                                icon = MaterialSymbols.Rounded.Settings,
+                                onClick = onClickSettings,
+                            ),
+                        )
+                    }
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_view_upcoming),
+                            icon = MaterialSymbols.Rounded.CalendarMonth,
+                            onClick = onCalendarClicked,
+                        ),
+                    )
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_update_library),
+                            icon = MaterialSymbols.Rounded.Refresh,
+                            onClick = onUpdateLibrary,
+                        ),
+                    )
+                },
             )
         },
         actionModeCounter = actionModeCounter,

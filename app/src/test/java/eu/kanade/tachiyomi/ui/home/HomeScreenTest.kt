@@ -34,4 +34,9 @@ class HomeScreenTest {
         HomeScreen.Tab.Browse(toExtensions = true).toExtensions shouldBe true
         HomeScreen.Tab.More(toDownloads = true).toDownloads shouldBe true
     }
+
+    @Test
+    fun `more tab is a valid screen destination for top bar navigation`() {
+        (MoreTab is cafe.adriel.voyager.core.screen.Screen) shouldBe true
+    }
 }

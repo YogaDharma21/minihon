@@ -34,6 +34,7 @@ import kotlinx.datetime.LocalDate
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.DeleteSweep
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.domain.history.model.HistoryWithRelations
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
@@ -53,6 +54,7 @@ fun HistoryScreen(
     onClickResume: (mangaId: Long, chapterId: Long) -> Unit,
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryViewModel.Dialog?) -> Unit,
+    onClickSettings: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
@@ -62,15 +64,26 @@ fun HistoryScreen(
                 onChangeSearchQuery = onSearchQueryChange,
                 actions = {
                     AppBarActions(
-                        listOf(
-                            AppBar.Action(
-                                title = stringResource(MR.strings.pref_clear_history),
-                                icon = MaterialSymbols.Rounded.DeleteSweep,
-                                onClick = {
-                                    onDialogChange(HistoryViewModel.Dialog.DeleteAll)
-                                },
-                            ),
-                        ),
+                        buildList {
+                            if (onClickSettings != null) {
+                                add(
+                                    AppBar.Action(
+                                        title = stringResource(MR.strings.label_settings),
+                                        icon = MaterialSymbols.Rounded.Settings,
+                                        onClick = onClickSettings,
+                                    ),
+                                )
+                            }
+                            add(
+                                AppBar.Action(
+                                    title = stringResource(MR.strings.pref_clear_history),
+                                    icon = MaterialSymbols.Rounded.DeleteSweep,
+                                    onClick = {
+                                        onDialogChange(HistoryViewModel.Dialog.DeleteAll)
+                                    },
+                                ),
+                            )
+                        },
                     )
                 },
                 scrollBehavior = scrollBehavior,

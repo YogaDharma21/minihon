@@ -44,6 +44,7 @@ import eu.kanade.tachiyomi.ui.browse.extension.details.SourcePreferencesScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -100,6 +101,7 @@ data class BrowseSourceScreen(
             MissingSourceScreen(
                 source = source,
                 navigateUp = navigateUp,
+                onClickSettings = { navigator.push(MoreTab) },
             )
             return
         }

@@ -26,6 +26,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -73,6 +74,7 @@ data object HistoryTab : Tab {
             onClickResume = viewModel::getNextChapterForManga,
             onDialogChange = viewModel::setDialog,
             onClickFavorite = viewModel::addFavorite,
+            onClickSettings = { navigator.push(MoreTab) },
         )
 
         val onDismissRequest = { viewModel.setDialog(null) }

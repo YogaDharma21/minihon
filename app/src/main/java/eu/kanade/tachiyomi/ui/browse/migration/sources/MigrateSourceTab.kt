@@ -12,8 +12,10 @@ import eu.kanade.presentation.browse.MigrateSourceScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
 import eu.kanade.tachiyomi.ui.browse.migration.manga.MigrateMangaScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -33,6 +35,11 @@ fun Screen.migrateSourceTab(): TabContent {
                 onClick = {
                     uriHandler.openUri("https://mihon.app/docs/guides/source-migration")
                 },
+            ),
+            AppBar.Action(
+                title = stringResource(MR.strings.label_settings),
+                icon = MaterialSymbols.Rounded.Settings,
+                onClick = { navigator.push(MoreTab) },
             ),
         ),
         content = { contentPadding, _ ->

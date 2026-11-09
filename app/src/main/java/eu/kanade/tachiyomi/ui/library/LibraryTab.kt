@@ -41,6 +41,7 @@ import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.channels.Channel
@@ -137,6 +138,7 @@ data object LibraryTab : Tab {
                     },
                     searchQuery = state.searchQuery,
                     onSearchQueryChange = viewModel::search,
+                    onClickSettings = { navigator.push(MoreTab) },
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
                 )
