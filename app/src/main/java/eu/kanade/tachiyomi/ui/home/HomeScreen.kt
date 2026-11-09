@@ -63,6 +63,7 @@ import mihon.app.di.appGraph
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 
 object HomeScreen : Screen() {
@@ -114,7 +115,10 @@ object HomeScreen : Screen() {
             }.collectAsState(initial = 0)
 
             // Provide usable navigator to content screen
-            CompositionLocalProvider(LocalNavigator provides navigator) {
+            CompositionLocalProvider(
+                LocalNavigator provides navigator,
+                LocalFloatingDockBottomPadding provides if (showBottomNav) 80.dp else 0.dp,
+            ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                 ) {
