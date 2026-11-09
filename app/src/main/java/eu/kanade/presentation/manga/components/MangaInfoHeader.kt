@@ -1,6 +1,7 @@
 package eu.kanade.presentation.manga.components
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -9,6 +10,8 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -55,6 +59,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -271,7 +276,11 @@ fun ExpandableMangaDescription(
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0x12FFFFFF)),
     ) {
-        Column(modifier = Modifier.padding(bottom = 12.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+        ) {
             val (expanded, onExpanded) = rememberSaveable {
                 mutableStateOf(defaultExpandState)
             }
@@ -284,7 +293,7 @@ fun ExpandableMangaDescription(
                 notes = notes,
                 onEditNotesClicked = onEditNotes,
                 modifier = Modifier
-                    .padding(top = 12.dp)
+                    .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .clickableNoIndication { onExpanded(!expanded) },
             )
@@ -294,67 +303,67 @@ fun ExpandableMangaDescription(
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .padding(vertical = 4.dp)
-                        .animateContentSize(animationSpec = spring())
+                        .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
                         .fillMaxWidth(),
                 ) {
-                var showMenu by remember { mutableStateOf(false) }
-                var tagSelected by remember { mutableStateOf("") }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(text = stringResource(MR.strings.action_search)) },
-                        onClick = {
-                            onTagSearch(tagSelected)
-                            showMenu = false
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(text = stringResource(MR.strings.action_copy_to_clipboard)) },
-                        onClick = {
-                            onCopyTagToClipboard(tagSelected)
-                            showMenu = false
-                        },
-                    )
-                }
-                if (expanded) {
-                    FlowRow(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
+                    var showMenu by remember { mutableStateOf(false) }
+                    var tagSelected by remember { mutableStateOf("") }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
                     ) {
-                        tags.forEach {
-                            TagsChip(
-                                modifier = DefaultTagChipModifier,
-                                text = it,
-                                onClick = {
-                                    tagSelected = it
-                                    showMenu = true
-                                },
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(MR.strings.action_search)) },
+                            onClick = {
+                                onTagSearch(tagSelected)
+                                showMenu = false
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(text = stringResource(MR.strings.action_copy_to_clipboard)) },
+                            onClick = {
+                                onCopyTagToClipboard(tagSelected)
+                                showMenu = false
+                            },
+                        )
                     }
-                } else {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = MaterialTheme.padding.medium),
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
-                    ) {
-                        items(items = tags) {
-                            TagsChip(
-                                modifier = DefaultTagChipModifier,
-                                text = it,
-                                onClick = {
-                                    tagSelected = it
-                                    showMenu = true
-                                },
-                            )
+                    if (expanded) {
+                        FlowRow(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
+                        ) {
+                            tags.forEach {
+                                TagsChip(
+                                    modifier = DefaultTagChipModifier,
+                                    text = it,
+                                    onClick = {
+                                        tagSelected = it
+                                        showMenu = true
+                                    },
+                                )
+                            }
+                        }
+                    } else {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
+                        ) {
+                            items(items = tags) {
+                                TagsChip(
+                                    modifier = DefaultTagChipModifier,
+                                    text = it,
+                                    onClick = {
+                                        tagSelected = it
+                                        showMenu = true
+                                    },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
 }
 
 @Composable
@@ -861,6 +870,7 @@ private fun MangaSummary(
     val loadImages = remember { preferences.imagesInDescription.get() }
     val animProgress by animateFloatAsState(
         targetValue = if (expanded) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "summary",
     )
     var infoHeight by remember { mutableIntStateOf(0) }
@@ -900,7 +910,7 @@ private fun MangaSummary(
                 }
             },
             {
-                val colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surfaceContainer)
+                val colors = listOf(Color.Transparent, Color(0xFF121316))
                 Box(
                     modifier = Modifier.background(Brush.verticalGradient(colors = colors)),
                     contentAlignment = Alignment.Center,
@@ -911,7 +921,7 @@ private fun MangaSummary(
                         contentDescription = stringResource(
                             if (expanded) MR.strings.manga_info_collapse else MR.strings.manga_info_expand,
                         ),
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.background(Brush.radialGradient(colors = colors.asReversed())),
                     )
                 }
@@ -957,16 +967,12 @@ private fun TagsChip(
                     style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                 )
             },
-            shape = RoundedCornerShape(8.dp),
+            shape = CircleShape,
             colors = SuggestionChipDefaults.suggestionChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                labelColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = Color(0x09FFFFFF),
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
-            border = SuggestionChipDefaults.suggestionChipBorder(
-                enabled = true,
-                borderColor = Color(0x12FFFFFF),
-                borderWidth = 1.dp,
-            ),
+            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
         )
     }
 }
@@ -980,6 +986,17 @@ private fun RowScope.MangaActionButton(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "pill_scale",
+    )
+
     val containerColor = if (active) {
         MaterialTheme.colorScheme.primary
     } else {
@@ -1002,9 +1019,11 @@ private fun RowScope.MangaActionButton(
         onClick = onClick,
         onLongClick = onLongClick,
         enabled = enabled,
+        interactionSource = interactionSource,
         modifier = Modifier
             .weight(1f)
-            .height(48.dp),
+            .height(48.dp)
+            .scale(scale),
         shape = RoundedCornerShape(12.dp),
         color = containerColor,
         border = border,
