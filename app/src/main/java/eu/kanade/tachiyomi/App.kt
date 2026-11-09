@@ -186,6 +186,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             .launchIn(scope)
 
         setAppCompatDelegateThemeMode(ThemeMode.DARK)
+        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+            androidx.core.os.LocaleListCompat.forLanguageTags("en"),
+        )
 
         // Updates widget update
         widgetManager.init(scope)

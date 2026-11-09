@@ -19,23 +19,11 @@ abstract class GenerateLocalesConfigTask : DefaultTask() {
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
-    fun action() {
-        val locales = localeFiles.asSequence()
-            .filterNot { it.readText().contains(emptyResourcesElement) }
-            .map {
-                it.parentFile.name
-                    .replace("base", "en")
-                    .replace("-r", "-")
-                    .replace("+", "-")
-            }
-            .distinct()
-            .sorted()
-            .joinToString("\n") { "|   <locale android:name=\"$it\"/>" }
-
+    fun generate() {
         val content = """
         |<?xml version="1.0" encoding="utf-8"?>
         |<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
-        $locales
+        |   <locale android:name="en"/>
         |</locale-config>
         """.trimMargin()
 
