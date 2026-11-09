@@ -1,18 +1,20 @@
 package eu.kanade.presentation.updates
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -31,6 +33,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.relativeDateText
@@ -50,7 +53,10 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.ListGroupHeader
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.padding
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.theme.borderHairline
+import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.util.selectedBackground
 
 internal fun LazyListScope.updatesLastUpdatedItem(
@@ -136,38 +142,237 @@ internal fun LazyListScope.updatesUiItems(
                     .animateItem(),
             ) {
                 Column {
-                    items.forEach { updatesItem ->
-                        UpdatesUiItem(
-                            update = updatesItem.update,
-                            selected = updatesItem.selected,
-                            readProgress = updatesItem.update.lastPageRead
-                                .takeIf { !updatesItem.update.read && it > 0L }
-                                ?.let {
-                                    stringResource(
-                                        MR.strings.chapter_progress,
-                                        it + 1,
-                                    )
+                    val mangaGroups = groupUpdatesByManga(items)
+                    mangaGroups.forEach { mangaGroup ->
+                        if (mangaGroup.size == 1) {
+                            val updatesItem = mangaGroup.first()
+                            UpdatesUiItem(
+                                update = updatesItem.update,
+                                selected = updatesItem.selected,
+                                readProgress = updatesItem.update.lastPageRead
+                                    .takeIf { !updatesItem.update.read && it > 0L }
+                                    ?.let {
+                                        stringResource(
+                                            MR.strings.chapter_progress,
+                                            it + 1,
+                                        )
+                                    },
+                                onLongClick = {
+                                    onUpdateSelected(updatesItem, !updatesItem.selected, true)
                                 },
-                            onLongClick = {
-                                onUpdateSelected(updatesItem, !updatesItem.selected, true)
-                            },
-                            onClick = {
-                                when {
-                                    selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
-                                    else -> onClickUpdate(updatesItem)
-                                }
-                            },
-                            onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
-                            onDownloadChapter = { action: ChapterDownloadAction ->
-                                onDownloadChapter(listOf(updatesItem), action)
-                            }.takeIf { !selectionMode },
-                            downloadStateProvider = updatesItem.downloadStateProvider,
-                            downloadProgressProvider = updatesItem.downloadProgressProvider,
-                        )
+                                onClick = {
+                                    when {
+                                        selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
+                                        else -> onClickUpdate(updatesItem)
+                                    }
+                                },
+                                onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
+                                onDownloadChapter = { action: ChapterDownloadAction ->
+                                    onDownloadChapter(listOf(updatesItem), action)
+                                }.takeIf { !selectionMode },
+                                downloadStateProvider = updatesItem.downloadStateProvider,
+                                downloadProgressProvider = updatesItem.downloadProgressProvider,
+                            )
+                        } else {
+                            val firstItem = mangaGroup.first()
+                            UpdatesMangaHeader(
+                                coverData = firstItem.update.coverData,
+                                title = firstItem.update.mangaTitle,
+                                chapterCount = mangaGroup.size,
+                                onClickCover = { onClickCover(firstItem) }.takeIf { !selectionMode },
+                            )
+                            mangaGroup.forEach { updatesItem ->
+                                UpdatesChapterUiItem(
+                                    update = updatesItem.update,
+                                    selected = updatesItem.selected,
+                                    readProgress = updatesItem.update.lastPageRead
+                                        .takeIf { !updatesItem.update.read && it > 0L }
+                                        ?.let {
+                                            stringResource(
+                                                MR.strings.chapter_progress,
+                                                it + 1,
+                                            )
+                                        },
+                                    onLongClick = {
+                                        onUpdateSelected(updatesItem, !updatesItem.selected, true)
+                                    },
+                                    onClick = {
+                                        when {
+                                            selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
+                                            else -> onClickUpdate(updatesItem)
+                                        }
+                                    },
+                                    onDownloadChapter = { action: ChapterDownloadAction ->
+                                        onDownloadChapter(listOf(updatesItem), action)
+                                    }.takeIf { !selectionMode },
+                                    downloadStateProvider = updatesItem.downloadStateProvider,
+                                    downloadProgressProvider = updatesItem.downloadProgressProvider,
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+internal fun groupUpdatesByManga(items: List<UpdatesItem>): List<List<UpdatesItem>> {
+    return buildList {
+        var currentMangaId: Long? = null
+        val currentMangaItems = mutableListOf<UpdatesItem>()
+        for (item in items) {
+            if (currentMangaId != null && item.update.mangaId != currentMangaId) {
+                add(currentMangaItems.toList())
+                currentMangaItems.clear()
+            }
+            currentMangaId = item.update.mangaId
+            currentMangaItems.add(item)
+        }
+        if (currentMangaItems.isNotEmpty()) {
+            add(currentMangaItems.toList())
+        }
+    }
+}
+
+@Composable
+private fun UpdatesMangaHeader(
+    coverData: tachiyomi.domain.manga.model.MangaCover,
+    title: String,
+    chapterCount: Int,
+    onClickCover: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onClickCover != null) {
+                    Modifier.clickable(onClick = onClickCover)
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = MaterialTheme.padding.medium, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MangaCover.Square(
+            modifier = Modifier.size(40.dp),
+            data = coverData,
+            onClick = onClickCover,
+        )
+
+        Text(
+            text = title,
+            maxLines = 2,
+            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = MaterialTheme.padding.medium),
+        )
+
+        Surface(
+            shape = RoundedCornerShape(9999.dp),
+            color = MaterialTheme.colorScheme.surfaceInset,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+        ) {
+            Text(
+                text = pluralStringResource(MR.plurals.manga_num_chapters, count = chapterCount, chapterCount),
+                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdatesChapterUiItem(
+    update: UpdatesWithRelations,
+    selected: Boolean,
+    readProgress: String?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDownloadChapter: ((ChapterDownloadAction) -> Unit)?,
+    // Download Indicator
+    downloadStateProvider: () -> Download.State,
+    downloadProgressProvider: () -> Int,
+    modifier: Modifier = Modifier,
+) {
+    val haptic = LocalHapticFeedback.current
+    val textAlpha = if (update.read) DISABLED_ALPHA else 1f
+
+    Row(
+        modifier = modifier
+            .selectedBackground(selected)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    onLongClick()
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                },
+            )
+            .height(48.dp)
+            .padding(start = 56.dp, end = MaterialTheme.padding.medium),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            var textHeight by remember { mutableIntStateOf(0) }
+            if (!update.read) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Circle,
+                    contentDescription = stringResource(MR.strings.unread),
+                    modifier = Modifier
+                        .height(8.dp)
+                        .padding(end = 4.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (update.bookmark) {
+                Icon(
+                    imageVector = MaterialSymbols.RoundedFilled.Bookmark,
+                    contentDescription = stringResource(MR.strings.action_filter_bookmarked),
+                    modifier = Modifier
+                        .sizeIn(maxHeight = with(LocalDensity.current) { (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp) }),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+            }
+            Text(
+                text = update.chapterName,
+                maxLines = 1,
+                style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                color = LocalContentColor.current.copy(alpha = textAlpha),
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { textHeight = it.size.height },
+                modifier = Modifier
+                    .weight(weight = 1f, fill = false),
+            )
+            if (readProgress != null) {
+                DotSeparatorText()
+                Text(
+                    text = readProgress,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                    color = LocalContentColor.current.copy(alpha = DISABLED_ALPHA),
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        ChapterDownloadIndicator(
+            enabled = onDownloadChapter != null,
+            modifier = Modifier.padding(start = 4.dp),
+            downloadStateProvider = downloadStateProvider,
+            downloadProgressProvider = downloadProgressProvider,
+            onClick = { onDownloadChapter?.invoke(it) },
+        )
     }
 }
 
@@ -240,7 +445,7 @@ private fun UpdatesUiItem(
                         imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                         contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                         modifier = Modifier
-                            .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                            .sizeIn(maxHeight = with(LocalDensity.current) { (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp) }),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(2.dp))
