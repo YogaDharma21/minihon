@@ -184,6 +184,7 @@ class MangaViewModel(
     private val isRefreshingData = MutableStateFlow(false)
 
     private val searchQuery = MutableStateFlow("")
+    private val expandedDuplicateChapterIds = MutableStateFlow(emptySet<Long>())
 
     private val downloadStates = MutableStateFlow(emptyMap<Long, Download.State>())
 
@@ -252,13 +253,13 @@ class MangaViewModel(
         mangaAndChapters,
         scanlators,
         trackers,
-        combine(selectedChapterIds, queuedDownloadStates.pausedWhileUnsubscribed(), ::Pair),
+        combine(selectedChapterIds, queuedDownloadStates.pausedWhileUnsubscribed(), expandedDuplicateChapterIds, ::Triple),
         combine(dialog, isRefreshingData, searchQuery, ::Triple),
     ) {
             mangaAndChapters,
             (availableScanlators, excludedScanlators),
             (trackingCount, hasLoggedInTrackers),
-            (selectedIds, downloads),
+            (selectedIds, downloads, expandedChapterIds),
             (dialog, isRefreshingData, searchQuery),
         ->
         State.Success(
@@ -282,6 +283,7 @@ class MangaViewModel(
             dialog = dialog,
             hideMissingChapters = hideMissingChapters,
             searchQuery = searchQuery,
+            expandedDuplicateChapterIds = expandedChapterIds,
         )
     }
         // Composition would otherwise build these on first read, on the main thread, for every new state
@@ -968,14 +970,14 @@ class MangaViewModel(
         fromLongPress: Boolean = false,
     ) {
         val chapters = successState?.processedChapters ?: return
-        val selectedIndex = chapters.indexOfFirst { it.id == item.chapter.id }
+        val selectedIndex = chapters.indexOfFirst { it.id == item.chapter.id || it.versions.any { v -> v.id == item.chapter.id } }
         if (selectedIndex < 0) return
 
         // Read from the ids, as the state catches up with a selection only after it's been made
         val selectedIds = HashSet(selectedChapterIds.value)
         if ((item.id in selectedIds) == selected) return
 
-        val firstSelection = chapters.none { it.id in selectedIds }
+        val firstSelection = chapters.none { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
         selectedIds.addOrRemove(item.id, selected)
 
         if (selected && fromLongPress) {
@@ -1001,9 +1003,9 @@ class MangaViewModel(
         } else if (!fromLongPress) {
             if (!selected) {
                 if (selectedIndex == selectedPositions[0]) {
-                    selectedPositions[0] = chapters.indexOfFirst { it.id in selectedIds }
+                    selectedPositions[0] = chapters.indexOfFirst { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
                 } else if (selectedIndex == selectedPositions[1]) {
-                    selectedPositions[1] = chapters.indexOfLast { it.id in selectedIds }
+                    selectedPositions[1] = chapters.indexOfLast { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
                 }
             } else {
                 if (selectedIndex < selectedPositions[0]) {
@@ -1080,6 +1082,16 @@ class MangaViewModel(
         searchQuery.value = query
     }
 
+    fun toggleDuplicateChapterExpanded(chapterId: Long) {
+        expandedDuplicateChapterIds.update { expandedIds ->
+            if (chapterId in expandedIds) {
+                expandedIds - chapterId
+            } else {
+                expandedIds + chapterId
+            }
+        }
+    }
+
     private data class MangaAndChapters(val manga: Manga, val source: Source, val chapters: List<ChapterList.Item>)
 
     sealed interface State {
@@ -1100,9 +1112,10 @@ class MangaViewModel(
             val dialog: Dialog? = null,
             val hideMissingChapters: Boolean = false,
             val searchQuery: String = "",
+            val expandedDuplicateChapterIds: Set<Long> = emptySet(),
         ) : State {
             val processedChapters by lazy {
-                chapters.applyFilters(manga).toList()
+                chapters.applyFilters(manga).toList().groupByDuplicateChapterNumber()
             }
 
             val isAnySelected by lazy {
@@ -1110,11 +1123,19 @@ class MangaViewModel(
             }
 
             val selectedChapters by lazy {
-                processedChapters.fastFilter { it.selected }
+                processedChapters.flatMap { item ->
+                    if (item.versions.isNotEmpty()) {
+                        item.versions.filter { it.selected }
+                    } else {
+                        if (item.selected) listOf(item) else emptyList()
+                    }
+                }
             }
 
             val hasUnreadChapters by lazy {
-                processedChapters.fastAny { !it.chapter.read }
+                processedChapters.fastAny { item ->
+                    !item.chapter.read || item.versions.any { !it.chapter.read }
+                }
             }
 
             val hasReadChapters by lazy {
@@ -1190,24 +1211,5 @@ class MangaViewModel(
                     .sortedWith { (chapter1), (chapter2) -> chapterSort(chapter1, chapter2) }
             }
         }
-    }
-}
-
-@Immutable
-sealed class ChapterList {
-    @Immutable
-    data class MissingCount(
-        val id: String,
-        val count: Int,
-    ) : ChapterList()
-
-    @Immutable
-    data class Item(
-        val chapter: Chapter,
-        val downloadState: Download.State,
-        val selected: Boolean = false,
-    ) : ChapterList() {
-        val id = chapter.id
-        val isDownloaded = downloadState == Download.State.DOWNLOADED
     }
 }

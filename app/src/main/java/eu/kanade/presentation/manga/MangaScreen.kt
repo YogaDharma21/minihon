@@ -124,6 +124,7 @@ fun MangaScreen(
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
     onSearchQueryChange: (String) -> Unit = {},
+    onToggleDuplicateChapterExpanded: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val onCopyTagToClipboard: (tag: String) -> Unit = {
@@ -167,6 +168,7 @@ fun MangaScreen(
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
             onSearchQueryChange = onSearchQueryChange,
+            onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
         )
     } else {
         MangaScreenLargeImpl(
@@ -203,6 +205,7 @@ fun MangaScreen(
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
             onSearchQueryChange = onSearchQueryChange,
+            onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
         )
     }
 }
@@ -255,6 +258,7 @@ private fun MangaScreenSmallImpl(
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
 ) {
     val chapterListState = rememberLazyListState()
 
@@ -425,6 +429,8 @@ private fun MangaScreenSmallImpl(
                         isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
                         chapterSwipeStartAction = chapterSwipeStartAction,
                         chapterSwipeEndAction = chapterSwipeEndAction,
+                        expandedDuplicateChapterIds = state.expandedDuplicateChapterIds,
+                        onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
                         onChapterClicked = onChapterClicked,
                         onDownloadChapter = onDownloadChapter,
                         downloadProgressProvider = downloadProgressProvider,
@@ -485,6 +491,7 @@ fun MangaScreenLargeImpl(
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val density = LocalDensity.current
@@ -648,6 +655,8 @@ fun MangaScreenLargeImpl(
                                 isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
                                 chapterSwipeStartAction = chapterSwipeStartAction,
                                 chapterSwipeEndAction = chapterSwipeEndAction,
+                                expandedDuplicateChapterIds = state.expandedDuplicateChapterIds,
+                                onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
                                 onChapterClicked = onChapterClicked,
                                 onDownloadChapter = onDownloadChapter,
                                 downloadProgressProvider = downloadProgressProvider,
@@ -710,6 +719,8 @@ private fun LazyListScope.sharedChapterItems(
     isAnyChapterSelected: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
+    expandedDuplicateChapterIds: Set<Long>,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
     onChapterClicked: (Chapter) -> Unit,
     onDownloadChapter: ((List<ChapterList.Item>, ChapterDownloadAction) -> Unit)?,
     downloadProgressProvider: (chapterId: Long) -> Int,
@@ -733,6 +744,7 @@ private fun LazyListScope.sharedChapterItems(
                 MissingChapterCountListItem(count = item.count)
             }
             is ChapterList.Item -> {
+                val isExpanded = item.id in expandedDuplicateChapterIds
                 MangaChapterListItem(
                     title = if (manga.displayMode == Manga.CHAPTER_DISPLAY_NUMBER) {
                         stringResource(
@@ -780,6 +792,27 @@ private fun LazyListScope.sharedChapterItems(
                     onChapterSwipe = {
                         onChapterSwipe(item, it)
                     },
+                    versions = item.versions,
+                    isExpanded = isExpanded,
+                    onToggleExpand = { onToggleDuplicateChapterExpanded(item.id) },
+                    onVersionClick = { version ->
+                        onChapterItemClick(
+                            chapterItem = version,
+                            isAnyChapterSelected = isAnyChapterSelected,
+                            onToggleSelection = { onChapterSelected(version, !version.selected, false) },
+                            onChapterClicked = onChapterClicked,
+                        )
+                    },
+                    onVersionLongClick = { version ->
+                        onChapterSelected(version, !version.selected, true)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onVersionDownloadClick = if (onDownloadChapter != null) {
+                        { version, action -> onDownloadChapter(listOf(version), action) }
+                    } else {
+                        null
+                    },
+                    versionDownloadProgressProvider = downloadProgressProvider,
                 )
             }
         }
