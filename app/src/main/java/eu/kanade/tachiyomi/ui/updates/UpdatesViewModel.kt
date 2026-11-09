@@ -95,6 +95,7 @@ class UpdatesViewModel(
     // First and last selected index in list
     private val selectedPositions: Array<Int> = arrayOf(-1, -1)
     private val selectedChapterIds = MutableStateFlow(emptySet<Long>())
+    private val collapsedMangaIds = MutableStateFlow(emptySet<Long>())
 
     private val dialog = MutableStateFlow<Dialog?>(null)
 
@@ -191,11 +192,11 @@ class UpdatesViewModel(
 
     val state: StateFlow<State> = combine(
         updateItems,
-        selectedChapterIds,
+        combine(selectedChapterIds, collapsedMangaIds, ::Pair),
         queuedDownloadStates.pausedWhileUnsubscribed(),
         dialog,
         hasActiveFilters,
-    ) { items, selectedIds, downloads, dialog, hasActiveFilters ->
+    ) { items, (selectedIds, collapsedIds), downloads, dialog, hasActiveFilters ->
         State(
             isLoading = items == null,
             hasActiveFilters = hasActiveFilters,
@@ -210,6 +211,7 @@ class UpdatesViewModel(
                     },
                 )
             },
+            collapsedMangaIds = collapsedIds,
             dialog = dialog,
         )
     }
@@ -484,6 +486,25 @@ class UpdatesViewModel(
         dialog.update { Dialog.FilterSheet }
     }
 
+    fun toggleMangaCollapse(mangaId: Long) {
+        collapsedMangaIds.update { if (mangaId in it) it - mangaId else it + mangaId }
+    }
+
+    fun toggleCollapseAll() {
+        val items = state.value.items
+        val mangaCounts = items.groupingBy { it.update.mangaId }.eachCount()
+        val multiChapterMangaIds = mangaCounts.filterValues { it > 1 }.keys
+        if (multiChapterMangaIds.isEmpty()) return
+
+        collapsedMangaIds.update { current ->
+            if (multiChapterMangaIds.all { it in current }) {
+                emptySet()
+            } else {
+                multiChapterMangaIds
+            }
+        }
+    }
+
     @Immutable
     private data class ItemPreferences(
         val filterDownloaded: TriState,
@@ -500,6 +521,7 @@ class UpdatesViewModel(
         val isLoading: Boolean = true,
         val hasActiveFilters: Boolean = false,
         val items: List<UpdatesItem> = listOf(),
+        val collapsedMangaIds: Set<Long> = emptySet(),
         val dialog: Dialog? = null,
     ) {
         val selected = items.filter { it.selected }

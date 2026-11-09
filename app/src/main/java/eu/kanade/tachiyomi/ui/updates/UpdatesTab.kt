@@ -15,9 +15,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
-import eu.kanade.presentation.updates.UpdateScreen
 import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
 import eu.kanade.presentation.updates.UpdatesFilterDialog
+import eu.kanade.presentation.updates.UpdatesScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
@@ -58,7 +58,7 @@ data object UpdatesTab : Tab {
         val settingsViewModel = metroViewModel<UpdatesSettingsViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle()
 
-        UpdateScreen(
+        UpdatesScreen(
             state = state,
             snackbarHostState = viewModel.snackbarHostState,
             lastUpdated = viewModel.lastUpdated,
@@ -77,6 +77,9 @@ data object UpdatesTab : Tab {
             },
             onFilterClicked = viewModel::showFilterDialog,
             hasActiveFilters = state.hasActiveFilters,
+            collapsedMangaIds = state.collapsedMangaIds,
+            onToggleMangaCollapse = viewModel::toggleMangaCollapse,
+            onToggleCollapseAll = viewModel::toggleCollapseAll,
             onClickSettings = { navigator.push(MoreTab) },
         )
 

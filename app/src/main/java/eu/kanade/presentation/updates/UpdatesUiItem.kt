@@ -1,5 +1,6 @@
 package eu.kanade.presentation.updates
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
@@ -46,6 +48,7 @@ import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import kotlinx.datetime.LocalDate
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Circle
 import tachiyomi.domain.updates.model.UpdatesWithRelations
@@ -94,6 +97,8 @@ internal fun LazyListScope.updatesUiItems(
     onClickCover: (UpdatesItem) -> Unit,
     onClickUpdate: (UpdatesItem) -> Unit,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
+    collapsedMangaIds: Set<Long> = emptySet(),
+    onToggleMangaCollapse: (Long) -> Unit = {},
 ) {
     val groups = buildList<Pair<LocalDate?, List<UpdatesItem>>> {
         var currentDate: LocalDate? = null
@@ -175,39 +180,49 @@ internal fun LazyListScope.updatesUiItems(
                             )
                         } else {
                             val firstItem = mangaGroup.first()
-                            UpdatesMangaHeader(
+                            val mangaId = firstItem.update.mangaId
+                            val isCollapsed = mangaId in collapsedMangaIds
+                            UpdatesMangaGroupHeader(
                                 coverData = firstItem.update.coverData,
                                 title = firstItem.update.mangaTitle,
                                 chapterCount = mangaGroup.size,
+                                isCollapsed = isCollapsed,
+                                onToggleCollapse = { onToggleMangaCollapse(mangaId) },
                                 onClickCover = { onClickCover(firstItem) }.takeIf { !selectionMode },
                             )
-                            mangaGroup.forEach { updatesItem ->
-                                UpdatesChapterUiItem(
-                                    update = updatesItem.update,
-                                    selected = updatesItem.selected,
-                                    readProgress = updatesItem.update.lastPageRead
-                                        .takeIf { !updatesItem.update.read && it > 0L }
-                                        ?.let {
-                                            stringResource(
-                                                MR.strings.chapter_progress,
-                                                it + 1,
-                                            )
+                            if (!isCollapsed) {
+                                mangaGroup.forEach { updatesItem ->
+                                    UpdatesChapterUiItem(
+                                        update = updatesItem.update,
+                                        selected = updatesItem.selected,
+                                        readProgress = updatesItem.update.lastPageRead
+                                            .takeIf { !updatesItem.update.read && it > 0L }
+                                            ?.let {
+                                                stringResource(
+                                                    MR.strings.chapter_progress,
+                                                    it + 1,
+                                                )
+                                            },
+                                        onLongClick = {
+                                            onUpdateSelected(updatesItem, !updatesItem.selected, true)
                                         },
-                                    onLongClick = {
-                                        onUpdateSelected(updatesItem, !updatesItem.selected, true)
-                                    },
-                                    onClick = {
-                                        when {
-                                            selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
-                                            else -> onClickUpdate(updatesItem)
-                                        }
-                                    },
-                                    onDownloadChapter = { action: ChapterDownloadAction ->
-                                        onDownloadChapter(listOf(updatesItem), action)
-                                    }.takeIf { !selectionMode },
-                                    downloadStateProvider = updatesItem.downloadStateProvider,
-                                    downloadProgressProvider = updatesItem.downloadProgressProvider,
-                                )
+                                        onClick = {
+                                            when {
+                                                selectionMode -> onUpdateSelected(
+                                                    updatesItem,
+                                                    !updatesItem.selected,
+                                                    false,
+                                                )
+                                                else -> onClickUpdate(updatesItem)
+                                            }
+                                        },
+                                        onDownloadChapter = { action: ChapterDownloadAction ->
+                                            onDownloadChapter(listOf(updatesItem), action)
+                                        }.takeIf { !selectionMode },
+                                        downloadStateProvider = updatesItem.downloadStateProvider,
+                                        downloadProgressProvider = updatesItem.downloadProgressProvider,
+                                    )
+                                }
                             }
                         }
                     }
@@ -236,23 +251,23 @@ internal fun groupUpdatesByManga(items: List<UpdatesItem>): List<List<UpdatesIte
 }
 
 @Composable
-private fun UpdatesMangaHeader(
+private fun UpdatesMangaGroupHeader(
     coverData: tachiyomi.domain.manga.model.MangaCover,
     title: String,
     chapterCount: Int,
+    isCollapsed: Boolean,
+    onToggleCollapse: () -> Unit,
     onClickCover: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    val rotation by animateFloatAsState(
+        targetValue = if (isCollapsed) -90f else 0f,
+        label = "collapse_chevron_rotation",
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(
-                if (onClickCover != null) {
-                    Modifier.clickable(onClick = onClickCover)
-                } else {
-                    Modifier
-                },
-            )
+            .clickable(onClick = onToggleCollapse)
             .padding(horizontal = MaterialTheme.padding.medium, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -286,8 +301,36 @@ private fun UpdatesMangaHeader(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Icon(
+            imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(24.dp)
+                .rotate(rotation),
+        )
     }
 }
+
+@Composable
+private fun UpdatesMangaHeader(
+    coverData: tachiyomi.domain.manga.model.MangaCover,
+    title: String,
+    chapterCount: Int,
+    onClickCover: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) = UpdatesMangaGroupHeader(
+    coverData = coverData,
+    title = title,
+    chapterCount = chapterCount,
+    isCollapsed = false,
+    onToggleCollapse = {},
+    onClickCover = onClickCover,
+    modifier = modifier,
+)
 
 @Composable
 private fun UpdatesChapterUiItem(
@@ -339,7 +382,11 @@ private fun UpdatesChapterUiItem(
                     imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                     contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                     modifier = Modifier
-                        .sizeIn(maxHeight = with(LocalDensity.current) { (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp) }),
+                        .sizeIn(
+                            maxHeight = with(LocalDensity.current) {
+                                (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp)
+                            },
+                        ),
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(2.dp))
@@ -445,7 +492,11 @@ private fun UpdatesUiItem(
                         imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                         contentDescription = stringResource(MR.strings.action_filter_bookmarked),
                         modifier = Modifier
-                            .sizeIn(maxHeight = with(LocalDensity.current) { (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp) }),
+                            .sizeIn(
+                                maxHeight = with(LocalDensity.current) {
+                                    (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp)
+                                },
+                            ),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.width(2.dp))
