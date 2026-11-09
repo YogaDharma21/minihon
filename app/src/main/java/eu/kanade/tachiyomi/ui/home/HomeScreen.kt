@@ -2,37 +2,52 @@ package eu.kanade.tachiyomi.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
-import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.util.Screen
-import eu.kanade.presentation.util.isTabletUi
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
@@ -63,52 +78,37 @@ object HomeScreen : Screen() {
     @Suppress("ConstPropertyName")
     private const val TabNavigatorKey = "HomeTabs"
 
-    private val TABS = listOf(
+    internal val TABS = listOf(
         LibraryTab,
         UpdatesTab,
         HistoryTab,
         BrowseTab,
-        MoreTab,
     )
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val scope = rememberCoroutineScope()
         TabNavigator(
             tab = LibraryTab,
             key = TabNavigatorKey,
         ) { tabNavigator ->
+            var showBottomNav by remember { mutableStateOf(true) }
+            LaunchedEffect(Unit) {
+                showBottomNavEvent.receiveAsFlow().collectLatest { show ->
+                    showBottomNav = show
+                }
+            }
+
+            val bottomPadding by animateDpAsState(
+                targetValue = if (showBottomNav) 88.dp else 0.dp,
+                label = "bottomPadding",
+            )
+
             // Provide usable navigator to content screen
             CompositionLocalProvider(LocalNavigator provides navigator) {
-                val tabletUi = isTabletUi()
-                val navigationSuiteType = if (tabletUi) {
-                    NavigationSuiteType.NavigationRail
-                } else {
-                    NavigationSuiteType.NavigationBar
-                }
-                val navigationSuiteState = rememberNavigationSuiteScaffoldState()
-                LaunchedEffect(navigationSuiteState, tabletUi) {
-                    if (tabletUi) navigationSuiteState.show()
-                    showBottomNavEvent.receiveAsFlow().collectLatest { show ->
-                        if (tabletUi || show) {
-                            navigationSuiteState.show()
-                        } else {
-                            navigationSuiteState.hide()
-                        }
-                    }
-                }
-
-                NavigationSuiteScaffold(
-                    navigationSuiteType = navigationSuiteType,
-                    state = navigationSuiteState,
-                    navigationSuiteColors = NavigationSuiteDefaults.colors(
-                        navigationRailContainerColor = MaterialTheme.colorScheme
-                            .surfaceColorAtElevation(3.dp),
-                    ),
-                    navigationItemVerticalArrangement = Arrangement.Center,
-                    navigationItems = {
-                        TABS.fastForEach { NavigationSuiteItem(it, navigationSuiteType) }
-                    },
+                Box(
+                    modifier = Modifier.fillMaxSize(),
                 ) {
                     AnimatedContent(
                         targetState = tabNavigator.current,
@@ -118,10 +118,52 @@ object HomeScreen : Screen() {
                                 durationMillis = TabFadeDuration,
                             ) togetherWith materialFadeThroughOut(durationMillis = TabFadeDuration)
                         },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = bottomPadding),
                         label = "tabContent",
                     ) {
                         tabNavigator.saveableState(key = "currentTab", it) {
                             it.Content()
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showBottomNav,
+                        enter = slideInVertically { it } + fadeIn(),
+                        exit = slideOutVertically { it } + fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp)
+                            .padding(bottom = 16.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                            shadowElevation = 8.dp,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                TABS.fastForEach { tab ->
+                                    val selected = tabNavigator.current::class == tab::class
+                                    FloatingDockItem(
+                                        tab = tab,
+                                        selected = selected,
+                                        onClick = {
+                                            if (!selected) {
+                                                tabNavigator.current = tab
+                                            } else {
+                                                scope.launch { tab.onReselect(navigator) }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -140,24 +182,28 @@ object HomeScreen : Screen() {
                 }
                 launch {
                     openTabEvent.receiveAsFlow().collectLatest {
-                        tabNavigator.current = when (it) {
-                            is Tab.Library -> LibraryTab
-                            Tab.Updates -> UpdatesTab
-                            Tab.History -> HistoryTab
+                        when (it) {
+                            is Tab.Library -> {
+                                tabNavigator.current = LibraryTab
+                                if (it.mangaIdToOpen != null) {
+                                    navigator.push(MangaScreen(it.mangaIdToOpen))
+                                }
+                            }
+                            Tab.Updates -> tabNavigator.current = UpdatesTab
+                            Tab.History -> tabNavigator.current = HistoryTab
                             is Tab.Browse -> {
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()
                                 }
-                                BrowseTab
+                                tabNavigator.current = BrowseTab
                             }
-                            is Tab.More -> MoreTab
-                        }
-
-                        if (it is Tab.Library && it.mangaIdToOpen != null) {
-                            navigator.push(MangaScreen(it.mangaIdToOpen))
-                        }
-                        if (it is Tab.More && it.toDownloads) {
-                            navigator.push(DownloadQueueScreen)
+                            is Tab.More -> {
+                                if (it.toDownloads) {
+                                    navigator.push(DownloadQueueScreen)
+                                } else {
+                                    navigator.push(MoreTab)
+                                }
+                            }
                         }
                     }
                 }
@@ -166,40 +212,69 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun NavigationSuiteItem(
+    private fun FloatingDockItem(
         tab: eu.kanade.presentation.util.Tab,
-        navigationSuiteType: NavigationSuiteType,
+        selected: Boolean,
+        onClick: () -> Unit,
     ) {
-        val tabNavigator = LocalTabNavigator.current
-        val navigator = LocalNavigator.currentOrThrow
-        val scope = rememberCoroutineScope()
-        val selected = tabNavigator.current::class == tab::class
-        NavigationSuiteItem(
-            navigationSuiteType = navigationSuiteType,
+        val backgroundColor = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        }
+        val contentColor = if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+        Surface(
             selected = selected,
-            onClick = {
-                if (!selected) {
-                    tabNavigator.current = tab
+            onClick = onClick,
+            shape = CircleShape,
+            color = backgroundColor,
+            contentColor = contentColor,
+            modifier = Modifier.animateContentSize(),
+        ) {
+            Row(
+                modifier = Modifier.padding(
+                    horizontal = if (selected) 14.dp else 10.dp,
+                    vertical = 8.dp,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                val badge = tabBadge(tab)
+                if (badge != null) {
+                    BadgedBox(
+                        badge = { badge() },
+                    ) {
+                        Icon(
+                            painter = tab.options.icon!!,
+                            contentDescription = tab.options.title,
+                            tint = contentColor,
+                        )
+                    }
                 } else {
-                    scope.launch { tab.onReselect(navigator) }
+                    Icon(
+                        painter = tab.options.icon!!,
+                        contentDescription = tab.options.title,
+                        tint = contentColor,
+                    )
                 }
-            },
-            icon = {
-                Icon(
-                    painter = tab.options.icon!!,
-                    contentDescription = tab.options.title,
-                )
-            },
-            label = {
-                Text(
-                    text = tab.options.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            },
-            badge = tabBadge(tab),
-        )
+
+                if (selected) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = tab.options.title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = contentColor,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 
     @Composable
@@ -271,6 +346,6 @@ object HomeScreen : Screen() {
         data object Updates : Tab
         data object History : Tab
         data class Browse(val toExtensions: Boolean = false) : Tab
-        data class More(val toDownloads: Boolean) : Tab
+        data class More(val toDownloads: Boolean = false) : Tab
     }
 }
