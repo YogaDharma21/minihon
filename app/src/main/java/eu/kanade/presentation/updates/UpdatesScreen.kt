@@ -32,7 +32,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.CalendarMonth
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.Refresh
@@ -57,7 +56,6 @@ fun UpdateScreen(
     onClickCover: (UpdatesItem) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
-    onCalendarClicked: () -> Unit,
     onUpdateLibrary: suspend () -> Boolean,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
@@ -78,7 +76,6 @@ fun UpdateScreen(
     Scaffold(
         topBar = { scrollBehavior ->
             UpdatesAppBar(
-                onCalendarClicked = { onCalendarClicked() },
                 onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
                 onFilterClicked = { onFilterClicked() },
                 hasFilters = hasActiveFilters,
@@ -160,7 +157,6 @@ fun UpdateScreen(
 
 @Composable
 private fun UpdatesAppBar(
-    onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
@@ -196,13 +192,6 @@ private fun UpdatesAppBar(
                             ),
                         )
                     }
-                    add(
-                        AppBar.Action(
-                            title = stringResource(MR.strings.action_view_upcoming),
-                            icon = MaterialSymbols.Rounded.CalendarMonth,
-                            onClick = onCalendarClicked,
-                        ),
-                    )
                     add(
                         AppBar.Action(
                             title = stringResource(MR.strings.action_update_library),

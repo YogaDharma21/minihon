@@ -176,9 +176,6 @@ class MangaViewModel(
 
     private val skipFiltered by readerPreferences.skipFiltered.asState(viewModelScope)
 
-    val isUpdateIntervalEnabled =
-        LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in libraryPreferences.autoUpdateMangaRestrictions.get()
-
     private val selectedPositions: Array<Int> = arrayOf(-1, -1) // first and last selected index in list
     private val selectedChapterIds = MutableStateFlow(emptySet<Long>())
 
@@ -470,20 +467,6 @@ class MangaViewModel(
             dialog.value = Dialog.ChangeCategory(
                 manga = manga,
                 initialSelection = categories.mapAsCheckboxState { it.id in selection },
-            )
-        }
-    }
-
-    fun showSetFetchIntervalDialog() {
-        val manga = successState?.manga ?: return
-        dialog.value = Dialog.SetFetchInterval(manga)
-    }
-
-    fun setFetchInterval(manga: Manga, interval: Int) {
-        viewModelScope.launch {
-            updateManga.awaitUpdateFetchInterval(
-                // Custom intervals are negative
-                manga.copy(fetchInterval = -interval),
             )
         }
     }
@@ -1053,7 +1036,6 @@ class MangaViewModel(
         data class DeleteChapters(val chapters: List<Chapter>) : Dialog
         data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
-        data class SetFetchInterval(val manga: Manga) : Dialog
         data object RemoveFromLibrary : Dialog
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
