@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -29,12 +31,15 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -55,6 +60,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -67,6 +73,7 @@ import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Search
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.clearFocusOnSoftKeyboardHide
 import tachiyomi.presentation.core.util.runOnEnterKeyPressed
@@ -90,7 +97,7 @@ fun TabbedScreen(
         val headerHeight = if (headerHeightPx > 0) {
             LocalDensity.current.run { headerHeightPx.toDp() }
         } else {
-            96.dp
+            136.dp
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -121,142 +128,181 @@ fun TabbedScreen(
                 contentAlignment = Alignment.TopCenter,
             ) {
                 Surface(
-                    shape = CircleShape,
-                    color = Color(0xFF121316),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                     border = BorderStroke(1.dp, Color(0x12FFFFFF)),
                     shadowElevation = 8.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp)
-                            .padding(horizontal = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(horizontal = 4.dp, vertical = 3.dp),
                     ) {
-                        if (isSearching) {
-                            val focusRequester = remember { FocusRequester() }
-                            val searchFieldState = rememberTextFieldState(searchQuery.orEmpty())
-                            val currentOnChangeSearchQuery by rememberUpdatedState(onChangeSearchQuery)
-
-                            LaunchedEffect(searchFieldState) {
-                                snapshotFlow { searchFieldState.text.toString() }
-                                    .drop(1)
-                                    .collect { currentOnChangeSearchQuery(it) }
-                            }
-                            LaunchedEffect(searchQuery) {
-                                if (searchQuery != searchFieldState.text.toString()) {
-                                    searchFieldState.setTextAndPlaceCursorAtEnd(searchQuery.orEmpty())
-                                }
-                            }
-
-                            val keyboardController = LocalSoftwareKeyboardController.current
-                            val focusManager = LocalFocusManager.current
-
-                            IconButton(onClick = { onChangeSearchQuery(null) }) {
-                                Icon(
-                                    imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
-                                    contentDescription = stringResource(MR.strings.action_cancel),
-                                    tint = MaterialTheme.colorScheme.onSurface,
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (isSearching) {
+                                SearchRow(
+                                    searchQuery = searchQuery.orEmpty(),
+                                    onChangeSearchQuery = onChangeSearchQuery,
                                 )
-                            }
+                            } else {
+                                Text(
+                                    text = stringResource(titleRes),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 19.sp,
+                                        letterSpacing = (-0.02).sp,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(start = 8.dp),
+                                )
 
-                            BasicTextField(
-                                state = searchFieldState,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .focusRequester(focusRequester)
-                                    .runOnEnterKeyPressed {
-                                        focusManager.clearFocus()
-                                        keyboardController?.hide()
-                                    }
-                                    .showSoftKeyboard(searchQuery.isNullOrEmpty())
-                                    .clearFocusOnSoftKeyboardHide(),
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    fontSize = 16.sp,
-                                ),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                onKeyboardAction = {
-                                    focusManager.clearFocus()
-                                    keyboardController?.hide()
-                                },
-                                lineLimits = TextFieldLineLimits.SingleLine,
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                decorator = { innerTextField ->
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.CenterStart,
-                                    ) {
-                                        if (searchFieldState.text.isEmpty()) {
-                                            Text(
-                                                text = stringResource(MR.strings.action_search_hint),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    .copy(alpha = 0.6f),
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                },
-                            )
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (searchFieldState.text.isNotEmpty()) {
-                                    IconButton(onClick = { searchFieldState.clearText() }) {
-                                        Icon(
-                                            imageVector = MaterialSymbols.Rounded.Close,
-                                            contentDescription = stringResource(MR.strings.action_reset),
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                    }
-                                }
-                                AppBarActions(tab.actions)
-                            }
-                        } else {
-                            // Left: Sleek integrated segmented tabs
-                            Surface(
-                                shape = CircleShape,
-                                color = Color(0x14FFFFFF),
-                                border = BorderStroke(1.dp, Color(0x10FFFFFF)),
-                            ) {
                                 Row(
-                                    modifier = Modifier.padding(3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    tabs.forEachIndexed { index, tabItem ->
-                                        val selected = state.currentPage == index
-                                        SegmentedTabButton(
-                                            selected = selected,
-                                            onClick = { scope.launch { state.animateScrollToPage(index) } },
-                                            title = stringResource(tabItem.titleRes),
-                                            badgeCount = tabItem.badgeNumber,
-                                        )
+                                    if (searchEnabled) {
+                                        IconButton(onClick = { onChangeSearchQuery("") }) {
+                                            Icon(
+                                                imageVector = MaterialSymbols.Rounded.Search,
+                                                contentDescription = stringResource(MR.strings.action_search),
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
                                     }
+                                    AppBarActions(tab.actions)
                                 }
                             }
+                        }
 
-                            // Right: Action buttons
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (searchEnabled) {
-                                    IconButton(onClick = { onChangeSearchQuery("") }) {
-                                        Icon(
-                                            imageVector = MaterialSymbols.Rounded.Search,
-                                            contentDescription = stringResource(MR.strings.action_search),
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                    }
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0x0EFFFFFF),
+                            border = BorderStroke(1.dp, Color(0x10FFFFFF)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                tabs.forEachIndexed { index, tabItem ->
+                                    SegmentedTabButton(
+                                        selected = state.currentPage == index,
+                                        onClick = { scope.launch { state.animateScrollToPage(index) } },
+                                        title = stringResource(tabItem.titleRes),
+                                        badgeCount = tabItem.badgeNumber,
+                                        modifier = Modifier.weight(1f),
+                                    )
                                 }
-                                AppBarActions(tab.actions)
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchRow(
+    searchQuery: String,
+    onChangeSearchQuery: (String?) -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val searchFieldState = rememberTextFieldState(searchQuery)
+    val currentOnChangeSearchQuery by rememberUpdatedState(onChangeSearchQuery)
+
+    LaunchedEffect(searchFieldState) {
+        snapshotFlow { searchFieldState.text.toString() }
+            .drop(1)
+            .collect { currentOnChangeSearchQuery(it) }
+    }
+    LaunchedEffect(searchQuery) {
+        if (searchQuery != searchFieldState.text.toString()) {
+            searchFieldState.setTextAndPlaceCursorAtEnd(searchQuery)
+        }
+    }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = { onChangeSearchQuery(null) }) {
+            Icon(
+                imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
+                contentDescription = stringResource(MR.strings.action_cancel),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        BasicTextField(
+            state = searchFieldState,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(focusRequester)
+                .runOnEnterKeyPressed {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }
+                .showSoftKeyboard(searchQuery.isEmpty())
+                .clearFocusOnSoftKeyboardHide(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            onKeyboardAction = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            },
+            lineLimits = TextFieldLineLimits.SingleLine,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorator = { innerTextField ->
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (searchFieldState.text.isEmpty()) {
+                        Text(
+                            text = stringResource(MR.strings.action_search_hint),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+
+        if (searchFieldState.text.isNotEmpty()) {
+            IconButton(onClick = { searchFieldState.clearText() }) {
+                Icon(
+                    imageVector = MaterialSymbols.Rounded.Close,
+                    contentDescription = stringResource(MR.strings.action_reset),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(12.dp))
         }
     }
 }
@@ -270,13 +316,13 @@ fun SegmentedTabButton(
     modifier: Modifier = Modifier,
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (selected) Color(0x28FFFFFF) else Color.Transparent,
-        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+        targetValue = if (selected) Color(0x22FFFFFF) else Color.Transparent,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabBg",
     )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) Color.White else Color(0x88FFFFFF),
-        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+        targetValue = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabContent",
     )
 
@@ -286,38 +332,24 @@ fun SegmentedTabButton(
         shape = CircleShape,
         color = backgroundColor,
         contentColor = contentColor,
-        border = if (selected) BorderStroke(1.dp, Color(0x24FFFFFF)) else null,
-        modifier = modifier,
+        border = if (selected) BorderStroke(1.dp, Color(0x20FFFFFF)) else null,
+        modifier = modifier.height(34.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 13.sp,
-                    letterSpacing = 0.2.sp,
-                ),
-                color = contentColor,
-            )
-            if (badgeCount != null && badgeCount > 0) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Surface(
-                    shape = CircleShape,
-                    color = if (selected) Color(0x33FFFFFF) else Color(0x1FFFFFFF),
+            CompositionLocalProvider(LocalContentColor provides contentColor) {
+                ProvideTextStyle(
+                    MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.2.sp,
+                    ),
                 ) {
-                    Text(
-                        text = "$badgeCount",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
-                        ),
-                        color = if (selected) Color.White else Color(0xAAFFFFFF),
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                    )
+                    TabText(text = title, badgeCount = badgeCount)
                 }
             }
         }
