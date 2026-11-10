@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
@@ -78,8 +79,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.borderHairline
 import tachiyomi.presentation.core.theme.surfaceInset
-
-import androidx.compose.ui.window.Dialog
 
 data class ReaderChapterGroup(
     val primary: ReaderChapter,
@@ -369,7 +368,6 @@ fun ReaderChapterListSheet(
                         val hasPrev = currentChapterIndex > 0
                         val hasNext = currentChapterIndex in 0 until chapters.lastIndex
                         var chapterPickerOpen by remember { mutableStateOf(false) }
-                        var pickerExpandedGroupIds by remember { mutableStateOf(setOf<Long>()) }
                         val pickerGroupedChapters = remember(chapters) { groupReaderChapters(chapters) }
 
                         Column(
@@ -397,7 +395,11 @@ fun ReaderChapterListSheet(
                                     Icon(
                                         imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
                                         contentDescription = "Previous Chapter",
-                                        tint = if (hasPrev) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                        tint = if (hasPrev) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                        },
                                     )
                                 }
 
@@ -414,7 +416,9 @@ fun ReaderChapterListSheet(
                                         ) {
                                             Text(
                                                 text = currChapter?.chapter?.name ?: "Select Chapter",
-                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                ),
                                                 color = MaterialTheme.colorScheme.onSurface,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
@@ -431,202 +435,15 @@ fun ReaderChapterListSheet(
                                     }
 
                                     if (chapterPickerOpen) {
-                                        Dialog(onDismissRequest = { chapterPickerOpen = false }) {
-                                            Surface(
-                                                shape = RoundedCornerShape(20.dp),
-                                                color = Color(0xFF16171A),
-                                                border = BorderStroke(1.dp, Color(0x18FFFFFF)),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(16.dp),
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(MR.strings.chapters),
-                                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                        color = MaterialTheme.colorScheme.onSurface,
-                                                        modifier = Modifier.padding(bottom = 12.dp),
-                                                    )
-                                                    val pickerInitialIndex = remember {
-                                                        pickerGroupedChapters.indexOfFirst { group ->
-                                                            group.primary.chapter.id == currentChapterId ||
-                                                                group.versions.any { it.chapter.id == currentChapterId }
-                                                        }.coerceAtLeast(0)
-                                                    }
-                                                    val pickerListState = rememberLazyListState(
-                                                        initialFirstVisibleItemIndex = pickerInitialIndex,
-                                                    )
-                                                    LazyColumn(
-                                                        state = pickerListState,
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .heightIn(max = 340.dp),
-                                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                                    ) {
-                                                        items(
-                                                            items = pickerGroupedChapters,
-                                                            key = { it.id },
-                                                        ) { group ->
-                                                            val isGroupExpanded = group.id in pickerExpandedGroupIds
-                                                            val isPrimarySelected = if (isGroupExpanded && group.versions.size > 1) {
-                                                                group.primary.chapter.id == currentChapterId
-                                                            } else {
-                                                                group.primary.chapter.id == currentChapterId || group.versions.any { it.chapter.id == currentChapterId }
-                                                            }
-
-                                                            Column(modifier = Modifier.fillMaxWidth()) {
-                                                                Surface(
-                                                                    shape = RoundedCornerShape(10.dp),
-                                                                    color = if (isPrimarySelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color(0x0AFFFFFF),
-                                                                    onClick = {
-                                                                        chapterPickerOpen = false
-                                                                        onSelectChapterForPreview?.invoke(group.primary)
-                                                                    },
-                                                                    modifier = Modifier.fillMaxWidth(),
-                                                                ) {
-                                                                    Row(
-                                                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                                                        verticalAlignment = Alignment.CenterVertically,
-                                                                    ) {
-                                                                        Column(modifier = Modifier.weight(1f)) {
-                                                                            Text(
-                                                                                text = group.primary.chapter.name,
-                                                                                style = MaterialTheme.typography.bodyMedium.copy(
-                                                                                    fontWeight = if (isPrimarySelected) FontWeight.Bold else FontWeight.Normal,
-                                                                                ),
-                                                                                color = if (isPrimarySelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                                                                maxLines = 1,
-                                                                                overflow = TextOverflow.Ellipsis,
-                                                                            )
-                                                                            if (!group.primary.chapter.scanlator.isNullOrBlank()) {
-                                                                                Text(
-                                                                                    text = group.primary.chapter.scanlator.orEmpty(),
-                                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                                                                    maxLines = 1,
-                                                                                    overflow = TextOverflow.Ellipsis,
-                                                                                )
-                                                                            }
-                                                                        }
-
-                                                                        if (group.versions.size > 1) {
-                                                                            Surface(
-                                                                                shape = RoundedCornerShape(9999.dp),
-                                                                                color = MaterialTheme.colorScheme.surfaceInset,
-                                                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
-                                                                                modifier = Modifier
-                                                                                    .padding(end = 6.dp)
-                                                                                    .clickable {
-                                                                                        pickerExpandedGroupIds = if (isGroupExpanded) {
-                                                                                            pickerExpandedGroupIds - group.id
-                                                                                        } else {
-                                                                                            pickerExpandedGroupIds + group.id
-                                                                                        }
-                                                                                    },
-                                                                            ) {
-                                                                                Row(
-                                                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                                ) {
-                                                                                    Text(
-                                                                                        text = "${group.versions.size} versions",
-                                                                                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                                    )
-                                                                                    Spacer(modifier = Modifier.width(2.dp))
-                                                                                    Icon(
-                                                                                        imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
-                                                                                        contentDescription = null,
-                                                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                                        modifier = Modifier.size(14.dp),
-                                                                                    )
-                                                                                }
-                                                                            }
-                                                                        }
-
-                                                                        if (isPrimarySelected) {
-                                                                            Icon(
-                                                                                imageVector = MaterialSymbols.Rounded.Check,
-                                                                                contentDescription = null,
-                                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                                modifier = Modifier.size(18.dp),
-                                                                            )
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                if (isGroupExpanded && group.versions.size > 1) {
-                                                                    Surface(
-                                                                        modifier = Modifier
-                                                                            .fillMaxWidth()
-                                                                            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 2.dp),
-                                                                        shape = RoundedCornerShape(10.dp),
-                                                                        color = MaterialTheme.colorScheme.surfaceInset,
-                                                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
-                                                                    ) {
-                                                                        Column(modifier = Modifier.fillMaxWidth()) {
-                                                                            group.versions.forEach { version ->
-                                                                                val isVersionSelected = version.chapter.id == currentChapterId
-                                                                                Surface(
-                                                                                    shape = RoundedCornerShape(8.dp),
-                                                                                    color = if (isVersionSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent,
-                                                                                    onClick = {
-                                                                                        chapterPickerOpen = false
-                                                                                        onSelectChapterForPreview?.invoke(version)
-                                                                                    },
-                                                                                    modifier = Modifier
-                                                                                        .fillMaxWidth()
-                                                                                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                                                                                ) {
-                                                                                    Row(
-                                                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                                                                        verticalAlignment = Alignment.CenterVertically,
-                                                                                    ) {
-                                                                                        Column(modifier = Modifier.weight(1f)) {
-                                                                                            Text(
-                                                                                                text = version.chapter.name,
-                                                                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                                                                    fontWeight = if (isVersionSelected) FontWeight.Bold else FontWeight.Normal,
-                                                                                                ),
-                                                                                                color = if (isVersionSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                                                                                maxLines = 1,
-                                                                                                overflow = TextOverflow.Ellipsis,
-                                                                                            )
-                                                                                            if (!version.chapter.scanlator.isNullOrBlank()) {
-                                                                                                Text(
-                                                                                                    text = version.chapter.scanlator.orEmpty(),
-                                                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                                                                                    maxLines = 1,
-                                                                                                    overflow = TextOverflow.Ellipsis,
-                                                                                                )
-                                                                                            }
-                                                                                        }
-
-                                                                                        if (isVersionSelected) {
-                                                                                            Icon(
-                                                                                                imageVector = MaterialSymbols.Rounded.Check,
-                                                                                                contentDescription = null,
-                                                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                                                modifier = Modifier.size(16.dp),
-                                                                                            )
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        ChapterPickerDialog(
+                                            groupedChapters = pickerGroupedChapters,
+                                            currentChapterId = currentChapterId,
+                                            onDismissRequest = { chapterPickerOpen = false },
+                                            onSelectChapter = { chapter ->
+                                                chapterPickerOpen = false
+                                                onSelectChapterForPreview?.invoke(chapter)
+                                            },
+                                        )
                                     }
                                 }
 
@@ -642,7 +459,11 @@ fun ReaderChapterListSheet(
                                     Icon(
                                         imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward,
                                         contentDescription = "Next Chapter",
-                                        tint = if (hasNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                        tint = if (hasNext) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                        },
                                     )
                                 }
                             }
@@ -802,7 +623,6 @@ private fun ChapterListItem(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-
             if (isCurrent) {
                 Box(
                     modifier = Modifier
@@ -955,9 +775,17 @@ private fun ChapterVersionRow(
             modifier = Modifier.size(28.dp),
         ) {
             Icon(
-                imageVector = if (bookmarked) MaterialSymbols.RoundedFilled.Bookmark else MaterialSymbols.Rounded.Bookmark,
+                imageVector = if (bookmarked) {
+                    MaterialSymbols.RoundedFilled.Bookmark
+                } else {
+                    MaterialSymbols.Rounded.Bookmark
+                },
                 contentDescription = null,
-                tint = if (bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                tint = if (bookmarked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                },
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -1048,7 +876,8 @@ private fun PageThumbnailItem(
 internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChapterGroup> {
     if (chapters.isEmpty()) return emptyList()
 
-    val isDescending = chapters.size >= 2 && chapters.first().chapter.chapterNumber > chapters.last().chapter.chapterNumber
+    val isDescending = chapters.size >= 2 &&
+        chapters.first().chapter.chapterNumber > chapters.last().chapter.chapterNumber
 
     val duplicatesByNumber = chapters.filter { it.chapter.chapterNumber > 0.0 }
         .groupBy { it.chapter.chapterNumber }
@@ -1068,8 +897,11 @@ internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChap
             val group = duplicatesByNumber.getValue(number)
             val primary = group.maxByOrNull {
                 var score = 0
-                if (it.chapter.read) score += 4
-                else if (it.chapter.lastPageRead > 0) score += 2
+                if (it.chapter.read) {
+                    score += 4
+                } else if (it.chapter.lastPageRead > 0) {
+                    score += 2
+                }
                 score
             } ?: rc
             val orderedVersions = listOf(primary) + group.filter { it.chapter.id != primary.chapter.id }
@@ -1125,10 +957,13 @@ internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChap
         val prevNum = prevItem?.primary?.chapter?.chapterNumber ?: -1.0
         val nextNum = nextItem?.primary?.chapter?.chapterNumber ?: -1.0
 
-        val isFirst = isSub && (prevItem == null || prevNum <= 0.0 || kotlin.math.floor(prevNum) != baseNum)
-        val isLast = !isSub || (nextItem == null || nextNum <= 0.0 || (nextNum % 1.0 == 0.0) || kotlin.math.floor(nextNum) != baseNum)
+        val isFirst = isSub &&
+            (prevItem == null || prevNum <= 0.0 || kotlin.math.floor(prevNum) != baseNum)
+        val isLast = !isSub ||
+            (nextItem == null || nextNum <= 0.0 || (nextNum % 1.0 == 0.0) || kotlin.math.floor(nextNum) != baseNum)
         val hasParent = isSub && prevItem != null && prevNum == baseNum
-        val hasSubBelow = !isSub && nextItem != null && nextNum > 0.0 && (nextNum % 1.0 != 0.0) && kotlin.math.floor(nextNum) == num
+        val hasSubBelow = !isSub && nextItem != null && nextNum > 0.0 &&
+            (nextNum % 1.0 != 0.0) && kotlin.math.floor(nextNum) == num
 
         group.copy(
             isSubChapter = isSub,
@@ -1137,5 +972,240 @@ internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChap
             hasParentAbove = hasParent,
             hasSubChaptersBelow = hasSubBelow,
         )
+    }
+}
+
+@Composable
+private fun ChapterPickerDialog(
+    groupedChapters: List<ReaderChapterGroup>,
+    currentChapterId: Long?,
+    onDismissRequest: () -> Unit,
+    onSelectChapter: (ReaderChapter) -> Unit,
+) {
+    var pickerExpandedGroupIds by remember { mutableStateOf(emptySet<Long>()) }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF16171A),
+            border = BorderStroke(1.dp, Color(0x18FFFFFF)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Text(
+                    text = stringResource(MR.strings.chapters),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                val pickerInitialIndex = remember {
+                    groupedChapters.indexOfFirst { group ->
+                        group.primary.chapter.id == currentChapterId ||
+                            group.versions.any { it.chapter.id == currentChapterId }
+                    }.coerceAtLeast(0)
+                }
+                val pickerListState = rememberLazyListState(
+                    initialFirstVisibleItemIndex = pickerInitialIndex,
+                )
+                LazyColumn(
+                    state = pickerListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 340.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(
+                        items = groupedChapters,
+                        key = { it.id },
+                    ) { group ->
+                        val isGroupExpanded = group.id in pickerExpandedGroupIds
+                        val isPrimarySelected = if (isGroupExpanded && group.versions.size > 1) {
+                            group.primary.chapter.id == currentChapterId
+                        } else {
+                            group.primary.chapter.id == currentChapterId ||
+                                group.versions.any { it.chapter.id == currentChapterId }
+                        }
+
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isPrimarySelected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                } else {
+                                    Color(0x0AFFFFFF)
+                                },
+                                onClick = {
+                                    onDismissRequest()
+                                    onSelectChapter(group.primary)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = group.primary.chapter.name,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isPrimarySelected) {
+                                                    FontWeight.Bold
+                                                } else {
+                                                    FontWeight.Normal
+                                                },
+                                            ),
+                                            color = if (isPrimarySelected) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        if (!group.primary.chapter.scanlator.isNullOrBlank()) {
+                                            Text(
+                                                text = group.primary.chapter.scanlator.orEmpty(),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    .copy(alpha = 0.6f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                    }
+
+                                    if (group.versions.size > 1) {
+                                        Surface(
+                                            shape = RoundedCornerShape(9999.dp),
+                                            color = MaterialTheme.colorScheme.surfaceInset,
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                                            modifier = Modifier
+                                                .padding(end = 6.dp)
+                                                .clickable {
+                                                    pickerExpandedGroupIds = if (isGroupExpanded) {
+                                                        pickerExpandedGroupIds - group.id
+                                                    } else {
+                                                        pickerExpandedGroupIds + group.id
+                                                    }
+                                                },
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Text(
+                                                    text = "${group.versions.size} versions",
+                                                    style = MaterialTheme.typography.labelSmall
+                                                        .copy(fontFeatureSettings = "tnum"),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Spacer(modifier = Modifier.width(2.dp))
+                                                Icon(
+                                                    imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(14.dp),
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (isPrimarySelected) {
+                                        Icon(
+                                            imageVector = MaterialSymbols.Rounded.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (isGroupExpanded && group.versions.size > 1) {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 2.dp),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surfaceInset,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        group.versions.forEach { version ->
+                                            val isVersionSelected = version.chapter.id == currentChapterId
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isVersionSelected) {
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                                } else {
+                                                    Color.Transparent
+                                                },
+                                                onClick = {
+                                                    onDismissRequest()
+                                                    onSelectChapter(version)
+                                                },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = version.chapter.name,
+                                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                                fontWeight = if (isVersionSelected) {
+                                                                    FontWeight.Bold
+                                                                } else {
+                                                                    FontWeight.Normal
+                                                                },
+                                                            ),
+                                                            color = if (isVersionSelected) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurface
+                                                            },
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                        if (!version.chapter.scanlator.isNullOrBlank()) {
+                                                            Text(
+                                                                text = version.chapter.scanlator.orEmpty(),
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                    .copy(alpha = 0.6f),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (isVersionSelected) {
+                                                        Icon(
+                                                            imageVector = MaterialSymbols.Rounded.Check,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(16.dp),
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

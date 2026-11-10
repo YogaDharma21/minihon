@@ -147,12 +147,12 @@ class ChapterListGroupingTest {
     @Test
     fun `groupSubChaptersWithParent positions sub-chapters under parent in descending sort`() {
         val ch26 = createItem(createChapter(id = 1L, chapterNumber = 26.0))
-        val ch25_2 = createItem(createChapter(id = 2L, chapterNumber = 25.2))
-        val ch25_1 = createItem(createChapter(id = 3L, chapterNumber = 25.1))
+        val ch25Part2 = createItem(createChapter(id = 2L, chapterNumber = 25.2))
+        val ch25Part1 = createItem(createChapter(id = 3L, chapterNumber = 25.1))
         val ch25 = createItem(createChapter(id = 4L, chapterNumber = 25.0))
         val ch24 = createItem(createChapter(id = 5L, chapterNumber = 24.0))
 
-        val input = listOf(ch26, ch25_2, ch25_1, ch25, ch24)
+        val input = listOf(ch26, ch25Part2, ch25Part1, ch25, ch24)
         val result = input.groupSubChaptersWithParent(sortDescending = true)
 
         result.map { it.chapter.chapterNumber } shouldBe listOf(26.0, 25.0, 25.1, 25.2, 24.0)
@@ -162,11 +162,11 @@ class ChapterListGroupingTest {
     fun `groupSubChaptersWithParent preserves ascending sort`() {
         val ch24 = createItem(createChapter(id = 1L, chapterNumber = 24.0))
         val ch25 = createItem(createChapter(id = 2L, chapterNumber = 25.0))
-        val ch25_1 = createItem(createChapter(id = 3L, chapterNumber = 25.1))
-        val ch25_2 = createItem(createChapter(id = 4L, chapterNumber = 25.2))
+        val ch25Part1 = createItem(createChapter(id = 3L, chapterNumber = 25.1))
+        val ch25Part2 = createItem(createChapter(id = 4L, chapterNumber = 25.2))
         val ch26 = createItem(createChapter(id = 5L, chapterNumber = 26.0))
 
-        val input = listOf(ch24, ch25, ch25_1, ch25_2, ch26)
+        val input = listOf(ch24, ch25, ch25Part1, ch25Part2, ch26)
         val result = input.groupSubChaptersWithParent(sortDescending = false)
 
         result.map { it.chapter.chapterNumber } shouldBe listOf(24.0, 25.0, 25.1, 25.2, 26.0)

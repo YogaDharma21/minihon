@@ -847,7 +847,8 @@ private fun LazyListScope.sharedChapterItems(
                             val currIndex = chapters.indexOf(item)
                             val prevItem = chapters.getOrNull(currIndex - 1) as? ChapterList.Item
                             val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
-                            prevItem == null || prevNum <= 0.0 || kotlin.math.floor(prevNum) != kotlin.math.floor(currNum)
+                            prevItem == null || prevNum <= 0.0 ||
+                                kotlin.math.floor(prevNum) != kotlin.math.floor(currNum)
                         }
                     },
                     isLastSubChapter = run {

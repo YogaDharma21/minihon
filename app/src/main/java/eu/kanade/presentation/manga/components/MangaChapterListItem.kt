@@ -168,7 +168,13 @@ fun MangaChapterListItem(
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { textHeight = it.size.height },
                             color = LocalContentColor.current.copy(
-                                alpha = if (read) DISABLED_ALPHA else if (isSubChapter) 0.85f else 1f,
+                                alpha = if (read) {
+                                    DISABLED_ALPHA
+                                } else if (isSubChapter) {
+                                    0.85f
+                                } else {
+                                    1f
+                                },
                             ),
                         )
                     }

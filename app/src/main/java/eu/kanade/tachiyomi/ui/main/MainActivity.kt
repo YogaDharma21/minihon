@@ -273,7 +273,6 @@ class MainActivity : BaseActivity() {
                                 .padding(contentPadding)
                                 .consumeWindowInsets(contentPadding),
                         )
-
                     }
                 }
 

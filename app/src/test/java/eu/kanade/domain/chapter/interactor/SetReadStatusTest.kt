@@ -69,7 +69,11 @@ class SetReadStatusTest {
         val otherCh = createChapter(id = 5L, chapterNumber = 189.0, scanlator = "Group A", read = false)
 
         coEvery { chapterRepository.getChapterByMangaId(1L) } returns listOf(
-            ch188v1, ch188v2, ch188v3, ch188v4, otherCh,
+            ch188v1,
+            ch188v2,
+            ch188v3,
+            ch188v4,
+            otherCh,
         )
 
         val updatesSlot = slot<List<ChapterUpdate>>()
@@ -90,12 +94,17 @@ class SetReadStatusTest {
 
     @Test
     fun `marking chapter as unread updates all duplicate versions of that chapterNumber`() = runTest {
-        val ch188v1 = createChapter(id = 1L, chapterNumber = 188.0, scanlator = "Group A", read = true, lastPageRead = 15)
-        val ch188v2 = createChapter(id = 2L, chapterNumber = 188.0, scanlator = "Group B", read = true, lastPageRead = 10)
-        val ch188v3 = createChapter(id = 3L, chapterNumber = 188.0, scanlator = "Group C", read = true, lastPageRead = 0)
+        val ch188v1 =
+            createChapter(id = 1L, chapterNumber = 188.0, scanlator = "Group A", read = true, lastPageRead = 15)
+        val ch188v2 =
+            createChapter(id = 2L, chapterNumber = 188.0, scanlator = "Group B", read = true, lastPageRead = 10)
+        val ch188v3 =
+            createChapter(id = 3L, chapterNumber = 188.0, scanlator = "Group C", read = true, lastPageRead = 0)
 
         coEvery { chapterRepository.getChapterByMangaId(1L) } returns listOf(
-            ch188v1, ch188v2, ch188v3,
+            ch188v1,
+            ch188v2,
+            ch188v3,
         )
 
         val updatesSlot = slot<List<ChapterUpdate>>()

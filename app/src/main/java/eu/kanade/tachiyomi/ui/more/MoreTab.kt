@@ -92,7 +92,11 @@ data object MoreTab : Tab {
             onClickAdvanced = { navigator.push(SettingsAdvancedScreen) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
             onClickAbout = { navigator.push(AboutScreen) },
-            onNavigateUp = if (navigator.canPop) { { navigator.pop() } } else null,
+            onNavigateUp = if (navigator.canPop) {
+                { navigator.pop() }
+            } else {
+                null
+            },
         )
     }
 }

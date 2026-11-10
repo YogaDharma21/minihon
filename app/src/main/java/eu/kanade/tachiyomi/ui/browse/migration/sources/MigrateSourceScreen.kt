@@ -7,7 +7,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
-import eu.kanade.presentation.browse.MigrateSourceScreen as MigrateSourceContent
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
@@ -17,6 +16,7 @@ import mihon.icons.materialsymbols.automirroredrounded.Help
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
+import eu.kanade.presentation.browse.MigrateSourceScreen as MigrateSourceContent
 
 data object MigrateSourceScreen : Screen() {
 

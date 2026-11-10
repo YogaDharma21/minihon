@@ -176,7 +176,11 @@ fun Screen.historyTab(viewModel: HistoryViewModel): TabContent {
                             snackbarHostState.showSnackbar(context.stringResource(MR.strings.internal_error))
                         HistoryViewModel.Event.HistoryCleared ->
                             snackbarHostState.showSnackbar(context.stringResource(MR.strings.clear_history_completed))
-                        is HistoryViewModel.Event.OpenChapter -> HistoryTab.openChapter(context, e.chapter, snackbarHostState)
+                        is HistoryViewModel.Event.OpenChapter -> HistoryTab.openChapter(
+                            context,
+                            e.chapter,
+                            snackbarHostState,
+                        )
                     }
                 }
             }

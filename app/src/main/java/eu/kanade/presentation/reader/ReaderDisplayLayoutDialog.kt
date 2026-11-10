@@ -151,7 +151,11 @@ fun ReaderDisplayLayoutDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = if (cropEnabled) MaterialSymbols.Rounded.Crop else CustomMaterialSymbols.Rounded.CropOff,
+                        imageVector = if (cropEnabled) {
+                            MaterialSymbols.Rounded.Crop
+                        } else {
+                            CustomMaterialSymbols.Rounded.CropOff
+                        },
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp),

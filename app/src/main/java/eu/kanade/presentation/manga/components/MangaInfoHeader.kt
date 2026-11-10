@@ -113,7 +113,6 @@ import org.intellij.markdown.ast.findChildOfType
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
-import tachiyomi.presentation.core.components.material.Surface as TachiyomiSurface
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -128,6 +127,7 @@ import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.util.clickableNoIndication
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 import kotlin.math.roundToInt
+import tachiyomi.presentation.core.components.material.Surface as TachiyomiSurface
 
 @Composable
 fun MangaInfoBox(

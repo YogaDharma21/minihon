@@ -10,17 +10,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.graphics.res.animatedVectorResource
-import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
-import androidx.compose.animation.graphics.vector.AnimatedImageVector
-import eu.kanade.presentation.util.rememberAnimatedVectorPainter
-import eu.kanade.tachiyomi.R
-import soup.compose.material.motion.animation.materialFadeThroughIn
-import soup.compose.material.motion.animation.materialFadeThroughOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +56,8 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.util.Screen
+import eu.kanade.presentation.util.rememberAnimatedVectorPainter
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.activity.ActivityTab
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
@@ -76,6 +74,8 @@ import kotlinx.coroutines.launch
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Settings
+import soup.compose.material.motion.animation.materialFadeThroughIn
+import soup.compose.material.motion.animation.materialFadeThroughOut
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
@@ -194,9 +194,15 @@ object HomeScreen : Screen() {
                                             else -> 0
                                         }
                                         val (title, painter) = when (tab) {
-                                            is LibraryTab -> libraryTitle to rememberAnimatedVectorPainter(libraryImage, selected)
-                                            is ActivityTab -> activityTitle to rememberAnimatedVectorPainter(activityImage, selected)
-                                            is BrowseTab -> browseTitle to rememberAnimatedVectorPainter(browseEnter, browseExit, selected)
+                                            is LibraryTab ->
+                                                libraryTitle to
+                                                    rememberAnimatedVectorPainter(libraryImage, selected)
+                                            is ActivityTab ->
+                                                activityTitle to
+                                                    rememberAnimatedVectorPainter(activityImage, selected)
+                                            is BrowseTab ->
+                                                browseTitle to
+                                                    rememberAnimatedVectorPainter(browseEnter, browseExit, selected)
                                             else -> tab.options.title to tab.options.icon!!
                                         }
                                         FloatingDockItem(

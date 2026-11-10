@@ -70,8 +70,8 @@ import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.MoreVert
 import mihon.icons.materialsymbols.rounded.Search
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.util.clearFocusOnSoftKeyboardHide
 import tachiyomi.presentation.core.util.runOnEnterKeyPressed
 import tachiyomi.presentation.core.util.secondaryItemAlpha
