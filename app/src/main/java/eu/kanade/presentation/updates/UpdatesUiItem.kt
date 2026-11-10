@@ -366,6 +366,16 @@ private fun UpdatesChapterUiItem(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Visual branch hierarchy connector
+            Text(
+                text = "└─",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                ),
+                modifier = Modifier.padding(end = 8.dp),
+            )
+
             var textHeight by remember { mutableIntStateOf(0) }
             if (!update.read) {
                 Icon(

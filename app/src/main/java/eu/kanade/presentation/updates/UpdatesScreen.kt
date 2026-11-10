@@ -71,6 +71,8 @@ fun UpdatesScreen(
     onToggleMangaCollapse: (Long) -> Unit,
     onToggleCollapseAll: () -> Unit,
     onClickSettings: (() -> Unit)? = null,
+    showTopBar: Boolean = true,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     BackHandler(enabled = state.selectionMode) {
         onSelectAll(false)
@@ -87,19 +89,21 @@ fun UpdatesScreen(
 
     Scaffold(
         topBar = { scrollBehavior ->
-            UpdatesAppBar(
-                onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
-                onFilterClicked = { onFilterClicked() },
-                hasFilters = hasActiveFilters,
-                allCollapsed = allCollapsed,
-                onToggleCollapseAll = onToggleCollapseAll,
-                actionModeCounter = state.selected.size,
-                onSelectAll = { onSelectAll(true) },
-                onInvertSelection = { onInvertSelection() },
-                onCancelActionMode = { onSelectAll(false) },
-                scrollBehavior = scrollBehavior,
-                onClickSettings = onClickSettings,
-            )
+            if (showTopBar || state.selectionMode) {
+                UpdatesAppBar(
+                    onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
+                    onFilterClicked = { onFilterClicked() },
+                    hasFilters = hasActiveFilters,
+                    allCollapsed = allCollapsed,
+                    onToggleCollapseAll = onToggleCollapseAll,
+                    actionModeCounter = state.selected.size,
+                    onSelectAll = { onSelectAll(true) },
+                    onInvertSelection = { onInvertSelection() },
+                    onCancelActionMode = { onSelectAll(false) },
+                    scrollBehavior = scrollBehavior,
+                    onClickSettings = onClickSettings,
+                )
+            }
         },
         bottomBar = {
             UpdatesBottomBar(
@@ -111,9 +115,10 @@ fun UpdatesScreen(
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-    ) { contentPadding ->
+    ) { innerPadding ->
+        val effectivePadding = contentPadding + innerPadding
         when {
-            state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
+            state.isLoading -> LoadingScreen(Modifier.padding(effectivePadding))
             else -> {
                 var isRefreshing by remember { mutableStateOf(false) }
 
@@ -129,12 +134,12 @@ fun UpdatesScreen(
                         }
                     },
                     enabled = !state.selectionMode,
-                    indicatorPadding = contentPadding,
+                    indicatorPadding = effectivePadding,
                 ) {
                     if (state.items.isEmpty()) {
                         Column(
                             modifier = Modifier
-                                .padding(contentPadding)
+                                .padding(effectivePadding)
                                 .fillMaxSize(),
                         ) {
                             UpdatesLastUpdatedHeader(lastUpdated = lastUpdated)
@@ -149,7 +154,7 @@ fun UpdatesScreen(
                         }
                     } else {
                         FastScrollLazyColumn(
-                            contentPadding = contentPadding + PaddingValues(bottom = 96.dp),
+                            contentPadding = effectivePadding + PaddingValues(bottom = 96.dp),
                         ) {
                             updatesLastUpdatedItem(lastUpdated)
 

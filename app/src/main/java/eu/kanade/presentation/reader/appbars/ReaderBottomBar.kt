@@ -34,11 +34,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 @Composable
 fun ReaderBottomBar(
     readingMode: ReadingMode,
-    onClickReadingMode: () -> Unit,
-    orientation: ReaderOrientation,
-    onClickOrientation: () -> Unit,
-    cropEnabled: Boolean,
-    onClickCropBorder: () -> Unit,
+    onClickDisplayLayout: () -> Unit,
     onClickSettings: () -> Unit,
     onClickChapterList: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -59,9 +55,9 @@ fun ReaderBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = MaterialTheme.padding.small)
+                .padding(horizontal = 24.dp, vertical = 6.dp)
                 .pointerInput(Unit) {},
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (onClickChapterList != null) {
@@ -69,28 +65,16 @@ fun ReaderBottomBar(
                     Icon(
                         imageVector = MaterialSymbols.AutoMirroredRounded.FormatListBulleted,
                         contentDescription = stringResource(MR.strings.chapters),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            IconButton(onClick = onClickReadingMode) {
+            IconButton(onClick = onClickDisplayLayout) {
                 Icon(
                     imageVector = readingMode.icon,
-                    contentDescription = stringResource(MR.strings.viewer),
-                )
-            }
-
-            IconButton(onClick = onClickOrientation) {
-                Icon(
-                    imageVector = orientation.icon,
-                    contentDescription = stringResource(MR.strings.rotation_type),
-                )
-            }
-
-            IconButton(onClick = onClickCropBorder) {
-                Icon(
-                    imageVector = if (cropEnabled) MaterialSymbols.Rounded.Crop else CustomMaterialSymbols.Rounded.CropOff,
-                    contentDescription = stringResource(MR.strings.pref_crop_borders),
+                    contentDescription = stringResource(MR.strings.pref_category_display),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -98,6 +82,7 @@ fun ReaderBottomBar(
                 Icon(
                     imageVector = MaterialSymbols.Rounded.Settings,
                     contentDescription = stringResource(MR.strings.action_settings),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

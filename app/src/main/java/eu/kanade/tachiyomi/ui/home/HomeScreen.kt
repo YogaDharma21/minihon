@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Badge
@@ -48,6 +49,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.activity.ActivityTab
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
@@ -61,9 +63,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import mihon.app.di.appGraph
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
+import tachiyomi.presentation.core.i18n.stringResource
 
 object HomeScreen : Screen() {
 
@@ -79,8 +84,7 @@ object HomeScreen : Screen() {
 
     internal val TABS = listOf(
         LibraryTab,
-        UpdatesTab,
-        HistoryTab,
+        ActivityTab,
         BrowseTab,
     )
 
@@ -146,35 +150,63 @@ object HomeScreen : Screen() {
                             .padding(horizontal = 24.dp)
                             .padding(bottom = 16.dp),
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                            shadowElevation = 8.dp,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF121316),
+                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                shadowElevation = 8.dp,
                             ) {
-                                TABS.fastForEach { tab ->
-                                    val selected = tabNavigator.current::class == tab::class
-                                    val badgeCount = when (tab) {
-                                        is UpdatesTab -> updatesBadgeCount
-                                        is BrowseTab -> extensionBadgeCount
-                                        else -> 0
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    TABS.fastForEach { tab ->
+                                        val selected = tabNavigator.current::class == tab::class
+                                        val badgeCount = when (tab) {
+                                            is ActivityTab -> updatesBadgeCount
+                                            is UpdatesTab -> updatesBadgeCount
+                                            is BrowseTab -> extensionBadgeCount
+                                            else -> 0
+                                        }
+                                        FloatingDockItem(
+                                            tab = tab,
+                                            badgeCount = badgeCount,
+                                            selected = selected,
+                                            onClick = {
+                                                if (!selected) {
+                                                    tabNavigator.current = tab
+                                                } else {
+                                                    scope.launch { tab.onReselect(navigator) }
+                                                }
+                                            },
+                                        )
                                     }
-                                    FloatingDockItem(
-                                        tab = tab,
-                                        badgeCount = badgeCount,
-                                        selected = selected,
-                                        onClick = {
-                                            if (!selected) {
-                                                tabNavigator.current = tab
-                                            } else {
-                                                scope.launch { tab.onReselect(navigator) }
-                                            }
-                                        },
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF121316),
+                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                shadowElevation = 8.dp,
+                                onClick = { navigator.push(MoreTab) },
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(46.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = MaterialSymbols.Rounded.Settings,
+                                        contentDescription = stringResource(MR.strings.label_settings),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                             }
@@ -203,8 +235,14 @@ object HomeScreen : Screen() {
                                     navigator.push(MangaScreen(it.mangaIdToOpen))
                                 }
                             }
-                            Tab.Updates -> tabNavigator.current = UpdatesTab
-                            Tab.History -> tabNavigator.current = HistoryTab
+                            Tab.Updates -> {
+                                tabNavigator.current = ActivityTab
+                                ActivityTab.showUpdates()
+                            }
+                            Tab.History -> {
+                                tabNavigator.current = ActivityTab
+                                ActivityTab.showHistory()
+                            }
                             is Tab.Browse -> {
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()
@@ -306,6 +344,12 @@ object HomeScreen : Screen() {
         return {
             Badge {
                 val desc = when (tab) {
+                    is ActivityTab -> pluralStringResource(
+                        MR.plurals.notification_chapters_generic,
+                        count = count,
+                        count,
+                    )
+
                     is UpdatesTab -> pluralStringResource(
                         MR.plurals.notification_chapters_generic,
                         count = count,

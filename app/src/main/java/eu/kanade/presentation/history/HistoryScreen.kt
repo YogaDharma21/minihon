@@ -56,45 +56,50 @@ fun HistoryScreen(
     onClickFavorite: (mangaId: Long) -> Unit,
     onDialogChange: (HistoryViewModel.Dialog?) -> Unit,
     onClickSettings: (() -> Unit)? = null,
+    showTopBar: Boolean = true,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
-            SearchToolbar(
-                titleContent = { AppBarTitle(stringResource(MR.strings.history)) },
-                searchQuery = state.searchQuery,
-                onChangeSearchQuery = onSearchQueryChange,
-                actions = {
-                    AppBarActions(
-                        buildList {
-                            if (onClickSettings != null) {
+            if (showTopBar) {
+                SearchToolbar(
+                    titleContent = { AppBarTitle(stringResource(MR.strings.history)) },
+                    searchQuery = state.searchQuery,
+                    onChangeSearchQuery = onSearchQueryChange,
+                    actions = {
+                        AppBarActions(
+                            buildList {
+                                if (onClickSettings != null) {
+                                    add(
+                                        AppBar.Action(
+                                            title = stringResource(MR.strings.label_settings),
+                                            icon = MaterialSymbols.Rounded.Settings,
+                                            onClick = onClickSettings,
+                                        ),
+                                    )
+                                }
                                 add(
                                     AppBar.Action(
-                                        title = stringResource(MR.strings.label_settings),
-                                        icon = MaterialSymbols.Rounded.Settings,
-                                        onClick = onClickSettings,
+                                        title = stringResource(MR.strings.pref_clear_history),
+                                        icon = MaterialSymbols.Rounded.DeleteSweep,
+                                        onClick = {
+                                            onDialogChange(HistoryViewModel.Dialog.DeleteAll)
+                                        },
                                     ),
                                 )
-                            }
-                            add(
-                                AppBar.Action(
-                                    title = stringResource(MR.strings.pref_clear_history),
-                                    icon = MaterialSymbols.Rounded.DeleteSweep,
-                                    onClick = {
-                                        onDialogChange(HistoryViewModel.Dialog.DeleteAll)
-                                    },
-                                ),
-                            )
-                        },
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                            },
+                        )
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-    ) { contentPadding ->
+    ) { innerPadding ->
+        val effectivePadding = contentPadding + innerPadding
         state.list.let {
             if (it == null) {
-                LoadingScreen(Modifier.padding(contentPadding))
+                LoadingScreen(Modifier.padding(effectivePadding))
             } else if (it.isEmpty()) {
                 val msg = if (!state.searchQuery.isNullOrEmpty()) {
                     MR.strings.no_results_found
@@ -103,12 +108,12 @@ fun HistoryScreen(
                 }
                 EmptyScreen(
                     stringRes = msg,
-                    modifier = Modifier.padding(contentPadding),
+                    modifier = Modifier.padding(effectivePadding),
                 )
             } else {
                 HistoryScreenContent(
                     history = it,
-                    contentPadding = contentPadding,
+                    contentPadding = effectivePadding,
                     onClickCover = { history -> onClickCover(history.mangaId) },
                     onClickResume = { history -> onClickResume(history.mangaId, history.chapterId) },
                     onClickDelete = { item -> onDialogChange(HistoryViewModel.Dialog.Delete(item)) },

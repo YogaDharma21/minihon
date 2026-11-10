@@ -815,6 +815,8 @@ private fun LazyListScope.sharedChapterItems(
                         null
                     },
                     versionDownloadProgressProvider = downloadProgressProvider,
+                    isSubChapter = item.chapter.chapterNumber > 0.0 &&
+                        (item.chapter.chapterNumber % 1.0 != 0.0),
                 )
             }
         }

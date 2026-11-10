@@ -49,15 +49,6 @@ fun ReaderTopBar(
         actions = {
             AppBarActions(
                 actions = buildList {
-                    if (onClickChapterList != null) {
-                        add(
-                            AppBar.Action(
-                                title = stringResource(MR.strings.chapters),
-                                icon = MaterialSymbols.AutoMirroredRounded.FormatListBulleted,
-                                onClick = onClickChapterList,
-                            ),
-                        )
-                    }
                     add(
                         AppBar.Action(
                             title = stringResource(

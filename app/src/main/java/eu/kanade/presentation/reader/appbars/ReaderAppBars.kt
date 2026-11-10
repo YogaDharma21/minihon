@@ -68,11 +68,7 @@ fun ReaderAppBars(
     onPageIndexChangeFinished: () -> Unit,
 
     readingMode: ReadingMode,
-    onClickReadingMode: () -> Unit,
-    orientation: ReaderOrientation,
-    onClickOrientation: () -> Unit,
-    cropEnabled: Boolean,
-    onClickCropBorder: () -> Unit,
+    onClickDisplayLayout: () -> Unit,
     onClickSettings: () -> Unit,
     onClickChapterList: (() -> Unit)? = null,
 ) {
@@ -162,11 +158,7 @@ fun ReaderAppBars(
                 ReaderBottomBar(
                     modifier = Modifier.fillMaxWidth(),
                     readingMode = readingMode,
-                    onClickReadingMode = onClickReadingMode,
-                    orientation = orientation,
-                    onClickOrientation = onClickOrientation,
-                    cropEnabled = cropEnabled,
-                    onClickCropBorder = onClickCropBorder,
+                    onClickDisplayLayout = onClickDisplayLayout,
                     onClickSettings = onClickSettings,
                     onClickChapterList = onClickChapterList,
                 )

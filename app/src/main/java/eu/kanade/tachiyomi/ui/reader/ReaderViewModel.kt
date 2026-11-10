@@ -794,8 +794,8 @@ class ReaderViewModel(
     /**
      * Bookmarks the currently active chapter.
      */
-    fun toggleChapterBookmark() {
-        val readerChapter = getCurrentChapter() ?: return
+    fun toggleChapterBookmark(targetChapter: ReaderChapter? = null) {
+        val readerChapter = targetChapter ?: getCurrentChapter() ?: return
         val bookmarked = !readerChapter.chapter.bookmark
         readerChapter.update { it.copy(bookmark = bookmarked) }
 
@@ -808,10 +808,12 @@ class ReaderViewModel(
             )
         }
 
-        mutableState.update {
-            it.copy(
-                bookmarked = bookmarked,
-            )
+        if (readerChapter.chapter.id == getCurrentChapter()?.chapter?.id) {
+            mutableState.update {
+                it.copy(
+                    bookmarked = bookmarked,
+                )
+            }
         }
     }
 
@@ -914,6 +916,10 @@ class ReaderViewModel(
 
     fun showMenus(visible: Boolean) {
         mutableState.update { it.copy(menuVisible = visible) }
+    }
+
+    fun openDisplayLayoutDialog() {
+        mutableState.update { it.copy(dialog = Dialog.DisplayLayout) }
     }
 
     fun openReadingModeSelectDialog() {
@@ -1122,6 +1128,7 @@ class ReaderViewModel(
 
     sealed interface Dialog {
         data object Settings : Dialog
+        data object DisplayLayout : Dialog
         data object ReadingModeSelect : Dialog
         data object OrientationModeSelect : Dialog
         data class PageActions(val page: ReaderPage) : Dialog

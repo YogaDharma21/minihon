@@ -69,6 +69,7 @@ import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
 import eu.kanade.presentation.reader.ReaderChapterListSheet
 import eu.kanade.presentation.reader.ReaderContentOverlay
+import eu.kanade.presentation.reader.ReaderDisplayLayoutDialog
 import eu.kanade.presentation.reader.ReaderNavigationOverlay
 import eu.kanade.presentation.reader.ReaderNavigationOverlayState
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
@@ -290,6 +291,33 @@ class ReaderActivity : BaseActivity() {
                         viewModel = settingsViewModel,
                     )
                 }
+                is ReaderViewModel.Dialog.DisplayLayout -> {
+                    val cropBorderPaged by readerPreferences.cropBorders.collectAsState()
+                    val cropBorderWebtoon by readerPreferences.cropBordersWebtoon.collectAsState()
+                    val isPagerType = ReadingMode.isPagerType(viewModel.getMangaReadingMode())
+                    val cropEnabled = if (isPagerType) cropBorderPaged else cropBorderWebtoon
+
+                    ReaderDisplayLayoutDialog(
+                        onDismissRequest = onDismissRequest,
+                        viewModel = settingsViewModel,
+                        cropEnabled = cropEnabled,
+                        onToggleCropBorder = {
+                            val enabled = viewModel.toggleCropBorders()
+                            menuToggleToast?.cancel()
+                            menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
+                        },
+                        onChangeReadingModeString = { stringRes ->
+                            menuToggleToast?.cancel()
+                            if (!readerPreferences.showReadingMode.get()) {
+                                menuToggleToast = toast(stringRes)
+                            }
+                        },
+                        onChangeOrientationString = { stringRes ->
+                            menuToggleToast?.cancel()
+                            menuToggleToast = toast(stringRes)
+                        },
+                    )
+                }
                 is ReaderViewModel.Dialog.ReadingModeSelect -> {
                     ReadingModeSelectDialog(
                         onDismissRequest = onDismissRequest,
@@ -324,10 +352,19 @@ class ReaderActivity : BaseActivity() {
                     ReaderChapterListSheet(
                         chapters = viewModel.getChapters(),
                         currentChapterId = state.currentChapter?.chapter?.id,
+                        pages = state.currentChapter?.pages ?: emptyList(),
+                        currentPageIndex = (state.currentPage - 1).coerceAtLeast(0),
                         onDismissRequest = onDismissRequest,
                         onChapterClicked = { chapter ->
                             onDismissRequest()
                             loadChapter(chapter)
+                        },
+                        onPageClicked = { pageIndex ->
+                            onDismissRequest()
+                            moveToPageIndex(pageIndex)
+                        },
+                        onToggleBookmark = { chapter ->
+                            viewModel.toggleChapterBookmark(chapter)
                         },
                     )
                 }
@@ -611,17 +648,7 @@ class ReaderActivity : BaseActivity() {
             readingMode = ReadingMode.fromPreference(
                 viewModel.getMangaReadingMode(resolveDefault = false),
             ),
-            onClickReadingMode = viewModel::openReadingModeSelectDialog,
-            orientation = ReaderOrientation.fromPreference(
-                viewModel.getMangaOrientation(resolveDefault = false),
-            ),
-            onClickOrientation = viewModel::openOrientationModeSelectDialog,
-            cropEnabled = cropEnabled,
-            onClickCropBorder = {
-                val enabled = viewModel.toggleCropBorders()
-                menuToggleToast?.cancel()
-                menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
-            },
+            onClickDisplayLayout = viewModel::openDisplayLayoutDialog,
             onClickSettings = viewModel::openSettingsDialog,
         )
     }

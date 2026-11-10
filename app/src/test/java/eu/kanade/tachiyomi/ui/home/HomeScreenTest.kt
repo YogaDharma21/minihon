@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.home
 
+import eu.kanade.tachiyomi.ui.activity.ActivityTab
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.history.HistoryTab
 import eu.kanade.tachiyomi.ui.library.LibraryTab
@@ -12,11 +13,10 @@ import org.junit.jupiter.api.Test
 class HomeScreenTest {
 
     @Test
-    fun `home screen tabs contains 4 primary tabs`() {
+    fun `home screen tabs contains 3 primary tabs`() {
         HomeScreen.TABS shouldBe listOf(
             LibraryTab,
-            UpdatesTab,
-            HistoryTab,
+            ActivityTab,
             BrowseTab,
         )
     }

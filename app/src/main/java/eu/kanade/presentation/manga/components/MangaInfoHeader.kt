@@ -152,15 +152,15 @@ fun MangaInfoBox(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .blur(20.dp)
-                .alpha(0.35f)
+                .blur(8.dp)
+                .alpha(0.45f)
                 .drawWithContent {
                     drawContent()
                     drawRect(
                         brush = Brush.verticalGradient(
-                            0.0f to canvasColor.copy(alpha = 0.35f),
-                            0.25f to Color.Transparent,
-                            0.7f to canvasColor.copy(alpha = 0.85f),
+                            0.0f to canvasColor.copy(alpha = 0.2f),
+                            0.35f to Color.Transparent,
+                            0.75f to canvasColor.copy(alpha = 0.85f),
                             1.0f to canvasColor,
                         ),
                     )

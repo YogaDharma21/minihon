@@ -88,6 +88,7 @@ fun MangaChapterListItem(
     onVersionLongClick: ((ChapterList.Item) -> Unit)? = null,
     onVersionDownloadClick: ((ChapterList.Item, ChapterDownloadAction) -> Unit)? = null,
     versionDownloadProgressProvider: ((Long) -> Int)? = null,
+    isSubChapter: Boolean = false,
 ) {
     val start = getSwipeAction(
         action = chapterSwipeStartAction,
@@ -136,6 +137,16 @@ fun MangaChapterListItem(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (isSubChapter) {
+                            Text(
+                                text = "└─",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                ),
+                                modifier = Modifier.padding(end = 6.dp),
+                            )
+                        }
                         var textHeight by remember { mutableIntStateOf(0) }
                         if (!read) {
                             Icon(
@@ -303,9 +314,19 @@ private fun MangaChapterVersionItem(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(start = 32.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+            .padding(start = 24.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Connector branch indicator
+        Text(
+            text = "└─",
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            ),
+            modifier = Modifier.padding(end = 8.dp),
+        )
+
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -334,16 +355,24 @@ private fun MangaChapterVersionItem(
                 }
                 val scanlatorText = version.chapter.scanlator.takeIf { !it.isNullOrBlank() }
                     ?: stringResource(MR.strings.unknown)
-                Text(
-                    text = scanlatorText,
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = LocalContentColor.current.copy(
-                        alpha = if (version.chapter.read) DISABLED_ALPHA else 1f,
-                    ),
-                    modifier = Modifier.weight(1f, fill = false),
-                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                    border = BorderStroke(1.dp, Color(0x14FFFFFF)),
+                ) {
+                    Text(
+                        text = scanlatorText,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = LocalContentColor.current.copy(
+                                alpha = if (version.chapter.read) DISABLED_ALPHA else 1f,
+                            ),
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
 
             val date = relativeDateText(version.chapter.dateUpload)
