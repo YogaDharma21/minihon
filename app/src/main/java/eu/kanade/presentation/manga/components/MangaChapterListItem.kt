@@ -31,13 +31,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -135,16 +131,6 @@ fun MangaChapterListItem(
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
-                    .chapterTreeGuide(
-                        isSubChapter = isSubChapter,
-                        isFirstSubChapter = isFirstSubChapter,
-                        isLastSubChapter = isLastSubChapter,
-                        hasParentAbove = hasParentAbove,
-                        hasSubChaptersBelow = hasSubChaptersBelow,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                        guideX = 18.dp,
-                        branchWidth = 8.dp,
-                    )
                     .padding(start = if (isSubChapter) 32.dp else 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
             ) {
                 Column(
@@ -181,7 +167,9 @@ fun MangaChapterListItem(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { textHeight = it.size.height },
-                            color = LocalContentColor.current.copy(alpha = if (read) DISABLED_ALPHA else 1f),
+                            color = LocalContentColor.current.copy(
+                                alpha = if (read) DISABLED_ALPHA else if (isSubChapter) 0.85f else 1f,
+                            ),
                         )
                     }
 
@@ -243,23 +231,30 @@ fun MangaChapterListItem(
         }
 
         if (isExpanded && versions.size > 1) {
-            Column(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceInset),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceInset,
+                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
             ) {
-                versions.forEachIndexed { index, version ->
-                    MangaChapterVersionItem(
-                        version = version,
-                        isLast = index == versions.lastIndex,
-                        downloadIndicatorEnabled = downloadIndicatorEnabled,
-                        downloadProgressProvider = { versionDownloadProgressProvider?.invoke(version.id) ?: 0 },
-                        onClick = { onVersionClick?.invoke(version) },
-                        onLongClick = { onVersionLongClick?.invoke(version) },
-                        onDownloadClick = onVersionDownloadClick?.let { callback ->
-                            { action -> callback(version, action) }
-                        },
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    versions.forEachIndexed { index, version ->
+                        MangaChapterVersionItem(
+                            version = version,
+                            isLast = index == versions.lastIndex,
+                            downloadIndicatorEnabled = downloadIndicatorEnabled,
+                            downloadProgressProvider = { versionDownloadProgressProvider?.invoke(version.id) ?: 0 },
+                            onClick = { onVersionClick?.invoke(version) },
+                            onLongClick = { onVersionLongClick?.invoke(version) },
+                            onDownloadClick = onVersionDownloadClick?.let { callback ->
+                                { action -> callback(version, action) }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -324,19 +319,9 @@ private fun MangaChapterVersionItem(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(start = 24.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Connector branch indicator
-        Text(
-            text = if (isLast) "└─" else "├─",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-            ),
-            modifier = Modifier.padding(end = 8.dp),
-        )
-
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -487,55 +472,5 @@ private fun swipeAction(
         isUndo = isUndo,
     )
 }
-
-fun Modifier.chapterTreeGuide(
-    isSubChapter: Boolean,
-    isFirstSubChapter: Boolean,
-    isLastSubChapter: Boolean,
-    hasParentAbove: Boolean,
-    hasSubChaptersBelow: Boolean,
-    color: Color,
-    guideX: Dp = 18.dp,
-    branchWidth: Dp = 8.dp,
-    strokeWidth: Dp = 1.5.dp,
-): Modifier = if (!isSubChapter && !hasSubChaptersBelow) this else this.drawBehind {
-    val x = guideX.toPx()
-    val stroke = strokeWidth.toPx()
-    val yCenter = size.height / 2
-
-    if (hasSubChaptersBelow) {
-        drawLine(
-            color = color,
-            start = Offset(x, yCenter),
-            end = Offset(x, size.height),
-            strokeWidth = stroke,
-            cap = StrokeCap.Round,
-        )
-    }
-
-    if (isSubChapter) {
-        val startY = if (!isFirstSubChapter || hasParentAbove) 0f else yCenter
-        val endY = if (!isLastSubChapter) size.height else yCenter
-
-        if (startY != endY) {
-            drawLine(
-                color = color,
-                start = Offset(x, startY),
-                end = Offset(x, endY),
-                strokeWidth = stroke,
-                cap = StrokeCap.Round,
-            )
-        }
-
-        drawLine(
-            color = color,
-            start = Offset(x, yCenter),
-            end = Offset(x + branchWidth.toPx(), yCenter),
-            strokeWidth = stroke,
-            cap = StrokeCap.Round,
-        )
-    }
-}
-
 
 private val swipeActionThreshold = 56.dp

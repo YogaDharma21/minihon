@@ -80,7 +80,6 @@ import tachiyomi.presentation.core.theme.borderHairline
 import tachiyomi.presentation.core.theme.surfaceInset
 
 import androidx.compose.ui.window.Dialog
-import eu.kanade.presentation.manga.components.chapterTreeGuide
 
 data class ReaderChapterGroup(
     val primary: ReaderChapter,
@@ -337,22 +336,25 @@ fun ReaderChapterListSheet(
                                     )
 
                                     if (isGroupExpanded && group.versions.size > 1) {
-                                        Column(
+                                        Surface(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(start = 24.dp, top = 2.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0x0DFFFFFF)),
+                                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.surfaceInset,
+                                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
                                         ) {
-                                            group.versions.forEachIndexed { vIndex, version ->
-                                                val isLastVersion = vIndex == group.versions.lastIndex
-                                                ChapterVersionRow(
-                                                    version = version,
-                                                    isCurrent = version.chapter.id == currentChapterId,
-                                                    isLast = isLastVersion,
-                                                    onClick = { onChapterClicked(version) },
-                                                    onToggleBookmark = { onToggleBookmark(version) },
-                                                )
+                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                group.versions.forEachIndexed { vIndex, version ->
+                                                    val isLastVersion = vIndex == group.versions.lastIndex
+                                                    ChapterVersionRow(
+                                                        version = version,
+                                                        isCurrent = version.chapter.id == currentChapterId,
+                                                        isLast = isLastVersion,
+                                                        onClick = { onChapterClicked(version) },
+                                                        onToggleBookmark = { onToggleBookmark(version) },
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -674,22 +676,12 @@ private fun ChapterListItem(
             .then(if (border != null) Modifier.border(border, RoundedCornerShape(8.dp)) else Modifier)
             .background(containerColor)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(start = if (isSubChapter) 28.dp else 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (isSubChapter) {
-                Text(
-                    text = if (isLastSubChapter) "└─" else "├─",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                    ),
-                    modifier = Modifier.padding(end = 6.dp),
-                )
-            }
 
             if (isCurrent) {
                 Box(
@@ -793,18 +785,9 @@ private fun ChapterVersionRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = if (isLast) "└─" else "├─",
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-            ),
-            modifier = Modifier.padding(end = 6.dp),
-        )
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = version.chapter.name,

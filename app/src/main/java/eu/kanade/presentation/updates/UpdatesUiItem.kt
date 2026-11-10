@@ -191,38 +191,49 @@ internal fun LazyListScope.updatesUiItems(
                                 onClickCover = { onClickCover(firstItem) }.takeIf { !selectionMode },
                             )
                             if (!isCollapsed) {
-                                mangaGroup.forEachIndexed { index, updatesItem ->
-                                    UpdatesChapterUiItem(
-                                        update = updatesItem.update,
-                                        isLast = index == mangaGroup.lastIndex,
-                                        selected = updatesItem.selected,
-                                        readProgress = updatesItem.update.lastPageRead
-                                            .takeIf { !updatesItem.update.read && it > 0L }
-                                            ?.let {
-                                                stringResource(
-                                                    MR.strings.chapter_progress,
-                                                    it + 1,
-                                                )
-                                            },
-                                        onLongClick = {
-                                            onUpdateSelected(updatesItem, !updatesItem.selected, true)
-                                        },
-                                        onClick = {
-                                            when {
-                                                selectionMode -> onUpdateSelected(
-                                                    updatesItem,
-                                                    !updatesItem.selected,
-                                                    false,
-                                                )
-                                                else -> onClickUpdate(updatesItem)
-                                            }
-                                        },
-                                        onDownloadChapter = { action: ChapterDownloadAction ->
-                                            onDownloadChapter(listOf(updatesItem), action)
-                                        }.takeIf { !selectionMode },
-                                        downloadStateProvider = updatesItem.downloadStateProvider,
-                                        downloadProgressProvider = updatesItem.downloadProgressProvider,
-                                    )
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 52.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                ) {
+                                    Column {
+                                        mangaGroup.forEachIndexed { index, updatesItem ->
+                                            UpdatesChapterUiItem(
+                                                update = updatesItem.update,
+                                                isLast = index == mangaGroup.lastIndex,
+                                                selected = updatesItem.selected,
+                                                readProgress = updatesItem.update.lastPageRead
+                                                    .takeIf { !updatesItem.update.read && it > 0L }
+                                                    ?.let {
+                                                        stringResource(
+                                                            MR.strings.chapter_progress,
+                                                            it + 1,
+                                                        )
+                                                    },
+                                                onLongClick = {
+                                                    onUpdateSelected(updatesItem, !updatesItem.selected, true)
+                                                },
+                                                onClick = {
+                                                    when {
+                                                        selectionMode -> onUpdateSelected(
+                                                            updatesItem,
+                                                            !updatesItem.selected,
+                                                            false,
+                                                        )
+                                                        else -> onClickUpdate(updatesItem)
+                                                    }
+                                                },
+                                                onDownloadChapter = { action: ChapterDownloadAction ->
+                                                    onDownloadChapter(listOf(updatesItem), action)
+                                                }.takeIf { !selectionMode },
+                                                downloadStateProvider = updatesItem.downloadStateProvider,
+                                                downloadProgressProvider = updatesItem.downloadProgressProvider,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -361,23 +372,13 @@ private fun UpdatesChapterUiItem(
                 },
             )
             .height(48.dp)
-            .padding(start = 56.dp, end = MaterialTheme.padding.medium),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Visual branch hierarchy connector
-            Text(
-                text = if (isLast) "└─" else "├─",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                ),
-                modifier = Modifier.padding(end = 8.dp),
-            )
-
             var textHeight by remember { mutableIntStateOf(0) }
             if (!update.read) {
                 Icon(
