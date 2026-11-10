@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -25,7 +26,6 @@ import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalSlider
 import androidx.compose.material3.rememberSliderState
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -106,7 +106,7 @@ fun ChapterNavigator(
     val isTabletUi = isTabletUi()
     val mainAxisPadding = if (isTabletUi) 24.dp else 8.dp
 
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainer
+    val backgroundColor = Color(0xFF121316)
     val buttonColor = IconButtonDefaults.filledIconButtonColors(
         containerColor = backgroundColor,
         disabledContainerColor = backgroundColor,
@@ -127,9 +127,6 @@ fun ChapterNavigator(
             onPageChange = onPageChange,
             onPageChangeFinished = onPageIndexChangeFinished,
             interactionSource = interactionSource,
-            mainAxisPadding = mainAxisPadding,
-            backgroundColor = backgroundColor,
-            buttonColor = buttonColor,
             modifier = modifier,
         )
     } else {
@@ -165,9 +162,6 @@ fun HorizontalChapterNavigator(
     onPageChange: (Int) -> Unit,
     onPageChangeFinished: () -> Unit,
     interactionSource: MutableInteractionSource,
-    mainAxisPadding: Dp,
-    backgroundColor: Color,
-    buttonColor: IconButtonColors,
     modifier: Modifier = Modifier,
 ) {
     val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -177,20 +171,23 @@ fun HorizontalChapterNavigator(
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(horizontal = mainAxisPadding),
+                .padding(horizontal = 8.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilledIconButton(
-                modifier = Modifier.border(1.dp, Color(0x12FFFFFF), CircleShape),
+            IconButton(
                 enabled = if (isRtl) enabledNext else enabledPrevious,
                 onClick = if (isRtl) onNextChapter else onPreviousChapter,
-                colors = buttonColor,
             ) {
                 Icon(
                     imageVector = MaterialSymbols.Rounded.SkipPrevious,
                     contentDescription = stringResource(
                         if (isRtl) MR.strings.action_next_chapter else MR.strings.action_previous_chapter,
                     ),
+                    tint = if (if (isRtl) enabledNext else enabledPrevious) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    },
                 )
             }
 
@@ -199,16 +196,14 @@ fun HorizontalChapterNavigator(
                     Row(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(backgroundColor)
-                            .border(BorderStroke(1.dp, Color(0x12FFFFFF)), RoundedCornerShape(24.dp))
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(contentAlignment = Alignment.CenterEnd) {
                             Text(
                                 text = currentPage.toString(),
                                 style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             // Taking up full length so the slider doesn't shift when 'currentPage' length changes
                             Text(
@@ -231,6 +226,7 @@ fun HorizontalChapterNavigator(
                         Text(
                             text = totalPages.toString(),
                             style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -238,17 +234,20 @@ fun HorizontalChapterNavigator(
                 Spacer(Modifier.weight(1f))
             }
 
-            FilledIconButton(
-                modifier = Modifier.border(1.dp, Color(0x12FFFFFF), CircleShape),
+            IconButton(
                 enabled = if (isRtl) enabledPrevious else enabledNext,
                 onClick = if (isRtl) onPreviousChapter else onNextChapter,
-                colors = buttonColor,
             ) {
                 Icon(
                     imageVector = MaterialSymbols.Rounded.SkipNext,
                     contentDescription = stringResource(
                         if (isRtl) MR.strings.action_previous_chapter else MR.strings.action_next_chapter,
                     ),
+                    tint = if (if (isRtl) enabledPrevious else enabledNext) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    },
                 )
             }
         }

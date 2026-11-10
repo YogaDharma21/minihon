@@ -141,28 +141,22 @@ fun ReaderAppBars(
             enter = slideInVertically(readerBarsSlideAnimationSpec) { it } + fadeIn(readerBarsFadeAnimationSpec),
             exit = slideOutVertically(readerBarsSlideAnimationSpec) { it } + fadeOut(readerBarsFadeAnimationSpec),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small)) {
-                if (chapterNavigatorType.isHorizontal()) {
-                    ChapterNavigator(
-                        type = chapterNavigatorType,
-                        onNextChapter = onNextChapter,
-                        enabledNext = enabledNext,
-                        onPreviousChapter = onPreviousChapter,
-                        enabledPrevious = enabledPrevious,
-                        currentPage = currentPage,
-                        totalPages = totalPages,
-                        onPageIndexChange = onPageIndexChange,
-                        onPageIndexChangeFinished = onPageIndexChangeFinished,
-                    )
-                }
-                ReaderBottomBar(
-                    modifier = Modifier.fillMaxWidth(),
-                    readingMode = readingMode,
-                    onClickDisplayLayout = onClickDisplayLayout,
-                    onClickSettings = onClickSettings,
-                    onClickChapterList = onClickChapterList,
-                )
-            }
+            ReaderBottomBar(
+                modifier = Modifier.fillMaxWidth(),
+                readingMode = readingMode,
+                onClickDisplayLayout = onClickDisplayLayout,
+                onClickSettings = onClickSettings,
+                onClickChapterList = onClickChapterList,
+                chapterNavigatorType = chapterNavigatorType,
+                onNextChapter = onNextChapter,
+                enabledNext = enabledNext,
+                onPreviousChapter = onPreviousChapter,
+                enabledPrevious = enabledPrevious,
+                currentPage = currentPage,
+                totalPages = totalPages,
+                onPageIndexChange = onPageIndexChange,
+                onPageIndexChangeFinished = onPageIndexChangeFinished,
+            )
         }
     }
 }
