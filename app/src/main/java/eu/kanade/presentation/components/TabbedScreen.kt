@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -33,19 +31,12 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -77,6 +67,7 @@ import dev.icerock.moko.resources.StringResource
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowBack
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Search
 import tachiyomi.i18n.MR
@@ -85,7 +76,6 @@ import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.clearFocusOnSoftKeyboardHide
 import tachiyomi.presentation.core.util.runOnEnterKeyPressed
-import tachiyomi.presentation.core.util.secondaryItemAlpha
 import tachiyomi.presentation.core.util.showSoftKeyboard
 
 @Composable
@@ -106,7 +96,7 @@ fun TabbedScreen(
         val headerHeight = if (headerHeightPx > 0) {
             LocalDensity.current.run { headerHeightPx.toDp() }
         } else {
-            120.dp
+            130.dp
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -124,44 +114,172 @@ fun TabbedScreen(
                 )
             }
 
-            Column(
+            val tab = tabs[state.currentPage]
+            val searchEnabled = tab.searchEnabled
+            val isSearching = searchEnabled && searchQuery != null
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
                     .zIndex(10f)
                     .onSizeChanged { headerHeightPx = it.height },
-                horizontalAlignment = Alignment.CenterHorizontally,
+                contentAlignment = Alignment.TopCenter,
             ) {
-                val tab = tabs[state.currentPage]
-                val searchEnabled = tab.searchEnabled
-
-                SearchToolbar(
-                    titleContent = { AppBarTitle(stringResource(titleRes)) },
-                    searchEnabled = searchEnabled,
-                    searchQuery = if (searchEnabled) searchQuery else null,
-                    onChangeSearchQuery = onChangeSearchQuery,
-                    actions = { AppBarActions(tab.actions) },
-                )
-
                 Surface(
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(24.dp),
                     color = Color(0xFF121316),
                     border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.offset(y = (-4).dp),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        tabs.forEachIndexed { index, tabItem ->
-                            val selected = state.currentPage == index
-                            SegmentedTabButton(
-                                selected = selected,
-                                onClick = { scope.launch { state.animateScrollToPage(index) } },
-                                title = stringResource(tabItem.titleRes),
-                                badgeCount = tabItem.badgeNumber,
-                            )
+                        // Row 1: Title & actions, or search bar
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            if (isSearching) {
+                                val focusRequester = remember { FocusRequester() }
+                                val searchFieldState = rememberTextFieldState(searchQuery.orEmpty())
+                                val currentOnChangeSearchQuery by rememberUpdatedState(onChangeSearchQuery)
+
+                                LaunchedEffect(searchFieldState) {
+                                    snapshotFlow { searchFieldState.text.toString() }
+                                        .drop(1)
+                                        .collect { currentOnChangeSearchQuery(it) }
+                                }
+                                LaunchedEffect(searchQuery) {
+                                    if (searchQuery != searchFieldState.text.toString()) {
+                                        searchFieldState.setTextAndPlaceCursorAtEnd(searchQuery.orEmpty())
+                                    }
+                                }
+
+                                val keyboardController = LocalSoftwareKeyboardController.current
+                                val focusManager = LocalFocusManager.current
+
+                                IconButton(onClick = { onChangeSearchQuery(null) }) {
+                                    Icon(
+                                        imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
+                                        contentDescription = stringResource(MR.strings.action_cancel),
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+
+                                BasicTextField(
+                                    state = searchFieldState,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(focusRequester)
+                                        .runOnEnterKeyPressed {
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                        }
+                                        .showSoftKeyboard(searchQuery.isNullOrEmpty())
+                                        .clearFocusOnSoftKeyboardHide(),
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        fontSize = 16.sp,
+                                    ),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    onKeyboardAction = {
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                    },
+                                    lineLimits = TextFieldLineLimits.SingleLine,
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    decorator = { innerTextField ->
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.CenterStart,
+                                        ) {
+                                            if (searchFieldState.text.isEmpty()) {
+                                                Text(
+                                                    text = stringResource(MR.strings.action_search_hint),
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        .copy(alpha = 0.6f),
+                                                )
+                                            }
+                                            innerTextField()
+                                        }
+                                    },
+                                )
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (searchFieldState.text.isNotEmpty()) {
+                                        IconButton(onClick = { searchFieldState.clearText() }) {
+                                            Icon(
+                                                imageVector = MaterialSymbols.Rounded.Close,
+                                                contentDescription = stringResource(MR.strings.action_reset),
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                    }
+                                    AppBarActions(tab.actions)
+                                }
+                            } else {
+                                Text(
+                                    text = stringResource(titleRes),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 19.sp,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                )
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (searchEnabled) {
+                                        IconButton(onClick = { onChangeSearchQuery("") }) {
+                                            Icon(
+                                                imageVector = MaterialSymbols.Rounded.Search,
+                                                contentDescription = stringResource(MR.strings.action_search),
+                                                tint = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
+                                    }
+                                    AppBarActions(tab.actions)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Row 2: Embedded clickable tabs
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0x0EFFFFFF),
+                            border = BorderStroke(1.dp, Color(0x10FFFFFF)),
+                            modifier = Modifier.padding(bottom = 2.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                tabs.forEachIndexed { index, tabItem ->
+                                    val selected = state.currentPage == index
+                                    SegmentedTabButton(
+                                        selected = selected,
+                                        onClick = { scope.launch { state.animateScrollToPage(index) } },
+                                        title = stringResource(tabItem.titleRes),
+                                        badgeCount = tabItem.badgeNumber,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -184,7 +302,7 @@ fun SegmentedTabButton(
         } else {
             Color.Transparent
         },
-        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabBg",
     )
     val contentColor by animateColorAsState(
@@ -193,7 +311,7 @@ fun SegmentedTabButton(
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabContent",
     )
 
