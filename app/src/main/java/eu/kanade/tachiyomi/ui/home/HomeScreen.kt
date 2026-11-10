@@ -7,11 +7,20 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.graphics.res.animatedVectorResource
+import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
+import androidx.compose.animation.graphics.vector.AnimatedImageVector
+import eu.kanade.presentation.util.rememberAnimatedVectorPainter
+import eu.kanade.tachiyomi.R
+import soup.compose.material.motion.animation.materialFadeThroughIn
+import soup.compose.material.motion.animation.materialFadeThroughOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -119,6 +128,15 @@ object HomeScreen : Screen() {
                 graph.sourcePreferences.extensionUpdatesCount.changes()
             }.collectAsState(initial = 0)
 
+            val libraryImage = AnimatedImageVector.animatedVectorResource(R.drawable.animated_library)
+            val activityImage = AnimatedImageVector.animatedVectorResource(R.drawable.animated_updates)
+            val browseEnter = AnimatedImageVector.animatedVectorResource(R.drawable.animated_browse_enter)
+            val browseExit = AnimatedImageVector.animatedVectorResource(R.drawable.animated_browse_exit)
+
+            val libraryTitle = stringResource(MR.strings.label_library)
+            val activityTitle = stringResource(MR.strings.label_activity)
+            val browseTitle = stringResource(MR.strings.browse)
+
             // Provide usable navigator to content screen
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
@@ -137,7 +155,7 @@ object HomeScreen : Screen() {
                         modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
                     ) {
-                        tabNavigator.saveableState(key = "currentTab", it) {
+                        tabNavigator.saveableState(key = it.key, it) {
                             it.Content()
                         }
                     }
@@ -175,7 +193,15 @@ object HomeScreen : Screen() {
                                             is BrowseTab -> extensionBadgeCount
                                             else -> 0
                                         }
+                                        val (title, painter) = when (tab) {
+                                            is LibraryTab -> libraryTitle to rememberAnimatedVectorPainter(libraryImage, selected)
+                                            is ActivityTab -> activityTitle to rememberAnimatedVectorPainter(activityImage, selected)
+                                            is BrowseTab -> browseTitle to rememberAnimatedVectorPainter(browseEnter, browseExit, selected)
+                                            else -> tab.options.title to tab.options.icon!!
+                                        }
                                         FloatingDockItem(
+                                            title = title,
+                                            painter = painter,
                                             tab = tab,
                                             badgeCount = badgeCount,
                                             selected = selected,
@@ -267,19 +293,20 @@ object HomeScreen : Screen() {
 
     @Composable
     private fun FloatingDockItem(
+        title: String,
+        painter: androidx.compose.ui.graphics.painter.Painter,
         tab: eu.kanade.presentation.util.Tab,
         badgeCount: Int,
         selected: Boolean,
         onClick: () -> Unit,
     ) {
-        val options = tab.options
         val backgroundColor by animateColorAsState(
             targetValue = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
                 Color.Transparent
             },
-            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
             label = "dockItemBg",
         )
         val contentColor by animateColorAsState(
@@ -288,7 +315,7 @@ object HomeScreen : Screen() {
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
             label = "dockItemContent",
         )
 
@@ -300,14 +327,10 @@ object HomeScreen : Screen() {
             contentColor = contentColor,
         ) {
             Row(
-                modifier = Modifier
-                    .animateContentSize(
-                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
-                    )
-                    .padding(
-                        horizontal = 12.dp,
-                        vertical = 8.dp,
-                    ),
+                modifier = Modifier.padding(
+                    horizontal = 12.dp,
+                    vertical = 8.dp,
+                ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -317,28 +340,40 @@ object HomeScreen : Screen() {
                         badge = { badge() },
                     ) {
                         Icon(
-                            painter = options.icon!!,
-                            contentDescription = options.title,
+                            painter = painter,
+                            contentDescription = title,
                             tint = contentColor,
                         )
                     }
                 } else {
                     Icon(
-                        painter = options.icon!!,
-                        contentDescription = options.title,
+                        painter = painter,
+                        contentDescription = title,
                         tint = contentColor,
                     )
                 }
 
-                if (selected) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = options.title,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = contentColor,
-                        maxLines = 1,
-                    )
+                AnimatedVisibility(
+                    visible = selected,
+                    enter = fadeIn(animationSpec = tween(280, delayMillis = 60)) + expandHorizontally(
+                        animationSpec = tween(380, easing = FastOutSlowInEasing),
+                        expandFrom = Alignment.Start,
+                    ),
+                    exit = fadeOut(animationSpec = tween(180)) + shrinkHorizontally(
+                        animationSpec = tween(340, easing = FastOutSlowInEasing),
+                        shrinkTowards = Alignment.Start,
+                    ),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = contentColor,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }

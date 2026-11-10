@@ -95,7 +95,7 @@ class UpdatesViewModel(
     // First and last selected index in list
     private val selectedPositions: Array<Int> = arrayOf(-1, -1)
     private val selectedChapterIds = MutableStateFlow(emptySet<Long>())
-    private val collapsedMangaIds = MutableStateFlow(emptySet<Long>())
+    private val expandedMangaIds = MutableStateFlow(emptySet<Long>())
 
     private val dialog = MutableStateFlow<Dialog?>(null)
 
@@ -192,11 +192,17 @@ class UpdatesViewModel(
 
     val state: StateFlow<State> = combine(
         updateItems,
-        combine(selectedChapterIds, collapsedMangaIds, ::Pair),
+        combine(selectedChapterIds, expandedMangaIds, ::Pair),
         queuedDownloadStates.pausedWhileUnsubscribed(),
         dialog,
         hasActiveFilters,
-    ) { items, (selectedIds, collapsedIds), downloads, dialog, hasActiveFilters ->
+    ) { items, (selectedIds, expandedIds), downloads, dialog, hasActiveFilters ->
+        val multiChapterMangaIds = items.orEmpty().groupingBy { it.update.mangaId }
+            .eachCount()
+            .filterValues { it > 1 }
+            .keys
+        val collapsedIds = multiChapterMangaIds - expandedIds
+
         State(
             isLoading = items == null,
             hasActiveFilters = hasActiveFilters,
@@ -487,7 +493,7 @@ class UpdatesViewModel(
     }
 
     fun toggleMangaCollapse(mangaId: Long) {
-        collapsedMangaIds.update { if (mangaId in it) it - mangaId else it + mangaId }
+        expandedMangaIds.update { if (mangaId in it) it - mangaId else it + mangaId }
     }
 
     fun toggleCollapseAll() {
@@ -496,7 +502,7 @@ class UpdatesViewModel(
         val multiChapterMangaIds = mangaCounts.filterValues { it > 1 }.keys
         if (multiChapterMangaIds.isEmpty()) return
 
-        collapsedMangaIds.update { current ->
+        expandedMangaIds.update { current ->
             if (multiChapterMangaIds.all { it in current }) {
                 emptySet()
             } else {

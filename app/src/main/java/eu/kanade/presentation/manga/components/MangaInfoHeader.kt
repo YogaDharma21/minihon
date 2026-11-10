@@ -587,7 +587,7 @@ private fun MangaKpiBar(
         ) {
             // Column 1: CHAPTERS
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(0.85f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -629,7 +629,7 @@ private fun MangaKpiBar(
 
             // Column 2: STATUS
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(0.95f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -688,7 +688,7 @@ private fun MangaKpiBar(
 
             // Column 3: SOURCE
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1.35f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {

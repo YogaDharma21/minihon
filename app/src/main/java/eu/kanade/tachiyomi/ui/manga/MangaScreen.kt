@@ -146,7 +146,7 @@ class MangaScreen(
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, viewModel.source!!) } },
             onFilterButtonClicked = viewModel::showSettingsDialog,
             onRefresh = viewModel::fetchAllFromSource,
-            onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter()) },
+            onContinueReading = { continueReading(context, viewModel.getChapterToRead()) },
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = viewModel::showCoverDialog,
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },

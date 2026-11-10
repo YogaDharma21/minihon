@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -274,6 +275,8 @@ private fun MangaScreenSmallImpl(
         onAllChapterSelected(false)
     }
 
+    var isSearchActive by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             val isFirstItemVisible by remember {
@@ -307,6 +310,16 @@ private fun MangaScreenSmallImpl(
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { titleAlpha },
                 backgroundAlphaProvider = { backgroundAlpha },
+                searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
+                onSearchQueryChange = { query ->
+                    if (query == null) {
+                        isSearchActive = false
+                        onSearchQueryChange("")
+                    } else {
+                        isSearchActive = true
+                        onSearchQueryChange(query)
+                    }
+                },
             )
         },
         bottomBar = {
@@ -322,23 +335,20 @@ private fun MangaScreenSmallImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.chapters.isNotEmpty() && !isAnySelected
-            SmallExtendedFloatingActionButton(
-                text = {
-                    Text(
-                        text = stringResource(
-                            if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
-                        ),
-                    )
-                },
-                icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                ),
-            )
+            if (state.chapters.isNotEmpty() && !isAnySelected) {
+                SmallExtendedFloatingActionButton(
+                    text = {
+                        Text(
+                            text = stringResource(
+                                if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
+                    },
+                    icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                )
+            }
         },
     ) { contentPadding ->
         val topPadding = contentPadding.calculateTopPadding()
@@ -419,7 +429,7 @@ private fun MangaScreenSmallImpl(
                             chapterCount = chapters.size,
                             missingChapterCount = state.missingChapterCount,
                             searchQuery = state.searchQuery,
-                            onSearchQueryChange = onSearchQueryChange,
+                            onSearchQueryChange = null,
                             onClick = onFilterClicked,
                         )
                     }
@@ -514,6 +524,8 @@ fun MangaScreenLargeImpl(
         onAllChapterSelected(false)
     }
 
+    var isSearchActive by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             MangaToolbar(
@@ -534,6 +546,16 @@ fun MangaScreenLargeImpl(
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { 1f },
                 backgroundAlphaProvider = { 1f },
+                searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
+                onSearchQueryChange = { query ->
+                    if (query == null) {
+                        isSearchActive = false
+                        onSearchQueryChange("")
+                    } else {
+                        isSearchActive = true
+                        onSearchQueryChange(query)
+                    }
+                },
             )
         },
         bottomBar = {
@@ -554,23 +576,20 @@ fun MangaScreenLargeImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.chapters.isNotEmpty() && !isAnySelected
-            SmallExtendedFloatingActionButton(
-                text = {
-                    Text(
-                        text = stringResource(
-                            if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
-                        ),
-                    )
-                },
-                icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                ),
-            )
+            if (state.chapters.isNotEmpty() && !isAnySelected) {
+                SmallExtendedFloatingActionButton(
+                    text = {
+                        Text(
+                            text = stringResource(
+                                if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
+                    },
+                    icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                )
+            }
         },
     ) { contentPadding ->
         PullRefresh(
@@ -646,7 +665,7 @@ fun MangaScreenLargeImpl(
                                     chapterCount = chapters.size,
                                     missingChapterCount = state.missingChapterCount,
                                     searchQuery = state.searchQuery,
-                                    onSearchQueryChange = onSearchQueryChange,
+                                    onSearchQueryChange = null,
                                     onClick = onFilterButtonClicked,
                                 )
                             }
@@ -815,19 +834,58 @@ private fun LazyListScope.sharedChapterItems(
                         null
                     },
                     versionDownloadProgressProvider = downloadProgressProvider,
-                    isSubChapter = item.chapter.chapterNumber > 0.0 &&
-                        (item.chapter.chapterNumber % 1.0 != 0.0),
+                    isSubChapter = run {
+                        val currNum = item.chapter.chapterNumber
+                        currNum > 0.0 && (currNum % 1.0 != 0.0)
+                    },
+                    isFirstSubChapter = run {
+                        val currNum = item.chapter.chapterNumber
+                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
+                        if (!isSub) {
+                            false
+                        } else {
+                            val currIndex = chapters.indexOf(item)
+                            val prevItem = chapters.getOrNull(currIndex - 1) as? ChapterList.Item
+                            val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
+                            prevItem == null || prevNum <= 0.0 || kotlin.math.floor(prevNum) != kotlin.math.floor(currNum)
+                        }
+                    },
                     isLastSubChapter = run {
-                        val isSub = item.chapter.chapterNumber > 0.0 && (item.chapter.chapterNumber % 1.0 != 0.0)
+                        val currNum = item.chapter.chapterNumber
+                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
                         if (!isSub) {
                             true
                         } else {
                             val currIndex = chapters.indexOf(item)
                             val nextItem = chapters.getOrNull(currIndex + 1) as? ChapterList.Item
-                            nextItem == null ||
-                                nextItem.chapter.chapterNumber <= 0.0 ||
-                                nextItem.chapter.chapterNumber % 1.0 == 0.0 ||
-                                kotlin.math.floor(nextItem.chapter.chapterNumber) != kotlin.math.floor(item.chapter.chapterNumber)
+                            val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
+                            nextItem == null || nextNum <= 0.0 || (nextNum % 1.0 == 0.0) ||
+                                kotlin.math.floor(nextNum) != kotlin.math.floor(currNum)
+                        }
+                    },
+                    hasParentAbove = run {
+                        val currNum = item.chapter.chapterNumber
+                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
+                        if (!isSub) {
+                            false
+                        } else {
+                            val currIndex = chapters.indexOf(item)
+                            val prevItem = chapters.getOrNull(currIndex - 1) as? ChapterList.Item
+                            val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
+                            prevItem != null && prevNum == kotlin.math.floor(currNum)
+                        }
+                    },
+                    hasSubChaptersBelow = run {
+                        val currNum = item.chapter.chapterNumber
+                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
+                        if (isSub) {
+                            false
+                        } else {
+                            val currIndex = chapters.indexOf(item)
+                            val nextItem = chapters.getOrNull(currIndex + 1) as? ChapterList.Item
+                            val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
+                            nextItem != null && nextNum > 0.0 && (nextNum % 1.0 != 0.0) &&
+                                kotlin.math.floor(nextNum) == currNum
                         }
                     },
                 )

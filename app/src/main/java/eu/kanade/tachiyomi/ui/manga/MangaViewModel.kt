@@ -643,6 +643,25 @@ class MangaViewModel(
         return successState.chapters.getNextUnread(successState.manga)
     }
 
+    /**
+     * Returns the best chapter to read: next unread, or first chapter if new, or latest read chapter if caught up.
+     */
+    fun getChapterToRead(): Chapter? {
+        val successState = successState ?: return null
+        val nextUnread = successState.chapters.getNextUnread(successState.manga)
+        if (nextUnread != null) return nextUnread
+
+        val allChaptersList = allChapters.orEmpty().map { it.chapter }
+        if (allChaptersList.isEmpty()) return null
+
+        val sortedAsc = allChaptersList.sortedWith(getChapterSort(successState.manga, sortDescending = false))
+        return if (!successState.hasReadChapters) {
+            sortedAsc.firstOrNull()
+        } else {
+            sortedAsc.lastOrNull { it.read } ?: sortedAsc.lastOrNull()
+        }
+    }
+
     private fun getUnreadChapters(): List<Chapter> {
         val chapterItems = if (skipFiltered) filteredChapters.orEmpty() else allChapters.orEmpty()
         return chapterItems

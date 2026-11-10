@@ -10,15 +10,21 @@ import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.ui.more.DownloadQueueState
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ChromeReaderMode
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.automirroredrounded.Label
 import mihon.icons.materialsymbols.rounded.CloudOff
+import mihon.icons.materialsymbols.rounded.Code
+import mihon.icons.materialsymbols.rounded.CollectionsBookmark
 import mihon.icons.materialsymbols.rounded.Download
+import mihon.icons.materialsymbols.rounded.Explore
 import mihon.icons.materialsymbols.rounded.Eyeglasses2
 import mihon.icons.materialsymbols.rounded.Info
+import mihon.icons.materialsymbols.rounded.Palette
 import mihon.icons.materialsymbols.rounded.QueryStats
-import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Storage
+import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.roundedfilled.VolunteerActivism
 import tachiyomi.core.common.Constants
 import tachiyomi.i18n.MR
@@ -37,8 +43,15 @@ fun MoreScreen(
     onClickDownloadQueue: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
+    onClickAppearance: () -> Unit,
+    onClickLibrarySettings: () -> Unit,
+    onClickReaderSettings: () -> Unit,
+    onClickDownloadsSettings: () -> Unit,
+    onClickTrackingSettings: () -> Unit,
+    onClickBrowseSettings: () -> Unit,
     onClickDataAndStorage: () -> Unit,
-    onClickSettings: () -> Unit,
+    onClickSecurity: () -> Unit,
+    onClickAdvanced: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
     onNavigateUp: (() -> Unit)? = null,
@@ -49,7 +62,7 @@ fun MoreScreen(
         topBar = { scrollBehavior ->
             if (onNavigateUp != null) {
                 AppBar(
-                    title = stringResource(MR.strings.label_more),
+                    title = stringResource(MR.strings.label_settings),
                     navigateUp = onNavigateUp,
                     scrollBehavior = scrollBehavior,
                 )
@@ -126,6 +139,51 @@ fun MoreScreen(
                     onPreferenceClick = onClickStats,
                 )
             }
+
+            item { HorizontalDivider() }
+
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_appearance),
+                    icon = MaterialSymbols.Rounded.Palette,
+                    onPreferenceClick = onClickAppearance,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_library),
+                    icon = MaterialSymbols.Rounded.CollectionsBookmark,
+                    onPreferenceClick = onClickLibrarySettings,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_reader),
+                    icon = MaterialSymbols.AutoMirroredRounded.ChromeReaderMode,
+                    onPreferenceClick = onClickReaderSettings,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_downloads),
+                    icon = MaterialSymbols.Rounded.Download,
+                    onPreferenceClick = onClickDownloadsSettings,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_tracking),
+                    icon = MaterialSymbols.Rounded.Sync,
+                    onPreferenceClick = onClickTrackingSettings,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.browse),
+                    icon = MaterialSymbols.Rounded.Explore,
+                    onPreferenceClick = onClickBrowseSettings,
+                )
+            }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_data_storage),
@@ -133,16 +191,23 @@ fun MoreScreen(
                     onPreferenceClick = onClickDataAndStorage,
                 )
             }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_security),
+                    icon = MaterialSymbols.Rounded.Security,
+                    onPreferenceClick = onClickSecurity,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.pref_category_advanced),
+                    icon = MaterialSymbols.Rounded.Code,
+                    onPreferenceClick = onClickAdvanced,
+                )
+            }
 
             item { HorizontalDivider() }
 
-            item {
-                TextPreferenceWidget(
-                    title = stringResource(MR.strings.label_settings),
-                    icon = MaterialSymbols.Rounded.Settings,
-                    onPreferenceClick = onClickSettings,
-                )
-            }
             item {
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_support_us),

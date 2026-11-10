@@ -16,7 +16,9 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.manga.DownloadAction
+import eu.kanade.presentation.components.SearchToolbar
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Search
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
@@ -47,8 +49,23 @@ fun MangaToolbar(
     titleAlphaProvider: () -> Float,
     backgroundAlphaProvider: () -> Float,
     modifier: Modifier = Modifier,
+    searchQuery: String? = null,
+    onSearchQueryChange: ((String?) -> Unit)? = null,
 ) {
     val isActionMode = actionModeCounter > 0
+
+    if (!isActionMode && searchQuery != null) {
+        SearchToolbar(
+            searchQuery = searchQuery,
+            onChangeSearchQuery = { onSearchQueryChange?.invoke(it) },
+            onClickCloseSearch = { onSearchQueryChange?.invoke(null) },
+            placeholderText = stringResource(MR.strings.action_search),
+            navigateUp = { onSearchQueryChange?.invoke(null) },
+            modifier = modifier,
+        )
+        return
+    }
+
     AppBar(
         titleContent = {
             if (isActionMode) {
@@ -99,6 +116,15 @@ fun MangaToolbar(
                                 title = stringResource(MR.strings.manga_download),
                                 icon = MaterialSymbols.Rounded.Download,
                                 onClick = { downloadExpanded = !downloadExpanded },
+                            ),
+                        )
+                    }
+                    if (onSearchQueryChange != null) {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(MR.strings.action_search),
+                                icon = MaterialSymbols.Rounded.Search,
+                                onClick = { onSearchQueryChange("") },
                             ),
                         )
                     }

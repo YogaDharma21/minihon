@@ -81,14 +81,6 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    val multiChapterMangaIds = remember(state.items) {
-        state.items.groupingBy { it.update.mangaId }
-            .eachCount()
-            .filterValues { it > 1 }
-            .keys
-    }
-    val allCollapsed = multiChapterMangaIds.isNotEmpty() && multiChapterMangaIds.all { it in state.collapsedMangaIds }
-
     return TabContent(
         titleRes = MR.strings.label_recent_updates,
         actions = listOf(
@@ -101,11 +93,6 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
                 title = stringResource(MR.strings.action_filter),
                 icon = MaterialSymbols.Rounded.FilterList,
                 onClick = viewModel::showFilterDialog,
-            ),
-            AppBar.Action(
-                title = "Collapse/Expand all",
-                icon = if (allCollapsed) MaterialSymbols.Rounded.UnfoldMore else MaterialSymbols.Rounded.UnfoldLess,
-                onClick = viewModel::toggleCollapseAll,
             ),
         ),
         content = { contentPadding, snackbarHostState ->

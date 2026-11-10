@@ -31,9 +31,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -89,7 +93,10 @@ fun MangaChapterListItem(
     onVersionDownloadClick: ((ChapterList.Item, ChapterDownloadAction) -> Unit)? = null,
     versionDownloadProgressProvider: ((Long) -> Int)? = null,
     isSubChapter: Boolean = false,
+    isFirstSubChapter: Boolean = false,
     isLastSubChapter: Boolean = true,
+    hasParentAbove: Boolean = false,
+    hasSubChaptersBelow: Boolean = false,
 ) {
     val start = getSwipeAction(
         action = chapterSwipeStartAction,
@@ -128,7 +135,17 @@ fun MangaChapterListItem(
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
-                    .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
+                    .chapterTreeGuide(
+                        isSubChapter = isSubChapter,
+                        isFirstSubChapter = isFirstSubChapter,
+                        isLastSubChapter = isLastSubChapter,
+                        hasParentAbove = hasParentAbove,
+                        hasSubChaptersBelow = hasSubChaptersBelow,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
+                        guideX = 18.dp,
+                        branchWidth = 8.dp,
+                    )
+                    .padding(start = if (isSubChapter) 32.dp else 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
@@ -138,16 +155,6 @@ fun MangaChapterListItem(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (isSubChapter) {
-                            Text(
-                                text = if (isLastSubChapter) "└─" else "├─",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                                ),
-                                modifier = Modifier.padding(end = 6.dp),
-                            )
-                        }
                         var textHeight by remember { mutableIntStateOf(0) }
                         if (!read) {
                             Icon(
@@ -480,5 +487,55 @@ private fun swipeAction(
         isUndo = isUndo,
     )
 }
+
+fun Modifier.chapterTreeGuide(
+    isSubChapter: Boolean,
+    isFirstSubChapter: Boolean,
+    isLastSubChapter: Boolean,
+    hasParentAbove: Boolean,
+    hasSubChaptersBelow: Boolean,
+    color: Color,
+    guideX: Dp = 18.dp,
+    branchWidth: Dp = 8.dp,
+    strokeWidth: Dp = 1.5.dp,
+): Modifier = if (!isSubChapter && !hasSubChaptersBelow) this else this.drawBehind {
+    val x = guideX.toPx()
+    val stroke = strokeWidth.toPx()
+    val yCenter = size.height / 2
+
+    if (hasSubChaptersBelow) {
+        drawLine(
+            color = color,
+            start = Offset(x, yCenter),
+            end = Offset(x, size.height),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+    }
+
+    if (isSubChapter) {
+        val startY = if (!isFirstSubChapter || hasParentAbove) 0f else yCenter
+        val endY = if (!isLastSubChapter) size.height else yCenter
+
+        if (startY != endY) {
+            drawLine(
+                color = color,
+                start = Offset(x, startY),
+                end = Offset(x, endY),
+                strokeWidth = stroke,
+                cap = StrokeCap.Round,
+            )
+        }
+
+        drawLine(
+            color = color,
+            start = Offset(x, yCenter),
+            end = Offset(x + branchWidth.toPx(), yCenter),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
 
 private val swipeActionThreshold = 56.dp
