@@ -78,7 +78,7 @@ fun TabbedScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
                     .zIndex(1f),
                 contentAlignment = Alignment.Center,
             ) {
@@ -130,7 +130,7 @@ fun SegmentedTabButton(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.primary
+            Color(0x22FFFFFF)
         } else {
             Color.Transparent
         },
@@ -139,7 +139,7 @@ fun SegmentedTabButton(
     )
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.onPrimary
+            Color.White
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
@@ -153,10 +153,11 @@ fun SegmentedTabButton(
         shape = CircleShape,
         color = backgroundColor,
         contentColor = contentColor,
+        border = if (selected) BorderStroke(1.dp, Color(0x20FFFFFF)) else null,
         modifier = modifier,
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             CompositionLocalProvider(LocalContentColor provides contentColor) {
