@@ -36,11 +36,6 @@ fun Screen.migrateSourceTab(): TabContent {
                     uriHandler.openUri("https://mihon.app/docs/guides/source-migration")
                 },
             ),
-            AppBar.Action(
-                title = stringResource(MR.strings.label_settings),
-                icon = MaterialSymbols.Rounded.Settings,
-                onClick = { navigator.push(MoreTab) },
-            ),
         ),
         content = { contentPadding, _ ->
             MigrateSourceScreen(

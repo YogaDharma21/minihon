@@ -42,11 +42,6 @@ fun extensionsTab(
         badgeNumber = updatesCount.takeIf { it > 0 },
         searchEnabled = true,
         actions = listOf(
-            AppBar.Action(
-                title = stringResource(MR.strings.label_settings),
-                icon = MaterialSymbols.Rounded.Settings,
-                onClick = { navigator.push(MoreTab) },
-            ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.action_filter),
                 onClick = { navigator.push(ExtensionFilterScreen()) },

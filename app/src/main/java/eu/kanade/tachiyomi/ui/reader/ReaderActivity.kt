@@ -366,6 +366,11 @@ class ReaderActivity : BaseActivity() {
                         onToggleBookmark = { chapter ->
                             viewModel.toggleChapterBookmark(chapter)
                         },
+                        onSelectChapterForPreview = { chapter ->
+                            lifecycleScope.launch {
+                                viewModel.loadChapter(chapter)
+                            }
+                        },
                     )
                 }
                 null -> {}

@@ -64,3 +64,42 @@ private fun ChapterList.Item.preferenceScore(): Int {
     }
     return score
 }
+
+fun List<ChapterList.Item>.groupSubChaptersWithParent(sortDescending: Boolean): List<ChapterList.Item> {
+    if (!sortDescending || isEmpty()) return this
+
+    val result = ArrayList<ChapterList.Item>(size)
+    var i = 0
+    while (i < size) {
+        val current = this[i]
+        val num = current.chapter.chapterNumber
+        if (num > 0.0 && num % 1.0 != 0.0) {
+            val baseNum = kotlin.math.floor(num)
+            val group = mutableListOf<ChapterList.Item>()
+            var j = i
+            while (j < size) {
+                val item = this[j]
+                val itemNum = item.chapter.chapterNumber
+                if (itemNum > 0.0 && kotlin.math.floor(itemNum) == baseNum) {
+                    group.add(item)
+                    j++
+                } else {
+                    break
+                }
+            }
+            val parentItem = group.firstOrNull { it.chapter.chapterNumber == baseNum }
+            val subChapters = group.filter { it.chapter.chapterNumber != baseNum }
+                .sortedBy { it.chapter.chapterNumber }
+
+            if (parentItem != null) {
+                result.add(parentItem)
+            }
+            result.addAll(subChapters)
+            i = j
+        } else {
+            result.add(current)
+            i++
+        }
+    }
+    return result
+}

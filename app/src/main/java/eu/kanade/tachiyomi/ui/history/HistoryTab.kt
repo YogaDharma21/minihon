@@ -98,11 +98,6 @@ fun Screen.historyTab(viewModel: HistoryViewModel): TabContent {
                 icon = MaterialSymbols.Rounded.DeleteSweep,
                 onClick = { viewModel.setDialog(HistoryViewModel.Dialog.DeleteAll) },
             ),
-            AppBar.Action(
-                title = stringResource(MR.strings.label_settings),
-                icon = MaterialSymbols.Rounded.Settings,
-                onClick = { navigator.push(MoreTab) },
-            ),
         ),
         content = { contentPadding, snackbarHostState ->
             HistoryScreen(
@@ -113,7 +108,7 @@ fun Screen.historyTab(viewModel: HistoryViewModel): TabContent {
                 onClickResume = viewModel::getNextChapterForManga,
                 onDialogChange = viewModel::setDialog,
                 onClickFavorite = viewModel::addFavorite,
-                onClickSettings = { navigator.push(MoreTab) },
+                onClickSettings = null,
                 showTopBar = false,
                 contentPadding = contentPadding,
             )

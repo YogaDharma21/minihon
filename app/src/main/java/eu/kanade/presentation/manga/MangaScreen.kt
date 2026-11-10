@@ -322,7 +322,7 @@ private fun MangaScreenSmallImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.hasUnreadChapters && !isAnySelected
+            val isFABVisible = state.chapters.isNotEmpty() && !isAnySelected
             SmallExtendedFloatingActionButton(
                 text = {
                     Text(
@@ -554,7 +554,7 @@ fun MangaScreenLargeImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.hasUnreadChapters && !isAnySelected
+            val isFABVisible = state.chapters.isNotEmpty() && !isAnySelected
             SmallExtendedFloatingActionButton(
                 text = {
                     Text(
@@ -817,6 +817,19 @@ private fun LazyListScope.sharedChapterItems(
                     versionDownloadProgressProvider = downloadProgressProvider,
                     isSubChapter = item.chapter.chapterNumber > 0.0 &&
                         (item.chapter.chapterNumber % 1.0 != 0.0),
+                    isLastSubChapter = run {
+                        val isSub = item.chapter.chapterNumber > 0.0 && (item.chapter.chapterNumber % 1.0 != 0.0)
+                        if (!isSub) {
+                            true
+                        } else {
+                            val currIndex = chapters.indexOf(item)
+                            val nextItem = chapters.getOrNull(currIndex + 1) as? ChapterList.Item
+                            nextItem == null ||
+                                nextItem.chapter.chapterNumber <= 0.0 ||
+                                nextItem.chapter.chapterNumber % 1.0 == 0.0 ||
+                                kotlin.math.floor(nextItem.chapter.chapterNumber) != kotlin.math.floor(item.chapter.chapterNumber)
+                        }
+                    },
                 )
             }
         }

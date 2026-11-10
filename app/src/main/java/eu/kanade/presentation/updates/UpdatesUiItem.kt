@@ -191,9 +191,10 @@ internal fun LazyListScope.updatesUiItems(
                                 onClickCover = { onClickCover(firstItem) }.takeIf { !selectionMode },
                             )
                             if (!isCollapsed) {
-                                mangaGroup.forEach { updatesItem ->
+                                mangaGroup.forEachIndexed { index, updatesItem ->
                                     UpdatesChapterUiItem(
                                         update = updatesItem.update,
+                                        isLast = index == mangaGroup.lastIndex,
                                         selected = updatesItem.selected,
                                         readProgress = updatesItem.update.lastPageRead
                                             .takeIf { !updatesItem.update.read && it > 0L }
@@ -344,6 +345,7 @@ private fun UpdatesChapterUiItem(
     downloadStateProvider: () -> Download.State,
     downloadProgressProvider: () -> Int,
     modifier: Modifier = Modifier,
+    isLast: Boolean = true,
 ) {
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
@@ -368,7 +370,7 @@ private fun UpdatesChapterUiItem(
         ) {
             // Visual branch hierarchy connector
             Text(
-                text = "└─",
+                text = if (isLast) "└─" else "├─",
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),

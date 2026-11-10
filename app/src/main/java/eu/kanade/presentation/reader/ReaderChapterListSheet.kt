@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -30,6 +31,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,14 +64,28 @@ import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowBack
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
 import mihon.icons.materialsymbols.automirroredrounded.FormatListBulleted
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.rounded.Search
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.ViewModule
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.theme.borderHairline
+import tachiyomi.presentation.core.theme.surfaceInset
+
+data class ReaderChapterGroup(
+    val primary: ReaderChapter,
+    val versions: List<ReaderChapter> = emptyList(),
+    val isSubChapter: Boolean = false,
+    val isLastSubChapter: Boolean = false,
+) {
+    val id: Long = primary.chapter.id
+}
 
 @Composable
 fun ReaderChapterListSheet(
@@ -80,9 +97,11 @@ fun ReaderChapterListSheet(
     onChapterClicked: (ReaderChapter) -> Unit,
     onPageClicked: (Int) -> Unit = {},
     onToggleBookmark: (ReaderChapter) -> Unit = {},
+    onSelectChapterForPreview: ((ReaderChapter) -> Unit)? = null,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
+    var expandedGroupIds by remember { mutableStateOf(setOf<Long>()) }
 
     val filteredChapters = remember(chapters, searchQuery) {
         if (searchQuery.isBlank()) {
@@ -95,12 +114,19 @@ fun ReaderChapterListSheet(
         }
     }
 
+    val groupedChapters = remember(filteredChapters) {
+        groupReaderChapters(filteredChapters)
+    }
+
     val bookmarkedChapters = remember(chapters) {
         chapters.filter { it.chapter.bookmark }
     }
 
     val initialIndex = remember {
-        chapters.indexOfFirst { it.chapter.id == currentChapterId }.coerceAtLeast(0)
+        groupedChapters.indexOfFirst { group ->
+            group.primary.chapter.id == currentChapterId ||
+                group.versions.any { it.chapter.id == currentChapterId }
+        }.coerceAtLeast(0)
     }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
 
@@ -264,7 +290,7 @@ fun ReaderChapterListSheet(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Chapter List
+                        // Chapter List with sub-chapters and version grouping
                         LazyColumn(
                             state = listState,
                             modifier = Modifier
@@ -274,52 +300,197 @@ fun ReaderChapterListSheet(
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             items(
-                                items = filteredChapters,
-                                key = { it.chapter.id },
-                            ) { readerChapter ->
-                                ChapterListItem(
-                                    readerChapter = readerChapter,
-                                    isCurrent = readerChapter.chapter.id == currentChapterId,
-                                    onClick = { onChapterClicked(readerChapter) },
-                                    onToggleBookmark = { onToggleBookmark(readerChapter) },
-                                )
+                                items = groupedChapters,
+                                key = { it.id },
+                            ) { group ->
+                                val isGroupExpanded = group.id in expandedGroupIds
+                                val isCurrent = group.primary.chapter.id == currentChapterId ||
+                                    group.versions.any { it.chapter.id == currentChapterId }
+
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    ChapterListItem(
+                                        readerChapter = group.primary,
+                                        isCurrent = isCurrent,
+                                        isSubChapter = group.isSubChapter,
+                                        isLastSubChapter = group.isLastSubChapter,
+                                        versionCount = group.versions.size,
+                                        isExpanded = isGroupExpanded,
+                                        onToggleExpand = {
+                                            expandedGroupIds = if (isGroupExpanded) {
+                                                expandedGroupIds - group.id
+                                            } else {
+                                                expandedGroupIds + group.id
+                                            }
+                                        },
+                                        onClick = { onChapterClicked(group.primary) },
+                                        onToggleBookmark = { onToggleBookmark(group.primary) },
+                                    )
+
+                                    if (isGroupExpanded && group.versions.size > 1) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = 24.dp, top = 2.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color(0x0DFFFFFF)),
+                                        ) {
+                                            group.versions.forEachIndexed { vIndex, version ->
+                                                val isLastVersion = vIndex == group.versions.lastIndex
+                                                ChapterVersionRow(
+                                                    version = version,
+                                                    isCurrent = version.chapter.id == currentChapterId,
+                                                    isLast = isLastVersion,
+                                                    onClick = { onChapterClicked(version) },
+                                                    onToggleBookmark = { onToggleBookmark(version) },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     1 -> {
-                        // Pages Thumbnail Grid
-                        if (pages.isEmpty()) {
-                            Box(
+                        // Pages Scrub Preview with Chapter Switcher
+                        val currentChapterIndex = chapters.indexOfFirst { it.chapter.id == currentChapterId }
+                        val currChapter = chapters.getOrNull(currentChapterIndex)
+                        val hasPrev = currentChapterIndex > 0
+                        val hasNext = currentChapterIndex in 0 until chapters.lastIndex
+                        var chapterPickerOpen by remember { mutableStateOf(false) }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 440.dp),
+                        ) {
+                            // Chapter Switcher Controls
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(200.dp),
-                                contentAlignment = Alignment.Center,
+                                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text(
-                                    text = stringResource(MR.strings.information_no_recent),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 92.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 440.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                items(
-                                    items = pages,
-                                    key = { it.index },
-                                ) { page ->
-                                    PageThumbnailItem(
-                                        page = page,
-                                        isCurrent = page.index == currentPageIndex,
-                                        onClick = { onPageClicked(page.index) },
+                                IconButton(
+                                    onClick = {
+                                        if (hasPrev) {
+                                            onSelectChapterForPreview?.invoke(chapters[currentChapterIndex - 1])
+                                        }
+                                    },
+                                    enabled = hasPrev,
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
+                                        contentDescription = "Previous Chapter",
+                                        tint = if (hasPrev) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                     )
+                                }
+
+                                Box {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0x14FFFFFF),
+                                        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                        onClick = { chapterPickerOpen = true },
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = currChapter?.chapter?.name ?: "Select Chapter",
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.widthIn(max = 200.dp),
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = chapterPickerOpen,
+                                        onDismissRequest = { chapterPickerOpen = false },
+                                    ) {
+                                        chapters.forEach { chapter ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = chapter.chapter.name,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        fontWeight = if (chapter.chapter.id == currentChapterId) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (chapter.chapter.id == currentChapterId) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                    )
+                                                },
+                                                onClick = {
+                                                    chapterPickerOpen = false
+                                                    onSelectChapterForPreview?.invoke(chapter)
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        if (hasNext) {
+                                            onSelectChapterForPreview?.invoke(chapters[currentChapterIndex + 1])
+                                        }
+                                    },
+                                    enabled = hasNext,
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward,
+                                        contentDescription = "Next Chapter",
+                                        tint = if (hasNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Pages Thumbnail Grid
+                            if (pages.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = stringResource(MR.strings.information_no_recent),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Adaptive(minSize = 92.dp),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    items(
+                                        items = pages,
+                                        key = { it.index },
+                                    ) { page ->
+                                        PageThumbnailItem(
+                                            page = page,
+                                            isCurrent = page.index == currentPageIndex,
+                                            onClick = { onPageClicked(page.index) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -405,6 +576,11 @@ private fun ChapterListItem(
     isCurrent: Boolean,
     onClick: () -> Unit,
     onToggleBookmark: () -> Unit,
+    isSubChapter: Boolean = false,
+    isLastSubChapter: Boolean = true,
+    versionCount: Int = 1,
+    isExpanded: Boolean = false,
+    onToggleExpand: (() -> Unit)? = null,
 ) {
     val chapter = readerChapter.chapter
     var bookmarked by remember(chapter.bookmark) { mutableStateOf(chapter.bookmark) }
@@ -440,6 +616,17 @@ private fun ChapterListItem(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (isSubChapter) {
+                Text(
+                    text = if (isLastSubChapter) "└─" else "├─",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    ),
+                    modifier = Modifier.padding(end = 6.dp),
+                )
+            }
+
             if (isCurrent) {
                 Box(
                     modifier = Modifier
@@ -473,6 +660,35 @@ private fun ChapterListItem(
                 }
             }
 
+            if (versionCount > 1 && onToggleExpand != null) {
+                Surface(
+                    shape = RoundedCornerShape(9999.dp),
+                    color = MaterialTheme.colorScheme.surfaceInset,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .clickable(onClick = onToggleExpand),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "$versionCount versions",
+                            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+            }
+
             IconButton(
                 onClick = {
                     bookmarked = !bookmarked
@@ -495,6 +711,70 @@ private fun ChapterListItem(
                     modifier = Modifier.size(18.dp),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ChapterVersionRow(
+    version: ReaderChapter,
+    isCurrent: Boolean,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    onToggleBookmark: () -> Unit,
+) {
+    var bookmarked by remember(version.chapter.bookmark) { mutableStateOf(version.chapter.bookmark) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (isLast) "└─" else "├─",
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            ),
+            modifier = Modifier.padding(end = 6.dp),
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = version.chapter.name,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                ),
+                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!version.chapter.scanlator.isNullOrBlank()) {
+                Text(
+                    text = version.chapter.scanlator.orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        IconButton(
+            onClick = {
+                bookmarked = !bookmarked
+                onToggleBookmark()
+            },
+            modifier = Modifier.size(28.dp),
+        ) {
+            Icon(
+                imageVector = if (bookmarked) MaterialSymbols.RoundedFilled.Bookmark else MaterialSymbols.Rounded.Bookmark,
+                contentDescription = null,
+                tint = if (bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
@@ -576,6 +856,91 @@ private fun PageThumbnailItem(
                 ),
                 color = Color.White,
             )
+        }
+    }
+}
+
+internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChapterGroup> {
+    if (chapters.isEmpty()) return emptyList()
+
+    val isDescending = chapters.size >= 2 && chapters.first().chapter.chapterNumber > chapters.last().chapter.chapterNumber
+
+    val duplicatesByNumber = chapters.filter { it.chapter.chapterNumber > 0.0 }
+        .groupBy { it.chapter.chapterNumber }
+        .filterValues { it.size > 1 }
+
+    val handledNumbers = HashSet<Double>()
+    val deduplicated = ArrayList<ReaderChapterGroup>(chapters.size)
+
+    for (rc in chapters) {
+        val number = rc.chapter.chapterNumber
+        if (number <= 0.0 || number !in duplicatesByNumber) {
+            deduplicated.add(ReaderChapterGroup(primary = rc))
+            continue
+        }
+
+        if (handledNumbers.add(number)) {
+            val group = duplicatesByNumber.getValue(number)
+            val primary = group.maxByOrNull {
+                var score = 0
+                if (it.chapter.read) score += 4
+                else if (it.chapter.lastPageRead > 0) score += 2
+                score
+            } ?: rc
+            val orderedVersions = listOf(primary) + group.filter { it.chapter.id != primary.chapter.id }
+            deduplicated.add(ReaderChapterGroup(primary = primary, versions = orderedVersions))
+        }
+    }
+
+    val positioned = if (isDescending) {
+        val result = ArrayList<ReaderChapterGroup>(deduplicated.size)
+        var i = 0
+        while (i < deduplicated.size) {
+            val current = deduplicated[i]
+            val num = current.primary.chapter.chapterNumber
+            if (num > 0.0 && num % 1.0 != 0.0) {
+                val baseNum = kotlin.math.floor(num)
+                val group = mutableListOf<ReaderChapterGroup>()
+                var j = i
+                while (j < deduplicated.size) {
+                    val item = deduplicated[j]
+                    val itemNum = item.primary.chapter.chapterNumber
+                    if (itemNum > 0.0 && kotlin.math.floor(itemNum) == baseNum) {
+                        group.add(item)
+                        j++
+                    } else {
+                        break
+                    }
+                }
+                val parentItem = group.firstOrNull { it.primary.chapter.chapterNumber == baseNum }
+                val subChapters = group.filter { it.primary.chapter.chapterNumber != baseNum }
+                    .sortedBy { it.primary.chapter.chapterNumber }
+
+                if (parentItem != null) {
+                    result.add(parentItem)
+                }
+                result.addAll(subChapters)
+                i = j
+            } else {
+                result.add(current)
+                i++
+            }
+        }
+        result
+    } else {
+        deduplicated
+    }
+
+    return positioned.mapIndexed { index, group ->
+        val num = group.primary.chapter.chapterNumber
+        val isSub = num > 0.0 && (num % 1.0 != 0.0)
+        if (!isSub) {
+            group.copy(isSubChapter = false, isLastSubChapter = true)
+        } else {
+            val nextItem = positioned.getOrNull(index + 1)
+            val nextNum = nextItem?.primary?.chapter?.chapterNumber ?: -1.0
+            val isLast = nextNum <= 0.0 || (nextNum % 1.0 == 0.0) || kotlin.math.floor(nextNum) != kotlin.math.floor(num)
+            group.copy(isSubChapter = true, isLastSubChapter = isLast)
         }
     }
 }

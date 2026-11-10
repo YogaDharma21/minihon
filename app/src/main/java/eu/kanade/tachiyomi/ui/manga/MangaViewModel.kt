@@ -1115,7 +1115,9 @@ class MangaViewModel(
             val expandedDuplicateChapterIds: Set<Long> = emptySet(),
         ) : State {
             val processedChapters by lazy {
-                chapters.applyFilters(manga).toList().groupByDuplicateChapterNumber()
+                chapters.applyFilters(manga).toList()
+                    .groupByDuplicateChapterNumber()
+                    .groupSubChaptersWithParent(manga.sortDescending())
             }
 
             val isAnySelected by lazy {

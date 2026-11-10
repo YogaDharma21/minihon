@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -277,7 +279,7 @@ object HomeScreen : Screen() {
             } else {
                 Color.Transparent
             },
-            animationSpec = tween(150),
+            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
             label = "dockItemBg",
         )
         val contentColor by animateColorAsState(
@@ -286,7 +288,7 @@ object HomeScreen : Screen() {
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-            animationSpec = tween(150),
+            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
             label = "dockItemContent",
         )
 
@@ -298,10 +300,14 @@ object HomeScreen : Screen() {
             contentColor = contentColor,
         ) {
             Row(
-                modifier = Modifier.padding(
-                    horizontal = 12.dp,
-                    vertical = 8.dp,
-                ),
+                modifier = Modifier
+                    .animateContentSize(
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                    )
+                    .padding(
+                        horizontal = 12.dp,
+                        vertical = 8.dp,
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {

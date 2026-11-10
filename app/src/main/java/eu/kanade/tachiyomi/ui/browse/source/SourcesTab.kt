@@ -43,11 +43,6 @@ fun Screen.sourcesTab(): TabContent {
                 icon = MaterialSymbols.Rounded.FilterList,
                 onClick = { navigator.push(SourcesFilterScreen()) },
             ),
-            AppBar.Action(
-                title = stringResource(MR.strings.label_settings),
-                icon = MaterialSymbols.Rounded.Settings,
-                onClick = { navigator.push(MoreTab) },
-            ),
         ),
         content = { contentPadding, snackbarHostState ->
             SourcesScreen(

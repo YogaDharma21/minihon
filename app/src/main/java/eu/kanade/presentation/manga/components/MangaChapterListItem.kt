@@ -89,6 +89,7 @@ fun MangaChapterListItem(
     onVersionDownloadClick: ((ChapterList.Item, ChapterDownloadAction) -> Unit)? = null,
     versionDownloadProgressProvider: ((Long) -> Int)? = null,
     isSubChapter: Boolean = false,
+    isLastSubChapter: Boolean = true,
 ) {
     val start = getSwipeAction(
         action = chapterSwipeStartAction,
@@ -139,7 +140,7 @@ fun MangaChapterListItem(
                     ) {
                         if (isSubChapter) {
                             Text(
-                                text = "└─",
+                                text = if (isLastSubChapter) "└─" else "├─",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
@@ -240,9 +241,10 @@ fun MangaChapterListItem(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.surfaceInset),
             ) {
-                versions.forEach { version ->
+                versions.forEachIndexed { index, version ->
                     MangaChapterVersionItem(
                         version = version,
+                        isLast = index == versions.lastIndex,
                         downloadIndicatorEnabled = downloadIndicatorEnabled,
                         downloadProgressProvider = { versionDownloadProgressProvider?.invoke(version.id) ?: 0 },
                         onClick = { onVersionClick?.invoke(version) },
@@ -305,6 +307,7 @@ private fun MangaChapterVersionItem(
     onLongClick: () -> Unit,
     onDownloadClick: ((ChapterDownloadAction) -> Unit)?,
     modifier: Modifier = Modifier,
+    isLast: Boolean = true,
 ) {
     Row(
         modifier = modifier
@@ -319,7 +322,7 @@ private fun MangaChapterVersionItem(
     ) {
         // Connector branch indicator
         Text(
-            text = "└─",
+            text = if (isLast) "└─" else "├─",
             style = MaterialTheme.typography.bodySmall.copy(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),

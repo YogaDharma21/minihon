@@ -107,11 +107,6 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
                 icon = if (allCollapsed) MaterialSymbols.Rounded.UnfoldMore else MaterialSymbols.Rounded.UnfoldLess,
                 onClick = viewModel::toggleCollapseAll,
             ),
-            AppBar.Action(
-                title = stringResource(MR.strings.label_settings),
-                icon = MaterialSymbols.Rounded.Settings,
-                onClick = { navigator.push(MoreTab) },
-            ),
         ),
         content = { contentPadding, snackbarHostState ->
             UpdatesScreen(
@@ -136,7 +131,7 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
                 collapsedMangaIds = state.collapsedMangaIds,
                 onToggleMangaCollapse = viewModel::toggleMangaCollapse,
                 onToggleCollapseAll = viewModel::toggleCollapseAll,
-                onClickSettings = { navigator.push(MoreTab) },
+                onClickSettings = null,
                 showTopBar = false,
                 contentPadding = contentPadding,
             )
