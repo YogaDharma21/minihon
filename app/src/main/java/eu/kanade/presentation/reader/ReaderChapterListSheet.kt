@@ -369,6 +369,8 @@ fun ReaderChapterListSheet(
                         val hasPrev = currentChapterIndex > 0
                         val hasNext = currentChapterIndex in 0 until chapters.lastIndex
                         var chapterPickerOpen by remember { mutableStateOf(false) }
+                        var pickerExpandedGroupIds by remember { mutableStateOf(setOf<Long>()) }
+                        val pickerGroupedChapters = remember(chapters) { groupReaderChapters(chapters) }
 
                         Column(
                             modifier = Modifier
@@ -449,8 +451,14 @@ fun ReaderChapterListSheet(
                                                         color = MaterialTheme.colorScheme.onSurface,
                                                         modifier = Modifier.padding(bottom = 12.dp),
                                                     )
+                                                    val pickerInitialIndex = remember {
+                                                        pickerGroupedChapters.indexOfFirst { group ->
+                                                            group.primary.chapter.id == currentChapterId ||
+                                                                group.versions.any { it.chapter.id == currentChapterId }
+                                                        }.coerceAtLeast(0)
+                                                    }
                                                     val pickerListState = rememberLazyListState(
-                                                        initialFirstVisibleItemIndex = currentChapterIndex.coerceAtLeast(0),
+                                                        initialFirstVisibleItemIndex = pickerInitialIndex,
                                                     )
                                                     LazyColumn(
                                                         state = pickerListState,
@@ -459,38 +467,158 @@ fun ReaderChapterListSheet(
                                                             .heightIn(max = 340.dp),
                                                         verticalArrangement = Arrangement.spacedBy(4.dp),
                                                     ) {
-                                                        items(chapters, key = { it.chapter.id }) { ch ->
-                                                            val isSelected = ch.chapter.id == currentChapterId
-                                                            Surface(
-                                                                shape = RoundedCornerShape(10.dp),
-                                                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color(0x0AFFFFFF),
-                                                                onClick = {
-                                                                    chapterPickerOpen = false
-                                                                    onSelectChapterForPreview?.invoke(ch)
-                                                                },
-                                                                modifier = Modifier.fillMaxWidth(),
-                                                            ) {
-                                                                Row(
-                                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                        items(
+                                                            items = pickerGroupedChapters,
+                                                            key = { it.id },
+                                                        ) { group ->
+                                                            val isGroupExpanded = group.id in pickerExpandedGroupIds
+                                                            val isPrimarySelected = if (isGroupExpanded && group.versions.size > 1) {
+                                                                group.primary.chapter.id == currentChapterId
+                                                            } else {
+                                                                group.primary.chapter.id == currentChapterId || group.versions.any { it.chapter.id == currentChapterId }
+                                                            }
+
+                                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(10.dp),
+                                                                    color = if (isPrimarySelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color(0x0AFFFFFF),
+                                                                    onClick = {
+                                                                        chapterPickerOpen = false
+                                                                        onSelectChapterForPreview?.invoke(group.primary)
+                                                                    },
+                                                                    modifier = Modifier.fillMaxWidth(),
                                                                 ) {
-                                                                    Text(
-                                                                        text = ch.chapter.name,
-                                                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                                        ),
-                                                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                                                        maxLines = 1,
-                                                                        overflow = TextOverflow.Ellipsis,
-                                                                        modifier = Modifier.weight(1f),
-                                                                    )
-                                                                    if (isSelected) {
-                                                                        Icon(
-                                                                            imageVector = MaterialSymbols.Rounded.Check,
-                                                                            contentDescription = null,
-                                                                            tint = MaterialTheme.colorScheme.primary,
-                                                                            modifier = Modifier.size(18.dp),
-                                                                        )
+                                                                    Row(
+                                                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                    ) {
+                                                                        Column(modifier = Modifier.weight(1f)) {
+                                                                            Text(
+                                                                                text = group.primary.chapter.name,
+                                                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                                                    fontWeight = if (isPrimarySelected) FontWeight.Bold else FontWeight.Normal,
+                                                                                ),
+                                                                                color = if (isPrimarySelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                                                maxLines = 1,
+                                                                                overflow = TextOverflow.Ellipsis,
+                                                                            )
+                                                                            if (!group.primary.chapter.scanlator.isNullOrBlank()) {
+                                                                                Text(
+                                                                                    text = group.primary.chapter.scanlator.orEmpty(),
+                                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                                                    maxLines = 1,
+                                                                                    overflow = TextOverflow.Ellipsis,
+                                                                                )
+                                                                            }
+                                                                        }
+
+                                                                        if (group.versions.size > 1) {
+                                                                            Surface(
+                                                                                shape = RoundedCornerShape(9999.dp),
+                                                                                color = MaterialTheme.colorScheme.surfaceInset,
+                                                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                                                                                modifier = Modifier
+                                                                                    .padding(end = 6.dp)
+                                                                                    .clickable {
+                                                                                        pickerExpandedGroupIds = if (isGroupExpanded) {
+                                                                                            pickerExpandedGroupIds - group.id
+                                                                                        } else {
+                                                                                            pickerExpandedGroupIds + group.id
+                                                                                        }
+                                                                                    },
+                                                                            ) {
+                                                                                Row(
+                                                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                                ) {
+                                                                                    Text(
+                                                                                        text = "${group.versions.size} versions",
+                                                                                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                                    )
+                                                                                    Spacer(modifier = Modifier.width(2.dp))
+                                                                                    Icon(
+                                                                                        imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
+                                                                                        contentDescription = null,
+                                                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                                        modifier = Modifier.size(14.dp),
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                        }
+
+                                                                        if (isPrimarySelected) {
+                                                                            Icon(
+                                                                                imageVector = MaterialSymbols.Rounded.Check,
+                                                                                contentDescription = null,
+                                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                                modifier = Modifier.size(18.dp),
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                if (isGroupExpanded && group.versions.size > 1) {
+                                                                    Surface(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 2.dp),
+                                                                        shape = RoundedCornerShape(10.dp),
+                                                                        color = MaterialTheme.colorScheme.surfaceInset,
+                                                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                                                                    ) {
+                                                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                                                            group.versions.forEach { version ->
+                                                                                val isVersionSelected = version.chapter.id == currentChapterId
+                                                                                Surface(
+                                                                                    shape = RoundedCornerShape(8.dp),
+                                                                                    color = if (isVersionSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent,
+                                                                                    onClick = {
+                                                                                        chapterPickerOpen = false
+                                                                                        onSelectChapterForPreview?.invoke(version)
+                                                                                    },
+                                                                                    modifier = Modifier
+                                                                                        .fillMaxWidth()
+                                                                                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                                                                                ) {
+                                                                                    Row(
+                                                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                                    ) {
+                                                                                        Column(modifier = Modifier.weight(1f)) {
+                                                                                            Text(
+                                                                                                text = version.chapter.name,
+                                                                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                                                                    fontWeight = if (isVersionSelected) FontWeight.Bold else FontWeight.Normal,
+                                                                                                ),
+                                                                                                color = if (isVersionSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                                                                maxLines = 1,
+                                                                                                overflow = TextOverflow.Ellipsis,
+                                                                                            )
+                                                                                            if (!version.chapter.scanlator.isNullOrBlank()) {
+                                                                                                Text(
+                                                                                                    text = version.chapter.scanlator.orEmpty(),
+                                                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                                                                    maxLines = 1,
+                                                                                                    overflow = TextOverflow.Ellipsis,
+                                                                                                )
+                                                                                            }
+                                                                                        }
+
+                                                                                        if (isVersionSelected) {
+                                                                                            Icon(
+                                                                                                imageVector = MaterialSymbols.Rounded.Check,
+                                                                                                contentDescription = null,
+                                                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                                                modifier = Modifier.size(16.dp),
+                                                                                            )
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
                                                                     }
                                                                 }
                                                             }
