@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -27,12 +27,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -54,34 +57,51 @@ fun TabbedScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
-        topBar = {
-            val tab = tabs[state.currentPage]
-            val searchEnabled = tab.searchEnabled
-
-            SearchToolbar(
-                titleContent = { AppBarTitle(stringResource(titleRes)) },
-                searchEnabled = searchEnabled,
-                searchQuery = if (searchEnabled) searchQuery else null,
-                onChangeSearchQuery = onChangeSearchQuery,
-                actions = { AppBarActions(tab.actions) },
-            )
-        },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
-        Column(
-            modifier = Modifier.padding(
-                top = contentPadding.calculateTopPadding(),
-                start = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
-                end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
-            ),
-        ) {
-            Box(
+        var headerHeightPx by remember { mutableIntStateOf(0) }
+        val headerHeight = if (headerHeightPx > 0) {
+            LocalDensity.current.run { headerHeightPx.toDp() }
+        } else {
+            120.dp
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            HorizontalPager(
+                modifier = Modifier.fillMaxSize(),
+                state = state,
+                verticalAlignment = Alignment.Top,
+            ) { page ->
+                tabs[page].content(
+                    PaddingValues(
+                        top = headerHeight,
+                        bottom = contentPadding.calculateBottomPadding(),
+                    ),
+                    snackbarHostState,
+                )
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .zIndex(1f),
-                contentAlignment = Alignment.Center,
+                    .align(Alignment.TopCenter)
+                    .zIndex(10f)
+                    .onSizeChanged { headerHeightPx = it.height },
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                val tab = tabs[state.currentPage]
+                val searchEnabled = tab.searchEnabled
+
+                SearchToolbar(
+                    titleContent = { AppBarTitle(stringResource(titleRes)) },
+                    searchEnabled = searchEnabled,
+                    searchQuery = if (searchEnabled) searchQuery else null,
+                    onChangeSearchQuery = onChangeSearchQuery,
+                    actions = { AppBarActions(tab.actions) },
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Surface(
                     shape = CircleShape,
                     color = Color(0xFF121316),
@@ -104,17 +124,6 @@ fun TabbedScreen(
                         }
                     }
                 }
-            }
-
-            HorizontalPager(
-                modifier = Modifier.fillMaxSize(),
-                state = state,
-                verticalAlignment = Alignment.Top,
-            ) { page ->
-                tabs[page].content(
-                    PaddingValues(bottom = contentPadding.calculateBottomPadding()),
-                    snackbarHostState,
-                )
             }
         }
     }
