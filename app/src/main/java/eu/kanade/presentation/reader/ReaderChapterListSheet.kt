@@ -463,8 +463,7 @@ fun ReaderChapterListSheet(
                                                             val isSelected = ch.chapter.id == currentChapterId
                                                             Surface(
                                                                 shape = RoundedCornerShape(10.dp),
-                                                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color(0x0AFFFFFF),
-                                                                border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                                                                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color(0x0AFFFFFF),
                                                                 onClick = {
                                                                     chapterPickerOpen = false
                                                                     onSelectChapterForPreview?.invoke(ch)
@@ -480,7 +479,7 @@ fun ReaderChapterListSheet(
                                                                         style = MaterialTheme.typography.bodyMedium.copy(
                                                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                                                         ),
-                                                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                                                         maxLines = 1,
                                                                         overflow = TextOverflow.Ellipsis,
                                                                         modifier = Modifier.weight(1f),
@@ -652,15 +651,9 @@ private fun ChapterListItem(
     var bookmarked by remember(chapter.bookmark) { mutableStateOf(chapter.bookmark) }
 
     val containerColor = if (isCurrent) {
-        Color(0x1CFFFFFF)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
     } else {
         Color.Transparent
-    }
-
-    val border = if (isCurrent) {
-        BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
-    } else {
-        null
     }
 
     val textColor = when {
@@ -673,7 +666,6 @@ private fun ChapterListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .then(if (border != null) Modifier.border(border, RoundedCornerShape(8.dp)) else Modifier)
             .background(containerColor)
             .clickable(onClick = onClick)
             .padding(start = if (isSubChapter) 28.dp else 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
@@ -781,13 +773,31 @@ private fun ChapterVersionRow(
 ) {
     var bookmarked by remember(version.chapter.bookmark) { mutableStateOf(version.chapter.bookmark) }
 
+    val containerColor = if (isCurrent) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    } else {
+        Color.Transparent
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(containerColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (isCurrent) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = version.chapter.name,
