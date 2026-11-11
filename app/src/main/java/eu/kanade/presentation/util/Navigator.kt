@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -13,10 +14,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
@@ -64,19 +69,20 @@ fun DefaultNavigatorScreenTransition(
                     // the origin does not cut and the staged motion is not scaled as one block.
                     val enter = fadeIn(
                         animationSpec = tween(
-                            durationMillis = 260,
-                            easing = LinearOutSlowInEasing,
+                            durationMillis = 140,
+                            easing = FastOutSlowInEasing,
                         ),
+                        initialAlpha = 0.35f,
                     )
                     val exit = scaleOut(
-                        targetScale = 0.98f,
+                        targetScale = 0.99f,
                         animationSpec = tween(
-                            durationMillis = 260,
-                            easing = LinearOutSlowInEasing,
+                            durationMillis = 180,
+                            easing = FastOutSlowInEasing,
                         ),
                     ) + fadeOut(
                         animationSpec = tween(
-                            durationMillis = 220,
+                            durationMillis = 120,
                             easing = FastOutLinearInEasing,
                         ),
                     )
@@ -85,28 +91,28 @@ fun DefaultNavigatorScreenTransition(
                     }
                 }
                 isPoppingManga -> {
-                    // Variant B: Shared Axis Z Bloom Exit (0.5x slow-mo ~650ms)
+                    // Variant B: Shared Axis Z Bloom Exit
                     val enter = scaleIn(
                         initialScale = 0.94f,
                         animationSpec = tween(
-                            durationMillis = 650,
+                            durationMillis = 380,
                             easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
                         ),
                     ) + fadeIn(
                         animationSpec = tween(
-                            durationMillis = 500,
+                            durationMillis = 200,
                             easing = LinearOutSlowInEasing,
                         ),
                     )
                     val exit = scaleOut(
                         targetScale = 0.90f,
                         animationSpec = tween(
-                            durationMillis = 650,
+                            durationMillis = 380,
                             easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
                         ),
                     ) + fadeOut(
                         animationSpec = tween(
-                            durationMillis = 450,
+                            durationMillis = 200,
                             easing = FastOutLinearInEasing,
                         ),
                     )
@@ -139,8 +145,31 @@ fun ScreenTransition(
         modifier = modifier,
         label = "transition",
     ) { screen ->
+        val isCurrentScreen = screen == navigator.lastItem
         navigator.saveableState("transition", screen) {
-            content(screen)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (isCurrentScreen) {
+                            Modifier
+                        } else {
+                            // The outgoing screen stays composed during the transition. Consume
+                            // pointers so taps and drags cannot reach controls that are leaving.
+                            Modifier.pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial)
+                                            .changes
+                                            .forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        },
+                    ),
+            ) {
+                content(screen)
+            }
         }
     }
 
