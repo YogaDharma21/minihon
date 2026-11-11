@@ -88,7 +88,6 @@ import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.source.Source
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import mihon.app.di.appGraph
@@ -135,6 +134,7 @@ fun MangaInfoBox(
     appBarPadding: Dp,
     manga: Manga,
     source: Source,
+    sourceName: String,
     isStubSource: Boolean,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
@@ -192,6 +192,7 @@ fun MangaInfoBox(
                     MangaCardContentSmall(
                         manga = manga,
                         source = source,
+                        sourceName = sourceName,
                         isStubSource = isStubSource,
                         chapterCount = chapterCount,
                         onCoverClick = onCoverClick,
@@ -201,6 +202,7 @@ fun MangaInfoBox(
                     MangaCardContentLarge(
                         manga = manga,
                         source = source,
+                        sourceName = sourceName,
                         isStubSource = isStubSource,
                         chapterCount = chapterCount,
                         onCoverClick = onCoverClick,
@@ -370,6 +372,7 @@ fun ExpandableMangaDescription(
 private fun MangaCardContentSmall(
     manga: Manga,
     source: Source,
+    sourceName: String,
     isStubSource: Boolean,
     chapterCount: Int,
     onCoverClick: () -> Unit,
@@ -417,6 +420,7 @@ private fun MangaCardContentSmall(
             chapterCount = chapterCount,
             status = manga.status,
             source = source,
+            sourceName = sourceName,
             isStubSource = isStubSource,
             doSearch = doSearch,
         )
@@ -427,6 +431,7 @@ private fun MangaCardContentSmall(
 private fun MangaCardContentLarge(
     manga: Manga,
     source: Source,
+    sourceName: String,
     isStubSource: Boolean,
     chapterCount: Int,
     onCoverClick: () -> Unit,
@@ -465,6 +470,7 @@ private fun MangaCardContentLarge(
             chapterCount = chapterCount,
             status = manga.status,
             source = source,
+            sourceName = sourceName,
             isStubSource = isStubSource,
             doSearch = doSearch,
         )
@@ -569,6 +575,7 @@ private fun MangaKpiBar(
     chapterCount: Int,
     status: Long,
     source: Source,
+    sourceName: String,
     isStubSource: Boolean,
     doSearch: (query: String, global: Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -740,7 +747,7 @@ private fun MangaKpiBar(
                                 tint = sourceColor,
                             )
                             Text(
-                                text = source.getNameForMangaInfo(),
+                                text = sourceName,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,

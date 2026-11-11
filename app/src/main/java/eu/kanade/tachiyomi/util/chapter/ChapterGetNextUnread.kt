@@ -9,8 +9,12 @@ import tachiyomi.domain.manga.model.Manga
 /**
  * Gets next unread chapter with filters and sorting applied
  */
-fun List<Chapter>.getNextUnread(manga: Manga, downloadManager: DownloadManager): Chapter? {
-    val unread = applyFilters(manga, downloadManager).let { chapters ->
+fun List<Chapter>.getNextUnread(
+    manga: Manga,
+    downloadedOnly: Boolean,
+    downloadManager: DownloadManager,
+): Chapter? {
+    val unread = applyFilters(manga, downloadedOnly, downloadManager).let { chapters ->
         if (manga.sortDescending()) {
             chapters.findLast { !it.read }
         } else {
@@ -19,7 +23,7 @@ fun List<Chapter>.getNextUnread(manga: Manga, downloadManager: DownloadManager):
     }
     if (unread != null) return unread
 
-    val chapters = applyFilters(manga, downloadManager).toList()
+    val chapters = applyFilters(manga, downloadedOnly, downloadManager).toList()
     return if (manga.sortDescending()) {
         chapters.firstOrNull()
     } else {
@@ -30,8 +34,8 @@ fun List<Chapter>.getNextUnread(manga: Manga, downloadManager: DownloadManager):
 /**
  * Gets next unread chapter with filters and sorting applied
  */
-fun List<ChapterList.Item>.getNextUnread(manga: Manga): Chapter? {
-    val unread = applyFilters(manga).let { chapters ->
+fun List<ChapterList.Item>.getNextUnread(manga: Manga, downloadedOnly: Boolean): Chapter? {
+    val unread = applyFilters(manga, downloadedOnly).let { chapters ->
         if (manga.sortDescending()) {
             chapters.findLast { !it.chapter.read }
         } else {
@@ -40,7 +44,7 @@ fun List<ChapterList.Item>.getNextUnread(manga: Manga): Chapter? {
     }?.chapter
     if (unread != null) return unread
 
-    val chapters = applyFilters(manga).toList()
+    val chapters = applyFilters(manga, downloadedOnly).toList()
     return if (manga.sortDescending()) {
         chapters.firstOrNull()?.chapter
     } else {

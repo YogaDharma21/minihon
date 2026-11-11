@@ -66,7 +66,6 @@ import eu.kanade.presentation.manga.components.MangaToolbar
 import eu.kanade.presentation.manga.components.MissingChapterCountListItem
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -481,6 +480,7 @@ private fun MangaScreenSmallImpl(
                             appBarPadding = topPadding,
                             manga = state.manga,
                             source = remember { state.source },
+                            sourceName = state.sourceName,
                             isStubSource = remember { state.source is StubSource },
                             chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
@@ -741,6 +741,7 @@ fun MangaScreenLargeImpl(
                             appBarPadding = contentPadding.calculateTopPadding(),
                             manga = state.manga,
                             source = remember { state.source },
+                            sourceName = state.sourceName,
                             isStubSource = remember { state.source is StubSource },
                             chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
