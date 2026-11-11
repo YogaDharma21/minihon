@@ -59,28 +59,24 @@ fun DefaultNavigatorScreenTransition(
 
             when {
                 isPushingManga -> {
-                    // Variant B: Shared Axis Z Bloom (0.5x slow-mo ~700ms)
-                    val enter = scaleIn(
-                        initialScale = 0.90f,
+                    // Variant C: the detail screen stages its own toolbar, info card, and
+                    // chapter list entrance. Keep only a short background crossfade here so
+                    // the origin does not cut and the staged motion is not scaled as one block.
+                    val enter = fadeIn(
                         animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
-                        ),
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 500,
+                            durationMillis = 260,
                             easing = LinearOutSlowInEasing,
                         ),
                     )
                     val exit = scaleOut(
-                        targetScale = 0.94f,
+                        targetScale = 0.98f,
                         animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.2f, 0f, 0f, 1.0f),
+                            durationMillis = 260,
+                            easing = LinearOutSlowInEasing,
                         ),
                     ) + fadeOut(
                         animationSpec = tween(
-                            durationMillis = 400,
+                            durationMillis = 220,
                             easing = FastOutLinearInEasing,
                         ),
                     )

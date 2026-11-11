@@ -1,7 +1,11 @@
 package eu.kanade.presentation.manga
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +33,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,12 +42,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
@@ -62,6 +70,7 @@ import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
+import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.chapter.model.Chapter
@@ -77,11 +86,80 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.shouldExpandFAB
 import tachiyomi.source.local.isLocal
 
+private object MangaDetailEnterSpec {
+    val EASING = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
+    const val TRANSFORM_DURATION_MILLIS = 700
+    const val FADE_DURATION_MILLIS = 700
+
+    val TOOLBAR_OFFSET = (-30).dp
+    val INFO_OFFSET = 60.dp
+    val CHAPTERS_OFFSET = 120.dp
+
+    const val INFO_DELAY_MILLIS = 40
+    const val CHAPTERS_DELAY_MILLIS = 80
+}
+
+private class MangaDetailSectionAnimation(
+    val translationY: Animatable<Float, AnimationVector1D>,
+    val alpha: Animatable<Float, AnimationVector1D>,
+)
+
+@Composable
+private fun rememberMangaDetailSectionAnimation(
+    playEnterTransition: Boolean,
+    enterOffset: Dp,
+    enterDelayMillis: Int = 0,
+): MangaDetailSectionAnimation {
+    val density = LocalDensity.current
+    val enterOffsetPx = with(density) { enterOffset.toPx() }
+    val translationY = remember {
+        Animatable(if (playEnterTransition) enterOffsetPx else 0f)
+    }
+    val alpha = remember {
+        Animatable(if (playEnterTransition) 0f else 1f)
+    }
+
+    LaunchedEffect(playEnterTransition) {
+        if (playEnterTransition) {
+            launch {
+                translationY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = MangaDetailEnterSpec.TRANSFORM_DURATION_MILLIS,
+                        delayMillis = enterDelayMillis,
+                        easing = MangaDetailEnterSpec.EASING,
+                    ),
+                )
+            }
+            alpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = MangaDetailEnterSpec.FADE_DURATION_MILLIS,
+                    delayMillis = enterDelayMillis,
+                    easing = MangaDetailEnterSpec.EASING,
+                ),
+            )
+        }
+    }
+
+    return remember(translationY, alpha) {
+        MangaDetailSectionAnimation(translationY, alpha)
+    }
+}
+
+private fun Modifier.mangaDetailSection(animation: MangaDetailSectionAnimation): Modifier =
+    graphicsLayer {
+        translationY = animation.translationY.value
+        alpha = animation.alpha.value
+    }
+
 @Composable
 fun MangaScreen(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
     isTabletUi: Boolean,
+    playEnterTransition: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     navigateUp: () -> Unit,
@@ -138,6 +216,7 @@ fun MangaScreen(
         MangaScreenSmallImpl(
             state = state,
             snackbarHostState = snackbarHostState,
+            playEnterTransition = playEnterTransition,
             chapterSwipeStartAction = chapterSwipeStartAction,
             chapterSwipeEndAction = chapterSwipeEndAction,
             navigateUp = navigateUp,
@@ -175,6 +254,7 @@ fun MangaScreen(
         MangaScreenLargeImpl(
             state = state,
             snackbarHostState = snackbarHostState,
+            playEnterTransition = playEnterTransition,
             chapterSwipeStartAction = chapterSwipeStartAction,
             chapterSwipeEndAction = chapterSwipeEndAction,
             navigateUp = navigateUp,
@@ -215,6 +295,7 @@ fun MangaScreen(
 private fun MangaScreenSmallImpl(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
+    playEnterTransition: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     navigateUp: () -> Unit,
@@ -277,6 +358,21 @@ private fun MangaScreenSmallImpl(
 
     var isSearchActive by remember { mutableStateOf(false) }
 
+    val toolbarEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.TOOLBAR_OFFSET,
+    )
+    val infoEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.INFO_OFFSET,
+        enterDelayMillis = MangaDetailEnterSpec.INFO_DELAY_MILLIS,
+    )
+    val chaptersEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.CHAPTERS_OFFSET,
+        enterDelayMillis = MangaDetailEnterSpec.CHAPTERS_DELAY_MILLIS,
+    )
+
     Scaffold(
         topBar = {
             val isFirstItemVisible by remember {
@@ -310,6 +406,7 @@ private fun MangaScreenSmallImpl(
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { titleAlpha },
                 backgroundAlphaProvider = { backgroundAlpha },
+                modifier = Modifier.mangaDetailSection(toolbarEnter),
                 searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
                 onSearchQueryChange = { query ->
                     if (query == null) {
@@ -347,6 +444,7 @@ private fun MangaScreenSmallImpl(
                     icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
                     onClick = onContinueReading,
                     expanded = chapterListState.shouldExpandFAB(),
+                    modifier = Modifier.mangaDetailSection(chaptersEnter),
                 )
             }
         },
@@ -387,6 +485,7 @@ private fun MangaScreenSmallImpl(
                             chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
+                            modifier = Modifier.mangaDetailSection(infoEnter),
                         )
                     }
 
@@ -402,6 +501,7 @@ private fun MangaScreenSmallImpl(
                             onWebViewLongClicked = onWebViewLongClicked,
                             onTrackingClicked = onTrackingClicked,
                             onEditCategory = onEditCategoryClicked,
+                            modifier = Modifier.mangaDetailSection(infoEnter),
                         )
                     }
 
@@ -417,6 +517,7 @@ private fun MangaScreenSmallImpl(
                             onTagSearch = onTagSearch,
                             onCopyTagToClipboard = onCopyTagToClipboard,
                             onEditNotes = onEditNotesClicked,
+                            modifier = Modifier.mangaDetailSection(infoEnter),
                         )
                     }
 
@@ -431,6 +532,7 @@ private fun MangaScreenSmallImpl(
                             searchQuery = state.searchQuery,
                             onSearchQueryChange = null,
                             onClick = onFilterClicked,
+                            modifier = Modifier.mangaDetailSection(chaptersEnter),
                         )
                     }
 
@@ -447,6 +549,7 @@ private fun MangaScreenSmallImpl(
                         downloadProgressProvider = downloadProgressProvider,
                         onChapterSelected = onChapterSelected,
                         onChapterSwipe = onChapterSwipe,
+                        modifier = Modifier.mangaDetailSection(chaptersEnter),
                     )
                 }
             }
@@ -458,6 +561,7 @@ private fun MangaScreenSmallImpl(
 fun MangaScreenLargeImpl(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
+    playEnterTransition: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     navigateUp: () -> Unit,
@@ -526,10 +630,27 @@ fun MangaScreenLargeImpl(
 
     var isSearchActive by remember { mutableStateOf(false) }
 
+    val toolbarEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.TOOLBAR_OFFSET,
+    )
+    val infoEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.INFO_OFFSET,
+        enterDelayMillis = MangaDetailEnterSpec.INFO_DELAY_MILLIS,
+    )
+    val chaptersEnter = rememberMangaDetailSectionAnimation(
+        playEnterTransition = playEnterTransition,
+        enterOffset = MangaDetailEnterSpec.CHAPTERS_OFFSET,
+        enterDelayMillis = MangaDetailEnterSpec.CHAPTERS_DELAY_MILLIS,
+    )
+
     Scaffold(
         topBar = {
             MangaToolbar(
-                modifier = Modifier.onSizeChanged { topBarHeight = it.height },
+                modifier = Modifier
+                    .mangaDetailSection(toolbarEnter)
+                    .onSizeChanged { topBarHeight = it.height },
                 title = state.manga.title,
                 hasFilters = state.filterActive,
                 navigateUp = navigateUp,
@@ -588,6 +709,7 @@ fun MangaScreenLargeImpl(
                     icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
                     onClick = onContinueReading,
                     expanded = chapterListState.shouldExpandFAB(),
+                    modifier = Modifier.mangaDetailSection(chaptersEnter),
                 )
             }
         },
@@ -610,6 +732,7 @@ fun MangaScreenLargeImpl(
                 startContent = {
                     Column(
                         modifier = Modifier
+                            .mangaDetailSection(infoEnter)
                             .verticalScroll(rememberScrollState())
                             .padding(bottom = contentPadding.calculateBottomPadding()),
                     ) {
@@ -646,6 +769,7 @@ fun MangaScreenLargeImpl(
                 endContent = {
                     VerticalFastScroller(
                         listState = chapterListState,
+                        modifier = Modifier.mangaDetailSection(chaptersEnter),
                         topContentPadding = contentPadding.calculateTopPadding(),
                     ) {
                         LazyColumn(
@@ -747,6 +871,7 @@ private fun LazyListScope.sharedChapterItems(
     downloadProgressProvider: (chapterId: Long) -> Int,
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     items(
         items = chapters,
@@ -762,7 +887,10 @@ private fun LazyListScope.sharedChapterItems(
 
         when (item) {
             is ChapterList.MissingCount -> {
-                MissingChapterCountListItem(count = item.count)
+                MissingChapterCountListItem(
+                    count = item.count,
+                    modifier = modifier,
+                )
             }
             is ChapterList.Item -> {
                 val isExpanded = item.id in expandedDuplicateChapterIds
@@ -813,6 +941,7 @@ private fun LazyListScope.sharedChapterItems(
                     onChapterSwipe = {
                         onChapterSwipe(item, it)
                     },
+                    modifier = modifier,
                     versions = item.versions,
                     isExpanded = isExpanded,
                     onToggleExpand = { onToggleDuplicateChapterExpanded(item.id) },
