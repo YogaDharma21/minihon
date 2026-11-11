@@ -316,12 +316,20 @@ fun SegmentedTabButton(
     modifier: Modifier = Modifier,
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (selected) Color(0x22FFFFFF) else Color.Transparent,
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        },
         animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabBg",
     )
     val contentColor by animateColorAsState(
-        targetValue = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
         animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "tabContent",
     )
@@ -332,7 +340,6 @@ fun SegmentedTabButton(
         shape = CircleShape,
         color = backgroundColor,
         contentColor = contentColor,
-        border = if (selected) BorderStroke(1.dp, Color(0x20FFFFFF)) else null,
         modifier = modifier.height(34.dp),
     ) {
         Box(
