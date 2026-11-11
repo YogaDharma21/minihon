@@ -12,8 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
@@ -26,7 +24,6 @@ import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransitionContent
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import kotlin.math.roundToInt
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
 
@@ -62,43 +59,11 @@ fun DefaultNavigatorScreenTransition(
 
             when {
                 isPushingManga -> {
-                    val enter = slideInVertically(
-                        initialOffsetY = { (it * 0.70f).roundToInt() },
-                        animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
-                        ),
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 550,
-                            easing = LinearOutSlowInEasing,
-                        ),
-                    ) + scaleIn(
-                        initialScale = 0.94f,
-                        animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
-                        ),
-                    )
-                    val exit = scaleOut(
-                        targetScale = 0.92f,
-                        animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.2f, 0f, 0f, 1.0f),
-                        ),
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 450,
-                            easing = FastOutLinearInEasing,
-                        ),
-                    )
-                    enter togetherWith exit
-                }
-                isPoppingManga -> {
+                    // Variant B: Shared Axis Z Bloom (0.5x slow-mo ~700ms)
                     val enter = scaleIn(
-                        initialScale = 0.92f,
+                        initialScale = 0.90f,
                         animationSpec = tween(
-                            durationMillis = 600,
+                            durationMillis = 700,
                             easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
                         ),
                     ) + fadeIn(
@@ -107,10 +72,40 @@ fun DefaultNavigatorScreenTransition(
                             easing = LinearOutSlowInEasing,
                         ),
                     )
-                    val exit = slideOutVertically(
-                        targetOffsetY = { (it * 0.70f).roundToInt() },
+                    val exit = scaleOut(
+                        targetScale = 0.94f,
                         animationSpec = tween(
-                            durationMillis = 600,
+                            durationMillis = 700,
+                            easing = CubicBezierEasing(0.2f, 0f, 0f, 1.0f),
+                        ),
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 400,
+                            easing = FastOutLinearInEasing,
+                        ),
+                    )
+                    (enter togetherWith exit).apply {
+                        targetContentZIndex = 1f
+                    }
+                }
+                isPoppingManga -> {
+                    // Variant B: Shared Axis Z Bloom Exit (0.5x slow-mo ~650ms)
+                    val enter = scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = tween(
+                            durationMillis = 650,
+                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
+                        ),
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 500,
+                            easing = LinearOutSlowInEasing,
+                        ),
+                    )
+                    val exit = scaleOut(
+                        targetScale = 0.90f,
+                        animationSpec = tween(
+                            durationMillis = 650,
                             easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
                         ),
                     ) + fadeOut(
@@ -118,14 +113,10 @@ fun DefaultNavigatorScreenTransition(
                             durationMillis = 450,
                             easing = FastOutLinearInEasing,
                         ),
-                    ) + scaleOut(
-                        targetScale = 0.94f,
-                        animationSpec = tween(
-                            durationMillis = 600,
-                            easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
-                        ),
                     )
-                    enter togetherWith exit
+                    (enter togetherWith exit).apply {
+                        targetContentZIndex = -1f
+                    }
                 }
                 else -> {
                     materialSharedAxisX(
