@@ -10,8 +10,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +31,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -285,7 +285,9 @@ fun ReaderChapterListSheet(
                                                     Text(
                                                         text = stringResource(MR.strings.action_search_hint),
                                                         style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                            alpha = 0.6f,
+                                                        ),
                                                     )
                                                 }
                                                 innerTextField()
