@@ -63,26 +63,32 @@ fun DefaultNavigatorScreenTransition(
             when {
                 isPushingManga -> {
                     val enter = slideInVertically(
-                        initialOffsetY = { (it * 0.18f).roundToInt() },
+                        initialOffsetY = { (it * 0.70f).roundToInt() },
                         animationSpec = tween(
-                            durationMillis = 350,
+                            durationMillis = 700,
                             easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
                         ),
                     ) + fadeIn(
                         animationSpec = tween(
-                            durationMillis = 280,
+                            durationMillis = 550,
                             easing = LinearOutSlowInEasing,
+                        ),
+                    ) + scaleIn(
+                        initialScale = 0.94f,
+                        animationSpec = tween(
+                            durationMillis = 700,
+                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
                         ),
                     )
                     val exit = scaleOut(
-                        targetScale = 0.96f,
+                        targetScale = 0.92f,
                         animationSpec = tween(
-                            durationMillis = 350,
+                            durationMillis = 700,
                             easing = CubicBezierEasing(0.2f, 0f, 0f, 1.0f),
                         ),
                     ) + fadeOut(
                         animationSpec = tween(
-                            durationMillis = 200,
+                            durationMillis = 450,
                             easing = FastOutLinearInEasing,
                         ),
                     )
@@ -90,27 +96,33 @@ fun DefaultNavigatorScreenTransition(
                 }
                 isPoppingManga -> {
                     val enter = scaleIn(
-                        initialScale = 0.96f,
+                        initialScale = 0.92f,
                         animationSpec = tween(
-                            durationMillis = 300,
+                            durationMillis = 600,
                             easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
                         ),
                     ) + fadeIn(
                         animationSpec = tween(
-                            durationMillis = 250,
+                            durationMillis = 500,
                             easing = LinearOutSlowInEasing,
                         ),
                     )
                     val exit = slideOutVertically(
-                        targetOffsetY = { (it * 0.18f).roundToInt() },
+                        targetOffsetY = { (it * 0.70f).roundToInt() },
                         animationSpec = tween(
-                            durationMillis = 300,
+                            durationMillis = 600,
                             easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
                         ),
                     ) + fadeOut(
                         animationSpec = tween(
-                            durationMillis = 220,
+                            durationMillis = 450,
                             easing = FastOutLinearInEasing,
+                        ),
+                    ) + scaleOut(
+                        targetScale = 0.94f,
+                        animationSpec = tween(
+                            durationMillis = 600,
+                            easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
                         ),
                     )
                     enter togetherWith exit
