@@ -9,14 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,14 +25,11 @@ import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.tachiyomi.ui.browse.source.SourcesViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
-import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.Keep
-import mihon.icons.materialsymbols.roundedfilled.Keep
+import mihon.app.di.appGraph
 import tachiyomi.domain.source.model.Pin
 import tachiyomi.domain.source.model.Source
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
-import tachiyomi.presentation.core.components.material.SECONDARY_ALPHA
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
 import tachiyomi.presentation.core.i18n.stringResource
@@ -58,6 +54,20 @@ fun SourcesScreen(
             modifier = Modifier.padding(contentPadding),
         )
         else -> {
+            val context = LocalContext.current
+            val loadedExtensions by context.appGraph.extensionManager.loadedExtensionsFlow.collectAsState(
+                initial = emptyList(),
+            )
+            val sourceVersions = remember(loadedExtensions) {
+                buildMap {
+                    for (ext in loadedExtensions) {
+                        for (s in ext.sources) {
+                            put(s.id, ext.versionName)
+                        }
+                    }
+                }
+            }
+
             ScrollbarLazyColumn(
                 contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
             ) {
@@ -90,6 +100,7 @@ fun SourcesScreen(
                                 .animateItem()
                                 .cascadeItemMotion(index = index),
                             source = model.source,
+                            version = sourceVersions[model.source.id],
                             onClickItem = onClickItem,
                             onLongClickItem = onLongClickItem,
                             onClickPin = onClickPin,
@@ -110,8 +121,10 @@ private fun SourceHeader(
     Text(
         text = LocaleHelper.getSourceDisplayName(language, context),
         modifier = modifier
-            .padding(horizontal = MaterialTheme.padding.medium, vertical = MaterialTheme.padding.small),
-        style = MaterialTheme.typography.header,
+            .padding(horizontal = 24.dp, vertical = MaterialTheme.padding.small),
+        style = MaterialTheme.typography.header.copy(
+            color = Color(0xFF8A8C92),
+        ),
     )
 }
 
@@ -122,6 +135,7 @@ private fun SourceItem(
     onLongClickItem: (Source) -> Unit,
     onClickPin: (Source) -> Unit,
     modifier: Modifier = Modifier,
+    version: String? = null,
 ) {
     Surface(
         modifier = modifier
@@ -133,48 +147,15 @@ private fun SourceItem(
     ) {
         BaseSourceItem(
             source = source,
+            version = version,
             onClickItem = { onClickItem(source, Listing.Popular) },
             onLongClickItem = { onLongClickItem(source) },
-            action = {
-                if (source.supportsLatest) {
-                    TextButton(onClick = { onClickItem(source, Listing.Latest) }) {
-                        Text(
-                            text = stringResource(MR.strings.latest),
-                            style = LocalTextStyle.current.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontFeatureSettings = "tnum",
-                            ),
-                        )
-                    }
-                }
-                SourcePinButton(
-                    isPinned = Pin.Pinned in source.pin,
-                    onClick = { onClickPin(source) },
-                )
+            onClickLatest = if (source.supportsLatest) {
+                { onClickItem(source, Listing.Latest) }
+            } else {
+                null
             },
-        )
-    }
-}
-
-@Composable
-private fun SourcePinButton(
-    isPinned: Boolean,
-    onClick: () -> Unit,
-) {
-    val icon = if (isPinned) MaterialSymbols.RoundedFilled.Keep else MaterialSymbols.Rounded.Keep
-    val tint = if (isPinned) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onBackground.copy(
-            alpha = SECONDARY_ALPHA,
-        )
-    }
-    val description = if (isPinned) MR.strings.action_unpin else MR.strings.action_pin
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = icon,
-            tint = tint,
-            contentDescription = stringResource(description),
+            onClickPin = { onClickPin(source) },
         )
     }
 }
