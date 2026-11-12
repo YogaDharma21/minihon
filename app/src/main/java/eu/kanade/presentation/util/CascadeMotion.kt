@@ -17,8 +17,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import java.util.Collections
 import kotlinx.coroutines.launch
+import java.util.Collections
 
 const val CASCADE_DURATION_MILLIS: Int = 800
 const val CASCADE_STAGGER_MILLIS: Int = 60

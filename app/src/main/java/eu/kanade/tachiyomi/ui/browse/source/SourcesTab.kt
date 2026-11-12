@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.source
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -12,6 +13,9 @@ import eu.kanade.presentation.browse.SourceOptionsDialog
 import eu.kanade.presentation.browse.SourcesScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.presentation.util.CascadeSurface
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
+import eu.kanade.presentation.util.rememberCascadeMotionTrigger
 import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
@@ -52,38 +56,42 @@ fun Screen.sourcesTab(): TabContent {
             ),
         ),
         content = { contentPadding, snackbarHostState ->
-            SourcesScreen(
-                state = state,
-                contentPadding = contentPadding,
-                onClickItem = { source, listing ->
-                    navigator.push(BrowseSourceScreen(source.id, listing.query))
-                },
-                onClickPin = viewModel::togglePin,
-                onLongClickItem = viewModel::showSourceDialog,
-            )
-
-            state.dialog?.let { dialog ->
-                val source = dialog.source
-                SourceOptionsDialog(
-                    source = source,
-                    onClickPin = {
-                        viewModel.togglePin(source)
-                        viewModel.closeDialog()
+            CompositionLocalProvider(
+                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.Sources),
+            ) {
+                SourcesScreen(
+                    state = state,
+                    contentPadding = contentPadding,
+                    onClickItem = { source, listing ->
+                        navigator.push(BrowseSourceScreen(source.id, listing.query))
                     },
-                    onClickDisable = {
-                        viewModel.toggleSource(source)
-                        viewModel.closeDialog()
-                    },
-                    onDismiss = viewModel::closeDialog,
+                    onClickPin = viewModel::togglePin,
+                    onLongClickItem = viewModel::showSourceDialog,
                 )
-            }
 
-            val internalErrString = stringResource(MR.strings.internal_error)
-            LaunchedEffect(Unit) {
-                viewModel.events.collectLatest { event ->
-                    when (event) {
-                        SourcesViewModel.Event.FailedFetchingSources -> {
-                            launch { snackbarHostState.showSnackbar(internalErrString) }
+                state.dialog?.let { dialog ->
+                    val source = dialog.source
+                    SourceOptionsDialog(
+                        source = source,
+                        onClickPin = {
+                            viewModel.togglePin(source)
+                            viewModel.closeDialog()
+                        },
+                        onClickDisable = {
+                            viewModel.toggleSource(source)
+                            viewModel.closeDialog()
+                        },
+                        onDismiss = viewModel::closeDialog,
+                    )
+                }
+
+                val internalErrString = stringResource(MR.strings.internal_error)
+                LaunchedEffect(Unit) {
+                    viewModel.events.collectLatest { event ->
+                        when (event) {
+                            SourcesViewModel.Event.FailedFetchingSources -> {
+                                launch { snackbarHostState.showSnackbar(internalErrString) }
+                            }
                         }
                     }
                 }

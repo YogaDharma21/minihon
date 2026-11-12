@@ -7,6 +7,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -26,7 +27,10 @@ import eu.kanade.presentation.history.HistoryScreen
 import eu.kanade.presentation.history.components.HistoryDeleteAllDialog
 import eu.kanade.presentation.history.components.HistoryDeleteDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
+import eu.kanade.presentation.util.CascadeSurface
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Tab
+import eu.kanade.presentation.util.rememberCascadeMotionTrigger
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -100,94 +104,104 @@ fun Screen.historyTab(viewModel: HistoryViewModel): TabContent {
             ),
         ),
         content = { contentPadding, snackbarHostState ->
-            HistoryScreen(
-                state = state,
-                snackbarHostState = snackbarHostState,
-                onSearchQueryChange = viewModel::updateSearchQuery,
-                onClickCover = { navigator.push(MangaScreen(it)) },
-                onClickResume = viewModel::getNextChapterForManga,
-                onDialogChange = viewModel::setDialog,
-                onClickFavorite = viewModel::addFavorite,
-                onClickSettings = null,
-                showTopBar = false,
-                contentPadding = contentPadding,
-            )
+            CompositionLocalProvider(
+                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.History),
+            ) {
+                HistoryScreen(
+                    state = state,
+                    snackbarHostState = snackbarHostState,
+                    onSearchQueryChange = viewModel::updateSearchQuery,
+                    onClickCover = { navigator.push(MangaScreen(it)) },
+                    onClickResume = viewModel::getNextChapterForManga,
+                    onDialogChange = viewModel::setDialog,
+                    onClickFavorite = viewModel::addFavorite,
+                    onClickSettings = null,
+                    showTopBar = false,
+                    contentPadding = contentPadding,
+                )
 
-            val onDismissRequest = { viewModel.setDialog(null) }
-            when (val dialog = state.dialog) {
-                is HistoryViewModel.Dialog.Delete -> {
-                    HistoryDeleteDialog(
-                        onDismissRequest = onDismissRequest,
-                        onDelete = { all ->
-                            if (all) {
-                                viewModel.removeAllFromHistory(dialog.history.mangaId)
-                            } else {
-                                viewModel.removeFromHistory(dialog.history)
-                            }
-                        },
-                    )
+                val onDismissRequest = { viewModel.setDialog(null) }
+                when (val dialog = state.dialog) {
+                    is HistoryViewModel.Dialog.Delete -> {
+                        HistoryDeleteDialog(
+                            onDismissRequest = onDismissRequest,
+                            onDelete = { all ->
+                                if (all) {
+                                    viewModel.removeAllFromHistory(dialog.history.mangaId)
+                                } else {
+                                    viewModel.removeFromHistory(dialog.history)
+                                }
+                            },
+                        )
+                    }
+                    is HistoryViewModel.Dialog.DeleteAll -> {
+                        HistoryDeleteAllDialog(
+                            onDismissRequest = onDismissRequest,
+                            onDelete = viewModel::removeAllHistory,
+                        )
+                    }
+                    is HistoryViewModel.Dialog.DuplicateManga -> {
+                        DuplicateMangaDialog(
+                            duplicates = dialog.duplicates,
+                            onDismissRequest = onDismissRequest,
+                            onConfirm = { viewModel.addFavorite(dialog.manga) },
+                            onOpenManga = { navigator.push(MangaScreen(it.id)) },
+                            onMigrate = { viewModel.showMigrateDialog(dialog.manga, it) },
+                        )
+                    }
+                    is HistoryViewModel.Dialog.ChangeCategory -> {
+                        ChangeCategoryDialog(
+                            initialSelection = dialog.initialSelection,
+                            onDismissRequest = onDismissRequest,
+                            onEditCategories = { navigator.push(CategoryScreen()) },
+                            onConfirm = { include, _ ->
+                                viewModel.moveMangaToCategoriesAndAddToLibrary(dialog.manga, include)
+                            },
+                        )
+                    }
+                    is HistoryViewModel.Dialog.Migrate -> {
+                        MigrateMangaDialog(
+                            current = dialog.current,
+                            target = dialog.target,
+                            onClickTitle = { navigator.push(MangaScreen(dialog.current.id)) },
+                            onDismissRequest = onDismissRequest,
+                        )
+                    }
+                    null -> {}
                 }
-                is HistoryViewModel.Dialog.DeleteAll -> {
-                    HistoryDeleteAllDialog(
-                        onDismissRequest = onDismissRequest,
-                        onDelete = viewModel::removeAllHistory,
-                    )
-                }
-                is HistoryViewModel.Dialog.DuplicateManga -> {
-                    DuplicateMangaDialog(
-                        duplicates = dialog.duplicates,
-                        onDismissRequest = onDismissRequest,
-                        onConfirm = { viewModel.addFavorite(dialog.manga) },
-                        onOpenManga = { navigator.push(MangaScreen(it.id)) },
-                        onMigrate = { viewModel.showMigrateDialog(dialog.manga, it) },
-                    )
-                }
-                is HistoryViewModel.Dialog.ChangeCategory -> {
-                    ChangeCategoryDialog(
-                        initialSelection = dialog.initialSelection,
-                        onDismissRequest = onDismissRequest,
-                        onEditCategories = { navigator.push(CategoryScreen()) },
-                        onConfirm = { include, _ ->
-                            viewModel.moveMangaToCategoriesAndAddToLibrary(dialog.manga, include)
-                        },
-                    )
-                }
-                is HistoryViewModel.Dialog.Migrate -> {
-                    MigrateMangaDialog(
-                        current = dialog.current,
-                        target = dialog.target,
-                        onClickTitle = { navigator.push(MangaScreen(dialog.current.id)) },
-                        onDismissRequest = onDismissRequest,
-                    )
-                }
-                null -> {}
-            }
 
-            LaunchedEffect(state.list) {
-                if (state.list != null) {
-                    (context as? MainActivity)?.ready = true
+                LaunchedEffect(state.list) {
+                    if (state.list != null) {
+                        (context as? MainActivity)?.ready = true
+                    }
                 }
-            }
 
-            LaunchedEffect(Unit) {
-                viewModel.events.collectLatest { e ->
-                    when (e) {
-                        HistoryViewModel.Event.InternalError ->
-                            snackbarHostState.showSnackbar(context.stringResource(MR.strings.internal_error))
-                        HistoryViewModel.Event.HistoryCleared ->
-                            snackbarHostState.showSnackbar(context.stringResource(MR.strings.clear_history_completed))
-                        is HistoryViewModel.Event.OpenChapter -> HistoryTab.openChapter(
+                LaunchedEffect(Unit) {
+                    viewModel.events.collectLatest { e ->
+                        when (e) {
+                            HistoryViewModel.Event.InternalError ->
+                                snackbarHostState.showSnackbar(context.stringResource(MR.strings.internal_error))
+                            HistoryViewModel.Event.HistoryCleared ->
+                                snackbarHostState.showSnackbar(
+                                    context.stringResource(MR.strings.clear_history_completed),
+                                )
+                            is HistoryViewModel.Event.OpenChapter -> HistoryTab.openChapter(
+                                context,
+                                e.chapter,
+                                snackbarHostState,
+                            )
+                        }
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    HistoryTab.resumeLastChapterReadEvent.receiveAsFlow().collectLatest {
+                        HistoryTab.openChapter(
                             context,
-                            e.chapter,
+                            viewModel.getNextChapter(),
                             snackbarHostState,
                         )
                     }
-                }
-            }
-
-            LaunchedEffect(Unit) {
-                HistoryTab.resumeLastChapterReadEvent.receiveAsFlow().collectLatest {
-                    HistoryTab.openChapter(context, viewModel.getNextChapter(), snackbarHostState)
                 }
             }
         },

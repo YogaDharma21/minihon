@@ -1,17 +1,12 @@
 package eu.kanade.tachiyomi.ui.activity
 
-import android.os.SystemClock
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.Navigator
@@ -19,8 +14,6 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.TabbedScreen
-import eu.kanade.presentation.util.CascadeMotionTrigger
-import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
@@ -78,25 +71,13 @@ data object ActivityTab : Tab {
 
         val state = rememberPagerState { tabs.size }
 
-        val parentTrigger = LocalCascadeMotionTrigger.current
-        var activityTrigger by remember { mutableStateOf(CascadeMotionTrigger()) }
-
-        LaunchedEffect(parentTrigger, state.currentPage) {
-            activityTrigger = CascadeMotionTrigger(
-                id = activityTrigger.id + 1,
-                startUptimeMillis = SystemClock.uptimeMillis(),
-            )
-        }
-
-        CompositionLocalProvider(LocalCascadeMotionTrigger provides activityTrigger) {
-            TabbedScreen(
-                titleRes = MR.strings.label_activity,
-                tabs = tabs,
-                state = state,
-                searchQuery = historyState.searchQuery,
-                onChangeSearchQuery = historyViewModel::updateSearchQuery,
-            )
-        }
+        TabbedScreen(
+            titleRes = MR.strings.label_activity,
+            tabs = tabs,
+            state = state,
+            searchQuery = historyState.searchQuery,
+            onChangeSearchQuery = historyViewModel::updateSearchQuery,
+        )
 
         LaunchedEffect(Unit) {
             switchTabChannel.receiveAsFlow().collectLatest {

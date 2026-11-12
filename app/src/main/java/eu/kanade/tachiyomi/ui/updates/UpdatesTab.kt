@@ -6,6 +6,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,7 +26,10 @@ import eu.kanade.presentation.components.TabContent
 import eu.kanade.presentation.updates.UpdatesDeleteConfirmationDialog
 import eu.kanade.presentation.updates.UpdatesFilterDialog
 import eu.kanade.presentation.updates.UpdatesScreen
+import eu.kanade.presentation.util.CascadeSurface
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Tab
+import eu.kanade.presentation.util.rememberCascadeMotionTrigger
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
@@ -96,82 +100,86 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
             ),
         ),
         content = { contentPadding, snackbarHostState ->
-            UpdatesScreen(
-                state = state,
-                snackbarHostState = snackbarHostState,
-                lastUpdated = viewModel.lastUpdated,
-                onClickCover = { item -> navigator.push(MangaScreen(item.update.mangaId)) },
-                onSelectAll = viewModel::toggleAllSelection,
-                onInvertSelection = viewModel::invertSelection,
-                onUpdateLibrary = viewModel::updateLibrary,
-                onDownloadChapter = viewModel::downloadChapters,
-                onMultiBookmarkClicked = viewModel::bookmarkUpdates,
-                onMultiMarkAsReadClicked = viewModel::markUpdatesRead,
-                onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
-                onUpdateSelected = viewModel::toggleSelection,
-                onOpenChapter = {
-                    val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
-                    context.startActivity(intent)
-                },
-                onFilterClicked = viewModel::showFilterDialog,
-                hasActiveFilters = state.hasActiveFilters,
-                collapsedMangaIds = state.collapsedMangaIds,
-                onToggleMangaCollapse = viewModel::toggleMangaCollapse,
-                onToggleCollapseAll = viewModel::toggleCollapseAll,
-                onClickSettings = null,
-                showTopBar = false,
-                contentPadding = contentPadding,
-            )
+            CompositionLocalProvider(
+                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.Updates),
+            ) {
+                UpdatesScreen(
+                    state = state,
+                    snackbarHostState = snackbarHostState,
+                    lastUpdated = viewModel.lastUpdated,
+                    onClickCover = { item -> navigator.push(MangaScreen(item.update.mangaId)) },
+                    onSelectAll = viewModel::toggleAllSelection,
+                    onInvertSelection = viewModel::invertSelection,
+                    onUpdateLibrary = viewModel::updateLibrary,
+                    onDownloadChapter = viewModel::downloadChapters,
+                    onMultiBookmarkClicked = viewModel::bookmarkUpdates,
+                    onMultiMarkAsReadClicked = viewModel::markUpdatesRead,
+                    onMultiDeleteClicked = viewModel::showConfirmDeleteChapters,
+                    onUpdateSelected = viewModel::toggleSelection,
+                    onOpenChapter = {
+                        val intent = ReaderActivity.newIntent(context, it.update.mangaId, it.update.chapterId)
+                        context.startActivity(intent)
+                    },
+                    onFilterClicked = viewModel::showFilterDialog,
+                    hasActiveFilters = state.hasActiveFilters,
+                    collapsedMangaIds = state.collapsedMangaIds,
+                    onToggleMangaCollapse = viewModel::toggleMangaCollapse,
+                    onToggleCollapseAll = viewModel::toggleCollapseAll,
+                    onClickSettings = null,
+                    showTopBar = false,
+                    contentPadding = contentPadding,
+                )
 
-            val onDismissDialog = { viewModel.setDialog(null) }
-            when (val dialog = state.dialog) {
-                is UpdatesViewModel.Dialog.DeleteConfirmation -> {
-                    UpdatesDeleteConfirmationDialog(
-                        onDismissRequest = onDismissDialog,
-                        onConfirm = { viewModel.deleteChapters(dialog.toDelete) },
-                    )
-                }
-                is UpdatesViewModel.Dialog.FilterSheet -> {
-                    UpdatesFilterDialog(
-                        onDismissRequest = onDismissDialog,
-                        viewModel = settingsViewModel,
-                    )
-                }
-                null -> {}
-            }
-
-            LaunchedEffect(Unit) {
-                viewModel.events.collectLatest { event ->
-                    when (event) {
-                        Event.InternalError -> snackbarHostState.showSnackbar(
-                            context.stringResource(MR.strings.internal_error),
+                val onDismissDialog = { viewModel.setDialog(null) }
+                when (val dialog = state.dialog) {
+                    is UpdatesViewModel.Dialog.DeleteConfirmation -> {
+                        UpdatesDeleteConfirmationDialog(
+                            onDismissRequest = onDismissDialog,
+                            onConfirm = { viewModel.deleteChapters(dialog.toDelete) },
                         )
-                        is Event.LibraryUpdateTriggered -> {
-                            val msg = if (event.started) {
-                                MR.strings.updating_library
-                            } else {
-                                MR.strings.update_already_running
+                    }
+                    is UpdatesViewModel.Dialog.FilterSheet -> {
+                        UpdatesFilterDialog(
+                            onDismissRequest = onDismissDialog,
+                            viewModel = settingsViewModel,
+                        )
+                    }
+                    null -> {}
+                }
+
+                LaunchedEffect(Unit) {
+                    viewModel.events.collectLatest { event ->
+                        when (event) {
+                            Event.InternalError -> snackbarHostState.showSnackbar(
+                                context.stringResource(MR.strings.internal_error),
+                            )
+                            is Event.LibraryUpdateTriggered -> {
+                                val msg = if (event.started) {
+                                    MR.strings.updating_library
+                                } else {
+                                    MR.strings.update_already_running
+                                }
+                                snackbarHostState.showSnackbar(context.stringResource(msg))
                             }
-                            snackbarHostState.showSnackbar(context.stringResource(msg))
                         }
                     }
                 }
-            }
 
-            LaunchedEffect(state.selectionMode) {
-                HomeScreen.showBottomNav(!state.selectionMode)
-            }
-
-            LaunchedEffect(state.isLoading) {
-                if (!state.isLoading) {
-                    (context as? MainActivity)?.ready = true
+                LaunchedEffect(state.selectionMode) {
+                    HomeScreen.showBottomNav(!state.selectionMode)
                 }
-            }
-            DisposableEffect(Unit) {
-                viewModel.resetNewUpdatesCount()
 
-                onDispose {
+                LaunchedEffect(state.isLoading) {
+                    if (!state.isLoading) {
+                        (context as? MainActivity)?.ready = true
+                    }
+                }
+                DisposableEffect(Unit) {
                     viewModel.resetNewUpdatesCount()
+
+                    onDispose {
+                        viewModel.resetNewUpdatesCount()
+                    }
                 }
             }
         },
