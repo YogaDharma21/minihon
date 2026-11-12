@@ -16,11 +16,36 @@ class CascadeMotionTest {
 
     @Test
     fun `target delay increases by stagger per index`() {
-        calculateCascadeTiming(index = 0, startUptimeMillis = 1000L, currentUptimeMillis = 1000L).targetDelayMillis shouldBe 0L
-        calculateCascadeTiming(index = 1, startUptimeMillis = 1000L, currentUptimeMillis = 1000L).targetDelayMillis shouldBe 60L
-        calculateCascadeTiming(index = 2, startUptimeMillis = 1000L, currentUptimeMillis = 1000L).targetDelayMillis shouldBe 120L
-        calculateCascadeTiming(index = 5, startUptimeMillis = 1000L, currentUptimeMillis = 1000L).targetDelayMillis shouldBe 300L
-        calculateCascadeTiming(index = -1, startUptimeMillis = 1000L, currentUptimeMillis = 1000L).targetDelayMillis shouldBe 0L
+        calculateCascadeTiming(
+            index = 0,
+            startUptimeMillis = 1000L,
+            currentUptimeMillis = 1000L,
+        ).targetDelayMillis shouldBe
+            0L
+        calculateCascadeTiming(
+            index = 1,
+            startUptimeMillis = 1000L,
+            currentUptimeMillis = 1000L,
+        ).targetDelayMillis shouldBe
+            60L
+        calculateCascadeTiming(
+            index = 2,
+            startUptimeMillis = 1000L,
+            currentUptimeMillis = 1000L,
+        ).targetDelayMillis shouldBe
+            120L
+        calculateCascadeTiming(
+            index = 5,
+            startUptimeMillis = 1000L,
+            currentUptimeMillis = 1000L,
+        ).targetDelayMillis shouldBe
+            300L
+        calculateCascadeTiming(
+            index = -1,
+            startUptimeMillis = 1000L,
+            currentUptimeMillis = 1000L,
+        ).targetDelayMillis shouldBe
+            0L
     }
 
     @Test
@@ -46,13 +71,19 @@ class CascadeMotionTest {
         val start = 1000L
         val index = 2 // target delay = 120ms, duration = 800ms, total = 920ms
 
-        val justBefore = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 919L)
+        val justBefore = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = start,
+            currentUptimeMillis =
+            start + 919L,
+        )
         justBefore.isCompleted shouldBe false
 
         val exact = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 920L)
         exact.isCompleted shouldBe true
 
-        val after = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 1500L)
+        val after =
+            calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 1500L)
         after.isCompleted shouldBe true
     }
 
@@ -62,17 +93,32 @@ class CascadeMotionTest {
         val index = 2 // target delay = 120ms, duration = 800ms
 
         // Before start
-        val beforeStart = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 50L)
+        val beforeStart = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = start,
+            currentUptimeMillis =
+            start + 50L,
+        )
         beforeStart.remainingDurationMillis shouldBe 800L
         beforeStart.initialFraction shouldBe 0f
 
         // Exact start of item animation
-        val atStart = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 120L)
+        val atStart = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = start,
+            currentUptimeMillis =
+            start + 120L,
+        )
         atStart.remainingDurationMillis shouldBe 800L
         atStart.initialFraction shouldBe 0f
 
         // Halfway through animation (120ms delay + 400ms = 520ms)
-        val halfway = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 520L)
+        val halfway = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = start,
+            currentUptimeMillis =
+            start + 520L,
+        )
         halfway.remainingDurationMillis shouldBe 400L
         halfway.initialFraction shouldBe (0.5f plusOrMinus 0.001f)
 
@@ -82,7 +128,12 @@ class CascadeMotionTest {
         atEnd.initialFraction shouldBe 1f
 
         // Past end
-        val pastEnd = calculateCascadeTiming(index = index, startUptimeMillis = start, currentUptimeMillis = start + 2000L)
+        val pastEnd = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = start,
+            currentUptimeMillis =
+            start + 2000L,
+        )
         pastEnd.remainingDurationMillis shouldBe 0L
         pastEnd.initialFraction shouldBe 1f
     }
