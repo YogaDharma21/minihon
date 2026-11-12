@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -131,8 +133,27 @@ fun MangaChapterListItem(
                         onClick = onClick,
                         onLongClick = onLongClick,
                     )
-                    .padding(start = if (isSubChapter) 32.dp else 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
+                    .padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 12.dp),
             ) {
+                if (isSubChapter) {
+                    Box(
+                        modifier = Modifier
+                            .width(16.dp)
+                            .height(20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                        alpha = if (read) DISABLED_ALPHA else 0.7f,
+                                    ),
+                                    shape = CircleShape,
+                                ),
+                        )
+                    }
+                }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
