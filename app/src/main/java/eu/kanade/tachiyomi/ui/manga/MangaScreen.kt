@@ -67,7 +67,6 @@ class MangaScreen(
 ) : Screen(), AssistContentScreen {
 
     private var assistUrl: String? = null
-    private var hasPlayedEnterTransition = false
 
     override fun onProvideAssistUrl() = assistUrl
 
@@ -77,10 +76,6 @@ class MangaScreen(
         val context = LocalContext.current
         val haptic = LocalHapticFeedback.current
         val scope = rememberCoroutineScope()
-        val playEnterTransition = remember { !hasPlayedEnterTransition }
-        if (playEnterTransition) {
-            hasPlayedEnterTransition = true
-        }
         val viewModel =
             assistedMetroViewModel<MangaViewModel, MangaViewModel.Factory> {
                 create(mangaId = mangaId, isFromSource = fromSource)
@@ -112,7 +107,6 @@ class MangaScreen(
             state = successState,
             snackbarHostState = viewModel.snackbarHostState,
             isTabletUi = isTabletUi(),
-            playEnterTransition = playEnterTransition,
             chapterSwipeStartAction = viewModel.chapterSwipeStartAction,
             chapterSwipeEndAction = viewModel.chapterSwipeEndAction,
             navigateUp = navigator::pop,
