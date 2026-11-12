@@ -3,7 +3,7 @@ package eu.kanade.presentation.library.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.MangaCover
@@ -34,14 +35,16 @@ internal fun LibraryComfortableGrid(
     ) {
         globalSearchItem(searchQuery, onGlobalSearchClicked)
 
-        items(
+        itemsIndexed(
             items = items,
-            contentType = { "library_comfortable_grid_item" },
-        ) { libraryItem ->
+            contentType = { _, _ -> "library_comfortable_grid_item" },
+        ) { index, libraryItem ->
             val manga = libraryItem.libraryManga.manga
             val isSelected = manga.id in selection
             Surface(
-                modifier = Modifier.animateItem(),
+                modifier = Modifier
+                    .animateItem()
+                    .cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
                 border = BorderStroke(

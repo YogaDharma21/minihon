@@ -5,13 +5,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.MangaCover
@@ -43,16 +44,17 @@ internal fun LibraryList(
             }
         }
 
-        items(
+        itemsIndexed(
             items = items,
-            contentType = { "library_list_item" },
-        ) { libraryItem ->
+            contentType = { _, _ -> "library_list_item" },
+        ) { index, libraryItem ->
             val manga = libraryItem.libraryManga.manga
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .animateItem(),
+                    .animateItem()
+                    .cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
                 border = BorderStroke(1.dp, Color(0x12FFFFFF)),
