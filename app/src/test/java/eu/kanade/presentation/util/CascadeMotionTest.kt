@@ -142,5 +142,59 @@ class CascadeMotionTest {
     fun `cascade trigger defaults to id 0`() {
         val trigger = CascadeMotionTrigger()
         trigger.id shouldBe 0L
+        trigger.disabled shouldBe false
+    }
+
+    @Test
+    fun `cascade trigger disabled companion object has disabled set to true`() {
+        CascadeMotionTrigger.Disabled.disabled shouldBe true
+    }
+
+    @Test
+    fun `cascade motion session tracks first entrance and marks subsequent accesses as played`() {
+        CascadeMotionSession.resetForTesting()
+
+        CascadeMotionSession.hasPlayed(CascadeSurface.Library) shouldBe false
+        CascadeMotionSession.hasPlayed(CascadeSurface.Updates) shouldBe false
+        CascadeMotionSession.hasPlayed(CascadeSurface.History) shouldBe false
+        CascadeMotionSession.hasPlayed(CascadeSurface.Sources) shouldBe false
+
+        CascadeMotionSession.markPlayed(CascadeSurface.Library)
+        CascadeMotionSession.hasPlayed(CascadeSurface.Library) shouldBe true
+        CascadeMotionSession.hasPlayed(CascadeSurface.Updates) shouldBe false
+
+        CascadeMotionSession.markPlayed(CascadeSurface.Updates)
+        CascadeMotionSession.hasPlayed(CascadeSurface.Updates) shouldBe true
+
+        CascadeMotionSession.resetForTesting()
+        CascadeMotionSession.hasPlayed(CascadeSurface.Library) shouldBe false
+        CascadeMotionSession.hasPlayed(CascadeSurface.Updates) shouldBe false
+    }
+
+    @Test
+    fun `trigger resolution returns disabled on subsequent accesses`() {
+        CascadeMotionSession.resetForTesting()
+
+        fun resolveTrigger(surface: CascadeSurface): CascadeMotionTrigger {
+            return if (CascadeMotionSession.hasPlayed(surface)) {
+                CascadeMotionTrigger.Disabled
+            } else {
+                CascadeMotionSession.markPlayed(surface)
+                CascadeMotionTrigger()
+            }
+        }
+
+        val firstAccess = resolveTrigger(CascadeSurface.Library)
+        firstAccess.disabled shouldBe false
+
+        val secondAccess = resolveTrigger(CascadeSurface.Library)
+        secondAccess.disabled shouldBe true
+
+        val otherSurfaceFirst = resolveTrigger(CascadeSurface.Sources)
+        otherSurfaceFirst.disabled shouldBe false
+
+        CascadeMotionSession.resetForTesting()
+        val afterReset = resolveTrigger(CascadeSurface.Library)
+        afterReset.disabled shouldBe false
     }
 }

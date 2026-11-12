@@ -17,12 +17,34 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.util.Collections
 import kotlinx.coroutines.launch
 
 const val CASCADE_DURATION_MILLIS: Int = 800
 const val CASCADE_STAGGER_MILLIS: Int = 60
 val CASCADE_EASING: Easing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 val CASCADE_RISE_DP: Dp = 12.dp
+
+enum class CascadeSurface {
+    Library,
+    Updates,
+    History,
+    Sources,
+}
+
+object CascadeMotionSession {
+    private val playedSurfaces = Collections.synchronizedSet(mutableSetOf<CascadeSurface>())
+
+    fun hasPlayed(surface: CascadeSurface): Boolean = surface in playedSurfaces
+
+    fun markPlayed(surface: CascadeSurface) {
+        playedSurfaces += surface
+    }
+
+    fun resetForTesting() {
+        playedSurfaces.clear()
+    }
+}
 
 internal fun defaultUptimeMillis(): Long {
     return try {
@@ -35,9 +57,26 @@ internal fun defaultUptimeMillis(): Long {
 data class CascadeMotionTrigger(
     val id: Long = 0L,
     val startUptimeMillis: Long = defaultUptimeMillis(),
-)
+    val disabled: Boolean = false,
+) {
+    companion object {
+        val Disabled = CascadeMotionTrigger(disabled = true)
+    }
+}
 
 val LocalCascadeMotionTrigger = staticCompositionLocalOf { CascadeMotionTrigger() }
+
+@Composable
+fun rememberCascadeMotionTrigger(surface: CascadeSurface): CascadeMotionTrigger {
+    return remember(surface) {
+        if (CascadeMotionSession.hasPlayed(surface)) {
+            CascadeMotionTrigger.Disabled
+        } else {
+            CascadeMotionSession.markPlayed(surface)
+            CascadeMotionTrigger()
+        }
+    }
+}
 
 data class CascadeTiming(
     val targetDelayMillis: Long,
@@ -89,6 +128,7 @@ fun Modifier.cascadeItemMotion(
     index: Int,
     trigger: CascadeMotionTrigger = LocalCascadeMotionTrigger.current,
 ): Modifier {
+    if (trigger.disabled) return this
     if (LocalInspectionMode.current) return this
 
     val context = LocalContext.current
