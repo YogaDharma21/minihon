@@ -2,13 +2,16 @@ package eu.kanade.presentation.updates
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,19 +28,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadIndicator
@@ -45,9 +58,12 @@ import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.relativeTimeSpanString
+import eu.kanade.presentation.util.rememberResourceBitmapPainter
+import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import kotlinx.datetime.LocalDate
+import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.KeyboardArrowDown
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
@@ -454,8 +470,14 @@ private fun UpdatesUiItem(
     downloadProgressProvider: () -> Int,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val textAlpha = if (update.read) DISABLED_ALPHA else 1f
+
+    val relativeTime = relativeTimeSpanString(update.dateFetch.toEpochMilliseconds())
+    val sourceName by produceState(initialValue = "", update.sourceId) {
+        value = runCatching { context.appGraph.sourceManager.getOrStub(update.sourceId).name }.getOrDefault("")
+    }
 
     Row(
         modifier = modifier
@@ -467,75 +489,103 @@ private fun UpdatesUiItem(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 },
             )
-            .height(56.dp)
-            .padding(horizontal = MaterialTheme.padding.medium),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MangaCover.Square(
-            modifier = Modifier
-                .padding(vertical = 6.dp)
-                .fillMaxHeight(),
-            data = update.coverData,
+        UpdatesShowcaseCover(
+            coverData = update.coverData,
             onClick = onClickCover,
         )
 
         Column(
             modifier = Modifier
-                .padding(horizontal = MaterialTheme.padding.medium)
-                .weight(1f),
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
                 text = update.mangaTitle,
-                maxLines = 1,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LocalContentColor.current.copy(alpha = textAlpha),
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = Color(0xFFF4F4F2).copy(alpha = textAlpha),
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 18.sp,
+                ),
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                var textHeight by remember { mutableIntStateOf(0) }
-                if (!update.read) {
-                    Icon(
-                        imageVector = MaterialSymbols.RoundedFilled.Circle,
-                        contentDescription = stringResource(MR.strings.unread),
-                        modifier = Modifier
-                            .height(8.dp)
-                            .padding(end = 4.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+            Surface(
+                shape = RoundedCornerShape(9999.dp),
+                color = MaterialTheme.colorScheme.surfaceInset,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!update.read) {
+                        Icon(
+                            imageVector = MaterialSymbols.RoundedFilled.Circle,
+                            contentDescription = stringResource(MR.strings.unread),
+                            modifier = Modifier.size(6.dp),
+                            tint = Color(0xFFA9BFA9),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    if (update.bookmark) {
+                        Icon(
+                            imageVector = MaterialSymbols.RoundedFilled.Bookmark,
+                            contentDescription = stringResource(MR.strings.action_filter_bookmarked),
+                            modifier = Modifier.size(12.dp),
+                            tint = Color(0xFFD2BD93),
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                    }
+                    Text(
+                        text = update.chapterName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFeatureSettings = "tnum",
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        color = Color(0xFFF4F4F2).copy(alpha = textAlpha),
                     )
                 }
-                if (update.bookmark) {
-                    Icon(
-                        imageVector = MaterialSymbols.RoundedFilled.Bookmark,
-                        contentDescription = stringResource(MR.strings.action_filter_bookmarked),
-                        modifier = Modifier
-                            .sizeIn(
-                                maxHeight = with(LocalDensity.current) {
-                                    (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp)
-                                },
-                            ),
-                        tint = MaterialTheme.colorScheme.primary,
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (sourceName.isNotBlank()) {
+                    Text(
+                        text = sourceName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF8A8C92).copy(alpha = textAlpha),
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    DotSeparatorText()
                 }
                 Text(
-                    text = update.chapterName,
+                    text = relativeTime,
                     maxLines = 1,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                    color = LocalContentColor.current.copy(alpha = textAlpha),
                     overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { textHeight = it.size.height },
-                    modifier = Modifier
-                        .weight(weight = 1f, fill = false),
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFeatureSettings = "tnum",
+                    ),
+                    color = Color(0xFF8A8C92).copy(alpha = textAlpha),
                 )
                 if (readProgress != null) {
                     DotSeparatorText()
                     Text(
                         text = readProgress,
                         maxLines = 1,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                        color = LocalContentColor.current.copy(alpha = DISABLED_ALPHA),
                         overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFeatureSettings = "tnum",
+                        ),
+                        color = Color(0xFF8A8C92).copy(alpha = textAlpha),
                     )
                 }
             }
@@ -547,6 +597,66 @@ private fun UpdatesUiItem(
             downloadStateProvider = downloadStateProvider,
             downloadProgressProvider = downloadProgressProvider,
             onClick = { onDownloadChapter?.invoke(it) },
+        )
+    }
+}
+
+@Composable
+private fun UpdatesShowcaseCover(
+    coverData: tachiyomi.domain.manga.model.MangaCover,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .size(width = 84.dp, height = 116.dp)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(10.dp),
+                clip = false,
+            )
+            .clip(RoundedCornerShape(10.dp))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
+        AsyncImage(
+            model = coverData,
+            placeholder = ColorPainter(Color(0x1F888888)),
+            error = rememberResourceBitmapPainter(id = R.drawable.cover_error),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+
+        // Book crease along spine
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(6.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0x40000000),
+                            Color(0x14000000),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(start = 5.dp)
+                .width(1.dp)
+                .background(Color(0x1FFFFFFF)),
         )
     }
 }
