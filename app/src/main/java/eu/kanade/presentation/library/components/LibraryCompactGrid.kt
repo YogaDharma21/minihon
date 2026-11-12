@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -40,16 +41,25 @@ internal fun LibraryCompactGrid(
             contentType = { _, _ -> "library_compact_grid_item" },
         ) { index, libraryItem ->
             val manga = libraryItem.libraryManga.manga
+            val isSelected = manga.id in selection
+            val progress = if (libraryItem.libraryManga.totalChapters > 0) {
+                libraryItem.libraryManga.readCount.toFloat() / libraryItem.libraryManga.totalChapters.toFloat()
+            } else {
+                null
+            }
             Surface(
                 modifier = Modifier
                     .animateItem()
                     .cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
-                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                border = BorderStroke(
+                    width = if (isSelected) 2.dp else 1.dp,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0x12FFFFFF),
+                ),
             ) {
                 MangaCompactGridItem(
-                    isSelected = manga.id in selection,
+                    isSelected = isSelected,
                     title = manga.title.takeIf { showTitle },
                     coverData = MangaCover(
                         mangaId = manga.id,
@@ -58,9 +68,11 @@ internal fun LibraryCompactGrid(
                         url = manga.thumbnailUrl,
                         lastModified = manga.coverLastModified,
                     ),
+                    spineTag = manga.genre?.firstOrNull() ?: "MANGA",
+                    unreadCount = libraryItem.badges.unreadCount,
+                    readProgress = progress,
                     coverBadgeStart = {
                         DownloadsBadge(count = libraryItem.badges.downloadCount)
-                        UnreadBadge(count = libraryItem.badges.unreadCount)
                     },
                     coverBadgeEnd = {
                         LanguageBadge(

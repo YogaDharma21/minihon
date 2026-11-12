@@ -79,6 +79,7 @@ private fun BrowseSourceComfortableGridItem(
                 url = manga.thumbnailUrl,
                 lastModified = manga.coverLastModified,
             ),
+            spineTag = manga.genre?.firstOrNull() ?: "MANGA",
             coverAlpha = if (manga.favorite) CommonMangaItemDefaults.BrowseFavoriteCoverAlpha else 1f,
             coverBadgeStart = {
                 InLibraryBadge(enabled = manga.favorite)

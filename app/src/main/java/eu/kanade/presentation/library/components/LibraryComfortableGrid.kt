@@ -41,6 +41,11 @@ internal fun LibraryComfortableGrid(
         ) { index, libraryItem ->
             val manga = libraryItem.libraryManga.manga
             val isSelected = manga.id in selection
+            val progress = if (libraryItem.libraryManga.totalChapters > 0) {
+                libraryItem.libraryManga.readCount.toFloat() / libraryItem.libraryManga.totalChapters.toFloat()
+            } else {
+                null
+            }
             Surface(
                 modifier = Modifier
                     .animateItem()
@@ -62,9 +67,11 @@ internal fun LibraryComfortableGrid(
                         url = manga.thumbnailUrl,
                         lastModified = manga.coverLastModified,
                     ),
+                    spineTag = manga.genre?.firstOrNull() ?: "MANGA",
+                    unreadCount = libraryItem.badges.unreadCount,
+                    readProgress = progress,
                     coverBadgeStart = {
                         DownloadsBadge(count = libraryItem.badges.downloadCount)
-                        UnreadBadge(count = libraryItem.badges.unreadCount)
                     },
                     coverBadgeEnd = {
                         LanguageBadge(
