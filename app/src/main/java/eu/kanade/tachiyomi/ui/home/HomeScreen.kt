@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.home
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -55,6 +56,8 @@ import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
+import eu.kanade.presentation.util.CascadeMotionTrigger
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberAnimatedVectorPainter
 import eu.kanade.tachiyomi.R
@@ -114,6 +117,27 @@ object HomeScreen : Screen() {
                 }
             }
 
+            var cascadeTrigger by remember { mutableStateOf(CascadeMotionTrigger()) }
+            var wasHomeScreen by remember { mutableStateOf(navigator.lastItem == HomeScreen) }
+
+            LaunchedEffect(tabNavigator.current) {
+                cascadeTrigger = CascadeMotionTrigger(
+                    id = cascadeTrigger.id + 1,
+                    startUptimeMillis = SystemClock.uptimeMillis(),
+                )
+            }
+
+            LaunchedEffect(navigator.lastItem) {
+                val isHome = navigator.lastItem == HomeScreen
+                if (isHome && !wasHomeScreen) {
+                    cascadeTrigger = CascadeMotionTrigger(
+                        id = cascadeTrigger.id + 1,
+                        startUptimeMillis = SystemClock.uptimeMillis(),
+                    )
+                }
+                wasHomeScreen = isHome
+            }
+
             val context = LocalContext.current
             val graph = remember { context.appGraph }
             val updatesBadgeCount by remember(graph) {
@@ -141,6 +165,7 @@ object HomeScreen : Screen() {
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
                 LocalFloatingDockBottomPadding provides if (showBottomNav) 80.dp else 0.dp,
+                LocalCascadeMotionTrigger provides cascadeTrigger,
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
