@@ -86,17 +86,17 @@ import tachiyomi.presentation.core.util.shouldExpandFAB
 import tachiyomi.source.local.isLocal
 
 private object MangaDetailEnterSpec {
-    val EASING = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+    val EASING = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 
-    const val TRANSFORM_DURATION_MILLIS = 600
-    const val FADE_DURATION_MILLIS = 260
+    const val TRANSFORM_DURATION_MILLIS = 800
+    const val FADE_DURATION_MILLIS = 800
 
     val TOOLBAR_OFFSET = (-30).dp
     val INFO_OFFSET = 60.dp
     val CHAPTERS_OFFSET = 120.dp
 
-    const val INFO_DELAY_MILLIS = 20
-    const val CHAPTERS_DELAY_MILLIS = 40
+    const val INFO_DELAY_MILLIS = 60
+    const val CHAPTERS_DELAY_MILLIS = 120
 }
 
 private class MangaDetailSectionAnimation(
