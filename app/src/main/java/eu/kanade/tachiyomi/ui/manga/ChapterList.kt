@@ -13,6 +13,15 @@ sealed class ChapterList {
     ) : ChapterList()
 
     @Immutable
+    data class GroupHeader(
+        val id: String,
+        val baseNumber: Double,
+        val label: String,
+        val partCount: Int,
+        val isSplit: Boolean,
+    ) : ChapterList()
+
+    @Immutable
     data class Item(
         val chapter: Chapter,
         val downloadState: Download.State,
@@ -66,14 +75,14 @@ private fun ChapterList.Item.preferenceScore(): Int {
 }
 
 fun List<ChapterList.Item>.groupSubChaptersWithParent(sortDescending: Boolean): List<ChapterList.Item> {
-    if (!sortDescending || isEmpty()) return this
+    if (isEmpty()) return this
 
     val result = ArrayList<ChapterList.Item>(size)
     var i = 0
     while (i < size) {
         val current = this[i]
         val num = current.chapter.chapterNumber
-        if (num > 0.0 && num % 1.0 != 0.0) {
+        if (num > 0.0) {
             val baseNum = kotlin.math.floor(num)
             val group = mutableListOf<ChapterList.Item>()
             var j = i
@@ -87,14 +96,60 @@ fun List<ChapterList.Item>.groupSubChaptersWithParent(sortDescending: Boolean): 
                     break
                 }
             }
-            val parentItem = group.firstOrNull { it.chapter.chapterNumber == baseNum }
-            val subChapters = group.filter { it.chapter.chapterNumber != baseNum }
-                .sortedBy { it.chapter.chapterNumber }
-
-            if (parentItem != null) {
-                result.add(parentItem)
+            val parentItems = group.filter { it.chapter.chapterNumber == baseNum }
+            val subChapters = group.filter { it.chapter.chapterNumber != baseNum }.let { subs ->
+                if (sortDescending) {
+                    subs.sortedByDescending { it.chapter.chapterNumber }
+                } else {
+                    subs.sortedBy { it.chapter.chapterNumber }
+                }
             }
+
+            result.addAll(parentItems)
             result.addAll(subChapters)
+            i = j
+        } else {
+            result.add(current)
+            i++
+        }
+    }
+    return result
+}
+
+fun List<ChapterList.Item>.insertEncapsulatedGroupHeaders(sortDescending: Boolean): List<ChapterList> {
+    if (isEmpty()) return emptyList()
+
+    val ordered = groupSubChaptersWithParent(sortDescending)
+    val result = ArrayList<ChapterList>(ordered.size * 2)
+    var i = 0
+    while (i < ordered.size) {
+        val current = ordered[i]
+        val num = current.chapter.chapterNumber
+        if (num > 0.0) {
+            val baseNum = kotlin.math.floor(num)
+            val group = mutableListOf<ChapterList.Item>()
+            var j = i
+            while (j < ordered.size) {
+                val item = ordered[j]
+                val itemNum = item.chapter.chapterNumber
+                if (itemNum > 0.0 && kotlin.math.floor(itemNum) == baseNum) {
+                    group.add(item)
+                    j++
+                } else {
+                    break
+                }
+            }
+            val isSplit = group.any { it.chapter.chapterNumber != baseNum }
+            result.add(
+                ChapterList.GroupHeader(
+                    id = "group-${baseNum.toInt()}",
+                    baseNumber = baseNum,
+                    label = "Chapter ${baseNum.toInt()}",
+                    partCount = group.size,
+                    isSplit = isSplit,
+                ),
+            )
+            result.addAll(group)
             i = j
         } else {
             result.add(current)

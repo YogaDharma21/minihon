@@ -155,7 +155,7 @@ class ChapterListGroupingTest {
         val input = listOf(ch26, ch25Part2, ch25Part1, ch25, ch24)
         val result = input.groupSubChaptersWithParent(sortDescending = true)
 
-        result.map { it.chapter.chapterNumber } shouldBe listOf(26.0, 25.0, 25.1, 25.2, 24.0)
+        result.map { it.chapter.chapterNumber } shouldBe listOf(26.0, 25.0, 25.2, 25.1, 24.0)
     }
 
     @Test
@@ -170,5 +170,73 @@ class ChapterListGroupingTest {
         val result = input.groupSubChaptersWithParent(sortDescending = false)
 
         result.map { it.chapter.chapterNumber } shouldBe listOf(24.0, 25.0, 25.1, 25.2, 26.0)
+    }
+
+    @Test
+    fun `groupSubChaptersWithParent with parent orders parent first then sub-chapters by direction`() {
+        val ch20 = createItem(createChapter(id = 1L, chapterNumber = 20.0))
+        val ch20Part1 = createItem(createChapter(id = 2L, chapterNumber = 20.1))
+        val ch20Part2 = createItem(createChapter(id = 3L, chapterNumber = 20.2))
+
+        val inputDescending = listOf(ch20Part2, ch20Part1, ch20)
+        val resultDescending = inputDescending.groupSubChaptersWithParent(sortDescending = true)
+        resultDescending.map { it.chapter.chapterNumber } shouldBe listOf(20.0, 20.2, 20.1)
+
+        val inputAscending = listOf(ch20, ch20Part1, ch20Part2)
+        val resultAscending = inputAscending.groupSubChaptersWithParent(sortDescending = false)
+        resultAscending.map { it.chapter.chapterNumber } shouldBe listOf(20.0, 20.1, 20.2)
+    }
+
+    @Test
+    fun `groupSubChaptersWithParent without parent orders orphan split sub-chapters by direction`() {
+        val ch23Part1 = createItem(createChapter(id = 1L, chapterNumber = 23.1))
+        val ch23Part2 = createItem(createChapter(id = 2L, chapterNumber = 23.2))
+
+        val inputDescending = listOf(ch23Part1, ch23Part2)
+        val resultDescending = inputDescending.groupSubChaptersWithParent(sortDescending = true)
+        resultDescending.map { it.chapter.chapterNumber } shouldBe listOf(23.2, 23.1)
+
+        val inputAscending = listOf(ch23Part2, ch23Part1)
+        val resultAscending = inputAscending.groupSubChaptersWithParent(sortDescending = false)
+        resultAscending.map { it.chapter.chapterNumber } shouldBe listOf(23.1, 23.2)
+    }
+
+    @Test
+    fun `insertEncapsulatedGroupHeaders injects GroupHeader with accurate flags and counts`() {
+        val ch20 = createItem(createChapter(id = 1L, chapterNumber = 20.0))
+        val ch20Part1 = createItem(createChapter(id = 2L, chapterNumber = 20.1))
+        val ch20Part2 = createItem(createChapter(id = 3L, chapterNumber = 20.2))
+        val ch19 = createItem(createChapter(id = 4L, chapterNumber = 19.0))
+        val ch23Part1 = createItem(createChapter(id = 5L, chapterNumber = 23.1))
+        val ch23Part2 = createItem(createChapter(id = 6L, chapterNumber = 23.2))
+
+        val input = listOf(ch23Part2, ch23Part1, ch20Part2, ch20Part1, ch20, ch19)
+        val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
+
+        result.size shouldBe 9
+
+        val header23 = result[0] as ChapterList.GroupHeader
+        header23.baseNumber shouldBe 23.0
+        header23.label shouldBe "Chapter 23"
+        header23.partCount shouldBe 2
+        header23.isSplit shouldBe true
+        (result[1] as ChapterList.Item).chapter.chapterNumber shouldBe 23.2
+        (result[2] as ChapterList.Item).chapter.chapterNumber shouldBe 23.1
+
+        val header20 = result[3] as ChapterList.GroupHeader
+        header20.baseNumber shouldBe 20.0
+        header20.label shouldBe "Chapter 20"
+        header20.partCount shouldBe 3
+        header20.isSplit shouldBe true
+        (result[4] as ChapterList.Item).chapter.chapterNumber shouldBe 20.0
+        (result[5] as ChapterList.Item).chapter.chapterNumber shouldBe 20.2
+        (result[6] as ChapterList.Item).chapter.chapterNumber shouldBe 20.1
+
+        val header19 = result[7] as ChapterList.GroupHeader
+        header19.baseNumber shouldBe 19.0
+        header19.label shouldBe "Chapter 19"
+        header19.partCount shouldBe 1
+        header19.isSplit shouldBe false
+        (result[8] as ChapterList.Item).chapter.chapterNumber shouldBe 19.0
     }
 }

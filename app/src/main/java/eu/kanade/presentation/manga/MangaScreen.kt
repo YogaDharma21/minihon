@@ -757,6 +757,7 @@ private fun LazyListScope.sharedChapterItems(
         key = { item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
+                is ChapterList.GroupHeader -> "group-header-${item.id}"
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
@@ -768,6 +769,7 @@ private fun LazyListScope.sharedChapterItems(
             is ChapterList.MissingCount -> {
                 MissingChapterCountListItem(count = item.count)
             }
+            is ChapterList.GroupHeader -> {}
             is ChapterList.Item -> {
                 val isExpanded = item.id in expandedDuplicateChapterIds
                 MangaChapterListItem(

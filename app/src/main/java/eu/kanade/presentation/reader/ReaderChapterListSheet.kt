@@ -945,7 +945,7 @@ internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChap
         while (i < deduplicated.size) {
             val current = deduplicated[i]
             val num = current.primary.chapter.chapterNumber
-            if (num > 0.0 && num % 1.0 != 0.0) {
+            if (num > 0.0) {
                 val baseNum = kotlin.math.floor(num)
                 val group = mutableListOf<ReaderChapterGroup>()
                 var j = i
@@ -961,7 +961,7 @@ internal fun groupReaderChapters(chapters: List<ReaderChapter>): List<ReaderChap
                 }
                 val parentItem = group.firstOrNull { it.primary.chapter.chapterNumber == baseNum }
                 val subChapters = group.filter { it.primary.chapter.chapterNumber != baseNum }
-                    .sortedBy { it.primary.chapter.chapterNumber }
+                    .sortedByDescending { it.primary.chapter.chapterNumber }
 
                 if (parentItem != null) {
                     result.add(parentItem)
