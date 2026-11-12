@@ -50,6 +50,7 @@ import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
+import eu.kanade.presentation.manga.components.ChapterGroupHeader
 import eu.kanade.presentation.manga.components.ChapterHeader
 import eu.kanade.presentation.manga.components.ExpandableMangaDescription
 import eu.kanade.presentation.manga.components.MangaActionRow
@@ -757,11 +758,16 @@ private fun LazyListScope.sharedChapterItems(
         key = { item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
-                is ChapterList.GroupHeader -> "group-header-${item.id}"
+                is ChapterList.GroupHeader -> item.id
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
-        contentType = { MangaScreenItem.CHAPTER },
+        contentType = { item ->
+            when (item) {
+                is ChapterList.GroupHeader -> MangaScreenItem.CHAPTER_GROUP_HEADER
+                else -> MangaScreenItem.CHAPTER
+            }
+        },
     ) { item ->
         val haptic = LocalHapticFeedback.current
 
@@ -769,7 +775,18 @@ private fun LazyListScope.sharedChapterItems(
             is ChapterList.MissingCount -> {
                 MissingChapterCountListItem(count = item.count)
             }
-            is ChapterList.GroupHeader -> {}
+            is ChapterList.GroupHeader -> {
+                val tag = if (item.isSplit) {
+                    "${item.partCount} Parts • Split"
+                } else {
+                    "Single Release"
+                }
+                ChapterGroupHeader(
+                    title = item.label,
+                    tag = tag,
+                    isSplit = item.isSplit,
+                )
+            }
             is ChapterList.Item -> {
                 val isExpanded = item.id in expandedDuplicateChapterIds
                 MangaChapterListItem(

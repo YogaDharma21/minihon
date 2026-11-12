@@ -116,23 +116,23 @@ fun List<ChapterList.Item>.groupSubChaptersWithParent(sortDescending: Boolean): 
     return result
 }
 
-fun List<ChapterList.Item>.insertEncapsulatedGroupHeaders(sortDescending: Boolean): List<ChapterList> {
+@JvmName("insertEncapsulatedGroupHeadersForChapterList")
+fun List<ChapterList>.insertEncapsulatedGroupHeaders(sortDescending: Boolean): List<ChapterList> {
     if (isEmpty()) return emptyList()
 
-    val ordered = groupSubChaptersWithParent(sortDescending)
-    val result = ArrayList<ChapterList>(ordered.size * 2)
+    val result = ArrayList<ChapterList>(size * 2)
     var i = 0
-    while (i < ordered.size) {
-        val current = ordered[i]
-        val num = current.chapter.chapterNumber
-        if (num > 0.0) {
-            val baseNum = kotlin.math.floor(num)
+    while (i < size) {
+        val current = this[i]
+        if (current is ChapterList.Item && current.chapter.chapterNumber > 0.0) {
+            val baseNum = kotlin.math.floor(current.chapter.chapterNumber)
             val group = mutableListOf<ChapterList.Item>()
             var j = i
-            while (j < ordered.size) {
-                val item = ordered[j]
-                val itemNum = item.chapter.chapterNumber
-                if (itemNum > 0.0 && kotlin.math.floor(itemNum) == baseNum) {
+            while (j < size) {
+                val item = this[j]
+                if (item is ChapterList.Item && item.chapter.chapterNumber > 0.0 &&
+                    kotlin.math.floor(item.chapter.chapterNumber) == baseNum
+                ) {
                     group.add(item)
                     j++
                 } else {
@@ -157,4 +157,11 @@ fun List<ChapterList.Item>.insertEncapsulatedGroupHeaders(sortDescending: Boolea
         }
     }
     return result
+}
+
+fun List<ChapterList.Item>.insertEncapsulatedGroupHeaders(sortDescending: Boolean): List<ChapterList> {
+    if (isEmpty()) return emptyList()
+
+    val ordered = groupSubChaptersWithParent(sortDescending)
+    return (ordered as List<ChapterList>).insertEncapsulatedGroupHeaders(sortDescending)
 }

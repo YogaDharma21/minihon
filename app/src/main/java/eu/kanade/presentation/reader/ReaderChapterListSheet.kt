@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import eu.kanade.presentation.components.AdaptiveSheet
+import eu.kanade.presentation.manga.components.ChapterGroupHeader
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import kotlinx.coroutines.Dispatchers
@@ -97,6 +98,64 @@ data class ReaderChapterGroup(
     val hasSubChaptersBelow: Boolean = false,
 ) {
     val id: Long = primary.chapter.id
+}
+
+sealed interface ReaderChapterListItem {
+    data class Header(
+        val id: String,
+        val baseNumber: Double,
+        val label: String,
+        val partCount: Int,
+        val isSplit: Boolean,
+    ) : ReaderChapterListItem
+
+    data class Chapter(
+        val group: ReaderChapterGroup,
+    ) : ReaderChapterListItem
+}
+
+internal fun insertReaderEncapsulatedGroupHeaders(groups: List<ReaderChapterGroup>): List<ReaderChapterListItem> {
+    if (groups.isEmpty()) return emptyList()
+
+    val result = ArrayList<ReaderChapterListItem>(groups.size * 2)
+    var i = 0
+    while (i < groups.size) {
+        val current = groups[i]
+        val num = current.primary.chapter.chapterNumber
+        if (num > 0.0) {
+            val baseNum = kotlin.math.floor(num)
+            val cluster = mutableListOf<ReaderChapterGroup>()
+            var j = i
+            while (j < groups.size) {
+                val item = groups[j]
+                val itemNum = item.primary.chapter.chapterNumber
+                if (itemNum > 0.0 && kotlin.math.floor(itemNum) == baseNum) {
+                    cluster.add(item)
+                    j++
+                } else {
+                    break
+                }
+            }
+            val isSplit = cluster.any { it.primary.chapter.chapterNumber != baseNum }
+            result.add(
+                ReaderChapterListItem.Header(
+                    id = "reader-group-${baseNum.toInt()}",
+                    baseNumber = baseNum,
+                    label = "Chapter ${baseNum.toInt()}",
+                    partCount = cluster.size,
+                    isSplit = isSplit,
+                ),
+            )
+            for (item in cluster) {
+                result.add(ReaderChapterListItem.Chapter(item))
+            }
+            i = j
+        } else {
+            result.add(ReaderChapterListItem.Chapter(current))
+            i++
+        }
+    }
+    return result
 }
 
 @Composable
@@ -131,14 +190,20 @@ fun ReaderChapterListSheet(
         groupReaderChapters(filteredChapters)
     }
 
+    val readerChapterListItems = remember(groupedChapters) {
+        insertReaderEncapsulatedGroupHeaders(groupedChapters)
+    }
+
     val bookmarkedChapters = remember(chapters) {
         chapters.filter { it.chapter.bookmark }
     }
 
     val initialIndex = remember {
-        groupedChapters.indexOfFirst { group ->
-            group.primary.chapter.id == currentChapterId ||
-                group.versions.any { it.chapter.id == currentChapterId }
+        readerChapterListItems.indexOfFirst { item ->
+            item is ReaderChapterListItem.Chapter && (
+                item.group.primary.chapter.id == currentChapterId ||
+                    item.group.versions.any { it.chapter.id == currentChapterId }
+                )
         }.coerceAtLeast(0)
     }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
@@ -321,54 +386,81 @@ fun ReaderChapterListSheet(
                                     verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                     items(
-                                        items = groupedChapters,
-                                        key = { it.id },
-                                    ) { group ->
-                                        val isGroupExpanded = group.id in expandedGroupIds
-                                        val isCurrent = group.primary.chapter.id == currentChapterId ||
-                                            group.versions.any { it.chapter.id == currentChapterId }
+                                        items = readerChapterListItems,
+                                        key = { item ->
+                                            when (item) {
+                                                is ReaderChapterListItem.Header -> item.id
+                                                is ReaderChapterListItem.Chapter -> item.group.id
+                                            }
+                                        },
+                                    ) { item ->
+                                        when (item) {
+                                            is ReaderChapterListItem.Header -> {
+                                                val tag = if (item.isSplit) {
+                                                    "${item.partCount} Parts • Split"
+                                                } else {
+                                                    "Single Release"
+                                                }
+                                                ChapterGroupHeader(
+                                                    modifier = Modifier.clip(RoundedCornerShape(8.dp)),
+                                                    title = item.label,
+                                                    tag = tag,
+                                                    isSplit = item.isSplit,
+                                                )
+                                            }
+                                            is ReaderChapterListItem.Chapter -> {
+                                                val group = item.group
+                                                val isGroupExpanded = group.id in expandedGroupIds
+                                                val isCurrent = group.primary.chapter.id == currentChapterId ||
+                                                    group.versions.any { it.chapter.id == currentChapterId }
 
-                                        Column(modifier = Modifier.fillMaxWidth()) {
-                                            ChapterListItem(
-                                                readerChapter = group.primary,
-                                                isCurrent = isCurrent,
-                                                isSubChapter = group.isSubChapter,
-                                                isFirstSubChapter = group.isFirstSubChapter,
-                                                isLastSubChapter = group.isLastSubChapter,
-                                                hasParentAbove = group.hasParentAbove,
-                                                hasSubChaptersBelow = group.hasSubChaptersBelow,
-                                                versionCount = group.versions.size,
-                                                isExpanded = isGroupExpanded,
-                                                onToggleExpand = {
-                                                    expandedGroupIds = if (isGroupExpanded) {
-                                                        expandedGroupIds - group.id
-                                                    } else {
-                                                        expandedGroupIds + group.id
-                                                    }
-                                                },
-                                                onClick = { onChapterClicked(group.primary) },
-                                                onToggleBookmark = { onToggleBookmark(group.primary) },
-                                            )
+                                                Column(modifier = Modifier.fillMaxWidth()) {
+                                                    ChapterListItem(
+                                                        readerChapter = group.primary,
+                                                        isCurrent = isCurrent,
+                                                        isSubChapter = group.isSubChapter,
+                                                        isFirstSubChapter = group.isFirstSubChapter,
+                                                        isLastSubChapter = group.isLastSubChapter,
+                                                        hasParentAbove = group.hasParentAbove,
+                                                        hasSubChaptersBelow = group.hasSubChaptersBelow,
+                                                        versionCount = group.versions.size,
+                                                        isExpanded = isGroupExpanded,
+                                                        onToggleExpand = {
+                                                            expandedGroupIds = if (isGroupExpanded) {
+                                                                expandedGroupIds - group.id
+                                                            } else {
+                                                                expandedGroupIds + group.id
+                                                            }
+                                                        },
+                                                        onClick = { onChapterClicked(group.primary) },
+                                                        onToggleBookmark = { onToggleBookmark(group.primary) },
+                                                    )
 
-                                            if (isGroupExpanded && group.versions.size > 1) {
-                                                Surface(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                                                    shape = RoundedCornerShape(10.dp),
-                                                    color = MaterialTheme.colorScheme.surfaceInset,
-                                                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                                                ) {
-                                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                                        group.versions.forEachIndexed { vIndex, version ->
-                                                            val isLastVersion = vIndex == group.versions.lastIndex
-                                                            ChapterVersionRow(
-                                                                version = version,
-                                                                isCurrent = version.chapter.id == currentChapterId,
-                                                                isLast = isLastVersion,
-                                                                onClick = { onChapterClicked(version) },
-                                                                onToggleBookmark = { onToggleBookmark(version) },
-                                                            )
+                                                    if (isGroupExpanded && group.versions.size > 1) {
+                                                        Surface(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                                            shape = RoundedCornerShape(10.dp),
+                                                            color = MaterialTheme.colorScheme.surfaceInset,
+                                                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                                        ) {
+                                                            Column(modifier = Modifier.fillMaxWidth()) {
+                                                                group.versions.forEachIndexed { vIndex, version ->
+                                                                    val isLastVersion =
+                                                                        vIndex == group.versions.lastIndex
+                                                                    ChapterVersionRow(
+                                                                        version = version,
+                                                                        isCurrent =
+                                                                        version.chapter.id == currentChapterId,
+                                                                        isLast = isLastVersion,
+                                                                        onClick = { onChapterClicked(version) },
+                                                                        onToggleBookmark = {
+                                                                            onToggleBookmark(version)
+                                                                        },
+                                                                    )
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }

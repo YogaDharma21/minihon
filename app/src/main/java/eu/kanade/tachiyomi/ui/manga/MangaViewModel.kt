@@ -1201,34 +1201,35 @@ class MangaViewModel(
             }
 
             val chapterListItems by lazy {
-                if (hideMissingChapters || searchQuery.isNotBlank()) {
-                    return@lazy processedChapters
-                }
-
-                processedChapters.insertSeparators { before, after ->
-                    val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
-                        after to before
-                    } else {
-                        before to after
-                    }
-                    if (higherChapter == null) return@insertSeparators null
-
-                    if (lowerChapter == null) {
-                        floor(higherChapter.chapter.chapterNumber)
-                            .toInt()
-                            .minus(1)
-                            .coerceAtLeast(0)
-                    } else {
-                        calculateChapterGap(higherChapter.chapter, lowerChapter.chapter)
-                    }
-                        .takeIf { it > 0 }
-                        ?.let { missingCount ->
-                            ChapterList.MissingCount(
-                                id = "${lowerChapter?.id}-${higherChapter.id}",
-                                count = missingCount,
-                            )
+                val rawItems = if (hideMissingChapters || searchQuery.isNotBlank()) {
+                    processedChapters
+                } else {
+                    processedChapters.insertSeparators { before, after ->
+                        val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
+                            after to before
+                        } else {
+                            before to after
                         }
+                        if (higherChapter == null) return@insertSeparators null
+
+                        if (lowerChapter == null) {
+                            floor(higherChapter.chapter.chapterNumber)
+                                .toInt()
+                                .minus(1)
+                                .coerceAtLeast(0)
+                        } else {
+                            calculateChapterGap(higherChapter.chapter, lowerChapter.chapter)
+                        }
+                            .takeIf { it > 0 }
+                            ?.let { missingCount ->
+                                ChapterList.MissingCount(
+                                    id = "${lowerChapter?.id}-${higherChapter.id}",
+                                    count = missingCount,
+                                )
+                            }
+                    }
                 }
+                rawItems.insertEncapsulatedGroupHeaders(manga.sortDescending())
             }
 
             val scanlatorFilterActive: Boolean

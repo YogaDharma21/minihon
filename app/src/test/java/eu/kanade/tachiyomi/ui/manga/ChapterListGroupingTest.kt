@@ -1,6 +1,10 @@
 package eu.kanade.tachiyomi.ui.manga
 
+import eu.kanade.presentation.reader.ReaderChapterGroup
+import eu.kanade.presentation.reader.ReaderChapterListItem
+import eu.kanade.presentation.reader.insertReaderEncapsulatedGroupHeaders
 import eu.kanade.tachiyomi.data.download.model.Download
+import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.chapter.model.Chapter
@@ -238,5 +242,56 @@ class ChapterListGroupingTest {
         header19.partCount shouldBe 1
         header19.isSplit shouldBe false
         (result[8] as ChapterList.Item).chapter.chapterNumber shouldBe 19.0
+    }
+
+    @Test
+    fun `insertEncapsulatedGroupHeaders on List of ChapterList preserves MissingCount separators`() {
+        val ch20 = createItem(createChapter(id = 1L, chapterNumber = 20.0))
+        val missing = ChapterList.MissingCount(id = "17-20", count = 2)
+        val ch17 = createItem(createChapter(id = 2L, chapterNumber = 17.0))
+
+        val input: List<ChapterList> = listOf(ch20, missing, ch17)
+        val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
+
+        result.size shouldBe 5
+        val header20 = result[0] as ChapterList.GroupHeader
+        header20.baseNumber shouldBe 20.0
+        header20.partCount shouldBe 1
+        (result[1] as ChapterList.Item).chapter.chapterNumber shouldBe 20.0
+
+        (result[2] as ChapterList.MissingCount).count shouldBe 2
+
+        val header17 = result[3] as ChapterList.GroupHeader
+        header17.baseNumber shouldBe 17.0
+        header17.partCount shouldBe 1
+        (result[4] as ChapterList.Item).chapter.chapterNumber shouldBe 17.0
+    }
+
+    @Test
+    fun `insertReaderEncapsulatedGroupHeaders clusters groups by base number`() {
+        val rc20 = ReaderChapter(createChapter(id = 1L, chapterNumber = 20.0))
+        val rc20Part1 = ReaderChapter(createChapter(id = 2L, chapterNumber = 20.1))
+        val rc19 = ReaderChapter(createChapter(id = 3L, chapterNumber = 19.0))
+
+        val groups = listOf(
+            ReaderChapterGroup(primary = rc20),
+            ReaderChapterGroup(primary = rc20Part1),
+            ReaderChapterGroup(primary = rc19),
+        )
+        val result = insertReaderEncapsulatedGroupHeaders(groups)
+
+        result.size shouldBe 5
+        val header20 = result[0] as ReaderChapterListItem.Header
+        header20.baseNumber shouldBe 20.0
+        header20.partCount shouldBe 2
+        header20.isSplit shouldBe true
+        (result[1] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 20.0
+        (result[2] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 20.1
+
+        val header19 = result[3] as ReaderChapterListItem.Header
+        header19.baseNumber shouldBe 19.0
+        header19.partCount shouldBe 1
+        header19.isSplit shouldBe false
+        (result[4] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 19.0
     }
 }
