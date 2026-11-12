@@ -43,6 +43,7 @@ import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadIndicator
 import eu.kanade.presentation.manga.components.DotSeparatorText
 import eu.kanade.presentation.manga.components.MangaCover
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
@@ -122,6 +123,7 @@ internal fun LazyListScope.updatesUiItems(
         }
     }
 
+    var itemIndex = 0
     groups.forEach { (date, items) ->
         if (date != null) {
             item(
@@ -152,6 +154,7 @@ internal fun LazyListScope.updatesUiItems(
                         if (mangaGroup.size == 1) {
                             val updatesItem = mangaGroup.first()
                             UpdatesUiItem(
+                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
                                 update = updatesItem.update,
                                 selected = updatesItem.selected,
                                 readProgress = updatesItem.update.lastPageRead
@@ -183,6 +186,7 @@ internal fun LazyListScope.updatesUiItems(
                             val mangaId = firstItem.update.mangaId
                             val isCollapsed = mangaId in collapsedMangaIds
                             UpdatesMangaGroupHeader(
+                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
                                 coverData = firstItem.update.coverData,
                                 title = firstItem.update.mangaTitle,
                                 chapterCount = mangaGroup.size,
