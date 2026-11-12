@@ -92,6 +92,8 @@ private class NotchedRibbonShape(private val notchDepth: Dp = 4.dp) : Shape {
     }
 }
 
+private val DefaultNotchedRibbonShape = NotchedRibbonShape(notchDepth = 4.dp)
+
 @Composable
 private fun VerticalSpineTag(
     text: String,
@@ -199,7 +201,7 @@ private fun NotchedRibbonBookmark(
     val countText = if (count > 999) "999+" else count.toString()
     Box(
         modifier = modifier
-            .clip(NotchedRibbonShape(notchDepth = 4.dp))
+            .clip(DefaultNotchedRibbonShape)
             .background(Color(0xFFC99A90))
             .padding(horizontal = 6.dp)
             .padding(top = 3.dp, bottom = 7.dp),

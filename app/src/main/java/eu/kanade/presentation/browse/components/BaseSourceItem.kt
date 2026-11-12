@@ -160,7 +160,7 @@ private val defaultContent: @Composable RowScope.(Source, String?, String?) -> U
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color(0xFF9CA3AF),
+                    color = Color(0xFF8A8C92),
                     fontFeatureSettings = "tnum",
                 ),
             )
