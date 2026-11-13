@@ -137,15 +137,17 @@ internal fun insertReaderEncapsulatedGroupHeaders(groups: List<ReaderChapterGrou
                 }
             }
             val isSplit = cluster.any { it.primary.chapter.chapterNumber != baseNum }
-            result.add(
-                ReaderChapterListItem.Header(
-                    id = "reader-group-${baseNum.toInt()}",
-                    baseNumber = baseNum,
-                    label = "Chapter ${baseNum.toInt()}",
-                    partCount = cluster.size,
-                    isSplit = isSplit,
-                ),
-            )
+            if (isSplit) {
+                result.add(
+                    ReaderChapterListItem.Header(
+                        id = "reader-group-${baseNum.toInt()}",
+                        baseNumber = baseNum,
+                        label = "Chapter ${baseNum.toInt()}",
+                        partCount = cluster.size,
+                        isSplit = true,
+                    ),
+                )
+            }
             for (item in cluster) {
                 result.add(ReaderChapterListItem.Chapter(item))
             }
@@ -396,16 +398,9 @@ fun ReaderChapterListSheet(
                                     ) { item ->
                                         when (item) {
                                             is ReaderChapterListItem.Header -> {
-                                                val tag = if (item.isSplit) {
-                                                    "${item.partCount} Parts • Split"
-                                                } else {
-                                                    "Single Release"
-                                                }
                                                 ChapterGroupHeader(
                                                     modifier = Modifier.clip(RoundedCornerShape(8.dp)),
                                                     title = item.label,
-                                                    tag = tag,
-                                                    isSplit = item.isSplit,
                                                 )
                                             }
                                             is ReaderChapterListItem.Chapter -> {
@@ -753,6 +748,18 @@ private fun ChapterListItem(
                         .background(MaterialTheme.colorScheme.primary),
                 )
                 Spacer(modifier = Modifier.width(10.dp))
+            } else if (isSubChapter) {
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = if (chapter.read) 0.38f else 0.7f,
+                            ),
+                        ),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {

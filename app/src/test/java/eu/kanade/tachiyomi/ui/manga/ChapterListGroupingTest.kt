@@ -217,7 +217,7 @@ class ChapterListGroupingTest {
         val input = listOf(ch23Part2, ch23Part1, ch20Part2, ch20Part1, ch20, ch19)
         val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
 
-        result.size shouldBe 9
+        result.size shouldBe 8
 
         val header23 = result[0] as ChapterList.GroupHeader
         header23.baseNumber shouldBe 23.0
@@ -236,35 +236,60 @@ class ChapterListGroupingTest {
         (result[5] as ChapterList.Item).chapter.chapterNumber shouldBe 20.2
         (result[6] as ChapterList.Item).chapter.chapterNumber shouldBe 20.1
 
-        val header19 = result[7] as ChapterList.GroupHeader
-        header19.baseNumber shouldBe 19.0
-        header19.label shouldBe "Chapter 19"
-        header19.partCount shouldBe 1
-        header19.isSplit shouldBe false
-        (result[8] as ChapterList.Item).chapter.chapterNumber shouldBe 19.0
+        (result[7] as ChapterList.Item).chapter.chapterNumber shouldBe 19.0
+        result.none { it is ChapterList.GroupHeader && it.baseNumber == 19.0 } shouldBe true
     }
 
     @Test
     fun `insertEncapsulatedGroupHeaders on List of ChapterList preserves MissingCount separators`() {
-        val ch20 = createItem(createChapter(id = 1L, chapterNumber = 20.0))
+        val ch20Part1 = createItem(createChapter(id = 1L, chapterNumber = 20.1))
+        val ch20 = createItem(createChapter(id = 2L, chapterNumber = 20.0))
         val missing = ChapterList.MissingCount(id = "17-20", count = 2)
-        val ch17 = createItem(createChapter(id = 2L, chapterNumber = 17.0))
+        val ch17 = createItem(createChapter(id = 3L, chapterNumber = 17.0))
 
-        val input: List<ChapterList> = listOf(ch20, missing, ch17)
+        val input: List<ChapterList> = listOf(ch20Part1, ch20, missing, ch17)
         val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
 
         result.size shouldBe 5
         val header20 = result[0] as ChapterList.GroupHeader
         header20.baseNumber shouldBe 20.0
-        header20.partCount shouldBe 1
-        (result[1] as ChapterList.Item).chapter.chapterNumber shouldBe 20.0
+        header20.partCount shouldBe 2
+        header20.isSplit shouldBe true
+        (result[1] as ChapterList.Item).chapter.chapterNumber shouldBe 20.1
+        (result[2] as ChapterList.Item).chapter.chapterNumber shouldBe 20.0
 
-        (result[2] as ChapterList.MissingCount).count shouldBe 2
+        (result[3] as ChapterList.MissingCount).count shouldBe 2
 
-        val header17 = result[3] as ChapterList.GroupHeader
-        header17.baseNumber shouldBe 17.0
-        header17.partCount shouldBe 1
         (result[4] as ChapterList.Item).chapter.chapterNumber shouldBe 17.0
+        result.none { it is ChapterList.GroupHeader && it.baseNumber == 17.0 } shouldBe true
+    }
+
+    @Test
+    fun `insertEncapsulatedGroupHeaders never injects headers for single chapter releases`() {
+        val ch24 = createItem(createChapter(id = 1L, chapterNumber = 24.0))
+        val ch23 = createItem(createChapter(id = 2L, chapterNumber = 23.0))
+
+        val input = listOf(ch24, ch23)
+        val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
+
+        result.size shouldBe 2
+        result.none { it is ChapterList.GroupHeader } shouldBe true
+    }
+
+    @Test
+    fun `insertEncapsulatedGroupHeaders injects header for orphan split sub-chapter`() {
+        val ch246Part1 = createItem(createChapter(id = 1L, chapterNumber = 246.1))
+
+        val input = listOf(ch246Part1)
+        val result = input.insertEncapsulatedGroupHeaders(sortDescending = true)
+
+        result.size shouldBe 2
+        val header = result[0] as ChapterList.GroupHeader
+        header.baseNumber shouldBe 246.0
+        header.label shouldBe "Chapter 246"
+        header.partCount shouldBe 1
+        header.isSplit shouldBe true
+        (result[1] as ChapterList.Item).chapter.chapterNumber shouldBe 246.1
     }
 
     @Test
@@ -280,7 +305,7 @@ class ChapterListGroupingTest {
         )
         val result = insertReaderEncapsulatedGroupHeaders(groups)
 
-        result.size shouldBe 5
+        result.size shouldBe 4
         val header20 = result[0] as ReaderChapterListItem.Header
         header20.baseNumber shouldBe 20.0
         header20.partCount shouldBe 2
@@ -288,10 +313,7 @@ class ChapterListGroupingTest {
         (result[1] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 20.0
         (result[2] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 20.1
 
-        val header19 = result[3] as ReaderChapterListItem.Header
-        header19.baseNumber shouldBe 19.0
-        header19.partCount shouldBe 1
-        header19.isSplit shouldBe false
-        (result[4] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 19.0
+        (result[3] as ReaderChapterListItem.Chapter).group.primary.chapter.chapterNumber shouldBe 19.0
+        result.none { it is ReaderChapterListItem.Header && it.baseNumber == 19.0 } shouldBe true
     }
 }

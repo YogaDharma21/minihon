@@ -140,15 +140,17 @@ fun List<ChapterList>.insertEncapsulatedGroupHeaders(sortDescending: Boolean): L
                 }
             }
             val isSplit = group.any { it.chapter.chapterNumber != baseNum }
-            result.add(
-                ChapterList.GroupHeader(
-                    id = "group-${baseNum.toInt()}",
-                    baseNumber = baseNum,
-                    label = "Chapter ${baseNum.toInt()}",
-                    partCount = group.size,
-                    isSplit = isSplit,
-                ),
-            )
+            if (isSplit) {
+                result.add(
+                    ChapterList.GroupHeader(
+                        id = "group-${baseNum.toInt()}",
+                        baseNumber = baseNum,
+                        label = "Chapter ${baseNum.toInt()}",
+                        partCount = group.size,
+                        isSplit = true,
+                    ),
+                )
+            }
             result.addAll(group)
             i = j
         } else {

@@ -776,15 +776,8 @@ private fun LazyListScope.sharedChapterItems(
                 MissingChapterCountListItem(count = item.count)
             }
             is ChapterList.GroupHeader -> {
-                val tag = if (item.isSplit) {
-                    "${item.partCount} Parts • Split"
-                } else {
-                    "Single Release"
-                }
                 ChapterGroupHeader(
                     title = item.label,
-                    tag = tag,
-                    isSplit = item.isSplit,
                 )
             }
             is ChapterList.Item -> {
