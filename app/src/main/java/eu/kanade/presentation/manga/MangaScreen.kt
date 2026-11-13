@@ -265,6 +265,7 @@ private fun MangaScreenSmallImpl(
     onToggleDuplicateChapterExpanded: (Long) -> Unit,
 ) {
     val chapterListState = rememberLazyListState()
+    val assemblyState = rememberMangaDetailAssemblyState(key = state.manga.id)
 
     val (chapters, listItem, isAnySelected) = remember(state) {
         Triple(
@@ -297,6 +298,7 @@ private fun MangaScreenSmallImpl(
                 label = "Top Bar Background",
             )
             MangaToolbar(
+                modifier = assemblyState.topBarModifier,
                 title = state.manga.title,
                 hasFilters = state.filterActive,
                 navigateUp = navigateUp,
@@ -350,6 +352,7 @@ private fun MangaScreenSmallImpl(
                     icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
                     onClick = onContinueReading,
                     expanded = chapterListState.shouldExpandFAB(),
+                    modifier = assemblyState.fabModifier,
                 )
             }
         },
@@ -391,6 +394,8 @@ private fun MangaScreenSmallImpl(
                             chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
+                            coverModifier = assemblyState.coverModifier,
+                            titlesModifier = assemblyState.titlesModifier,
                         )
                     }
 
@@ -406,6 +411,7 @@ private fun MangaScreenSmallImpl(
                             onWebViewLongClicked = onWebViewLongClicked,
                             onTrackingClicked = onTrackingClicked,
                             onEditCategory = onEditCategoryClicked,
+                            modifier = assemblyState.actionButtonsModifier,
                         )
                     }
 
@@ -421,6 +427,7 @@ private fun MangaScreenSmallImpl(
                             onTagSearch = onTagSearch,
                             onCopyTagToClipboard = onCopyTagToClipboard,
                             onEditNotes = onEditNotesClicked,
+                            modifier = assemblyState.descriptionModifier,
                         )
                     }
 
@@ -435,6 +442,7 @@ private fun MangaScreenSmallImpl(
                             searchQuery = state.searchQuery,
                             onSearchQueryChange = null,
                             onClick = onFilterClicked,
+                            modifier = assemblyState.chaptersModifier,
                         )
                     }
 
@@ -451,6 +459,7 @@ private fun MangaScreenSmallImpl(
                         downloadProgressProvider = downloadProgressProvider,
                         onChapterSelected = onChapterSelected,
                         onChapterSwipe = onChapterSwipe,
+                        itemModifier = assemblyState.chaptersModifier,
                     )
                 }
             }
@@ -523,6 +532,7 @@ fun MangaScreenLargeImpl(
     var topBarHeight by remember { mutableIntStateOf(0) }
 
     val chapterListState = rememberLazyListState()
+    val assemblyState = rememberMangaDetailAssemblyState(key = state.manga.id)
 
     BackHandler(enabled = isAnySelected) {
         onAllChapterSelected(false)
@@ -533,7 +543,9 @@ fun MangaScreenLargeImpl(
     Scaffold(
         topBar = {
             MangaToolbar(
-                modifier = Modifier.onSizeChanged { topBarHeight = it.height },
+                modifier = Modifier
+                    .onSizeChanged { topBarHeight = it.height }
+                    .then(assemblyState.topBarModifier),
                 title = state.manga.title,
                 hasFilters = state.filterActive,
                 navigateUp = navigateUp,
@@ -592,6 +604,7 @@ fun MangaScreenLargeImpl(
                     icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
                     onClick = onContinueReading,
                     expanded = chapterListState.shouldExpandFAB(),
+                    modifier = assemblyState.fabModifier,
                 )
             }
         },
@@ -627,6 +640,8 @@ fun MangaScreenLargeImpl(
                             chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
+                            coverModifier = assemblyState.coverModifier,
+                            titlesModifier = assemblyState.titlesModifier,
                         )
                         MangaActionRow(
                             favorite = state.manga.favorite,
@@ -636,6 +651,7 @@ fun MangaScreenLargeImpl(
                             onWebViewLongClicked = onWebViewLongClicked,
                             onTrackingClicked = onTrackingClicked,
                             onEditCategory = onEditCategoryClicked,
+                            modifier = assemblyState.actionButtonsModifier,
                         )
                         ExpandableMangaDescription(
                             defaultExpandState = true,
@@ -645,6 +661,7 @@ fun MangaScreenLargeImpl(
                             onTagSearch = onTagSearch,
                             onCopyTagToClipboard = onCopyTagToClipboard,
                             onEditNotes = onEditNotesClicked,
+                            modifier = assemblyState.descriptionModifier,
                         )
                     }
                 },
@@ -652,6 +669,7 @@ fun MangaScreenLargeImpl(
                     VerticalFastScroller(
                         listState = chapterListState,
                         topContentPadding = contentPadding.calculateTopPadding(),
+                        modifier = assemblyState.chaptersModifier,
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxHeight(),
@@ -752,6 +770,7 @@ private fun LazyListScope.sharedChapterItems(
     downloadProgressProvider: (chapterId: Long) -> Int,
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
+    itemModifier: Modifier = Modifier,
 ) {
     items(
         items = chapters,
@@ -773,11 +792,15 @@ private fun LazyListScope.sharedChapterItems(
 
         when (item) {
             is ChapterList.MissingCount -> {
-                MissingChapterCountListItem(count = item.count)
+                MissingChapterCountListItem(
+                    count = item.count,
+                    modifier = itemModifier,
+                )
             }
             is ChapterList.GroupHeader -> {
                 ChapterGroupHeader(
                     title = item.label,
+                    modifier = itemModifier,
                 )
             }
             is ChapterList.Item -> {
@@ -905,6 +928,7 @@ private fun LazyListScope.sharedChapterItems(
                                 kotlin.math.floor(nextNum) == currNum
                         }
                     },
+                    modifier = itemModifier,
                 )
             }
         }

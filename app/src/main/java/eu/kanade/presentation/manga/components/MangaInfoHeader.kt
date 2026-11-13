@@ -140,6 +140,8 @@ fun MangaInfoBox(
     doSearch: (query: String, global: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     chapterCount: Int = 0,
+    coverModifier: Modifier = Modifier,
+    titlesModifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxWidth()) {
         val canvasColor = MaterialTheme.colorScheme.background
@@ -197,6 +199,8 @@ fun MangaInfoBox(
                         chapterCount = chapterCount,
                         onCoverClick = onCoverClick,
                         doSearch = doSearch,
+                        coverModifier = coverModifier,
+                        titlesModifier = titlesModifier,
                     )
                 } else {
                     MangaCardContentLarge(
@@ -207,6 +211,8 @@ fun MangaInfoBox(
                         chapterCount = chapterCount,
                         onCoverClick = onCoverClick,
                         doSearch = doSearch,
+                        coverModifier = coverModifier,
+                        titlesModifier = titlesModifier,
                     )
                 }
             }
@@ -377,6 +383,8 @@ private fun MangaCardContentSmall(
     chapterCount: Int,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
+    coverModifier: Modifier = Modifier,
+    titlesModifier: Modifier = Modifier,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -393,7 +401,8 @@ private fun MangaCardContentSmall(
                     .border(
                         BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
                         shape = RoundedCornerShape(12.dp),
-                    ),
+                    )
+                    .then(coverModifier),
                 data = ImageRequest.Builder(LocalContext.current)
                     .data(manga)
                     .crossfade(true)
@@ -404,7 +413,9 @@ private fun MangaCardContentSmall(
             )
 
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .then(titlesModifier),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MangaHeaderTitles(
@@ -423,6 +434,7 @@ private fun MangaCardContentSmall(
             sourceName = sourceName,
             isStubSource = isStubSource,
             doSearch = doSearch,
+            modifier = titlesModifier,
         )
     }
 }
@@ -436,6 +448,8 @@ private fun MangaCardContentLarge(
     chapterCount: Int,
     onCoverClick: () -> Unit,
     doSearch: (query: String, global: Boolean) -> Unit,
+    coverModifier: Modifier = Modifier,
+    titlesModifier: Modifier = Modifier,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -448,7 +462,8 @@ private fun MangaCardContentLarge(
                 .border(
                     BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
                     shape = RoundedCornerShape(16.dp),
-                ),
+                )
+                .then(coverModifier),
             data = ImageRequest.Builder(LocalContext.current)
                 .data(manga)
                 .crossfade(true)
@@ -458,13 +473,20 @@ private fun MangaCardContentLarge(
             onClick = onCoverClick,
         )
 
-        MangaHeaderTitles(
-            title = manga.title,
-            author = manga.author,
-            artist = manga.artist,
-            doSearch = doSearch,
-            textAlign = TextAlign.Center,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(titlesModifier),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            MangaHeaderTitles(
+                title = manga.title,
+                author = manga.author,
+                artist = manga.artist,
+                doSearch = doSearch,
+                textAlign = TextAlign.Center,
+            )
+        }
 
         MangaKpiBar(
             chapterCount = chapterCount,
@@ -473,6 +495,7 @@ private fun MangaCardContentLarge(
             sourceName = sourceName,
             isStubSource = isStubSource,
             doSearch = doSearch,
+            modifier = titlesModifier,
         )
     }
 }
