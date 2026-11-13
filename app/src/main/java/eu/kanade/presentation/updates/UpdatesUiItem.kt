@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +56,6 @@ import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterDownloadIndicator
 import eu.kanade.presentation.manga.components.DotSeparatorText
-import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.presentation.util.rememberResourceBitmapPainter
@@ -78,6 +78,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.borderHairline
 import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.util.selectedBackground
+
+internal val UpdatesTrayContainerColor = Color(0xFF0D0E11)
+internal val UpdatesTrayStartOffset = 116.dp
 
 internal fun LazyListScope.updatesLastUpdatedItem(
     lastUpdated: Long,
@@ -201,12 +204,15 @@ internal fun LazyListScope.updatesUiItems(
                             val firstItem = mangaGroup.first()
                             val mangaId = firstItem.update.mangaId
                             val isCollapsed = mangaId in collapsedMangaIds
+                            val hasUnread = mangaGroup.any { !it.update.read }
+                            val allSelected = mangaGroup.all { it.selected }
                             UpdatesMangaGroupHeader(
                                 modifier = Modifier.cascadeItemMotion(index = itemIndex++),
-                                coverData = firstItem.update.coverData,
-                                title = firstItem.update.mangaTitle,
+                                update = firstItem.update,
                                 chapterCount = mangaGroup.size,
                                 isCollapsed = isCollapsed,
+                                hasUnread = hasUnread,
+                                selected = allSelected,
                                 onToggleCollapse = { onToggleMangaCollapse(mangaId) },
                                 onClickCover = { onClickCover(firstItem) }.takeIf { !selectionMode },
                             )
@@ -214,9 +220,9 @@ internal fun LazyListScope.updatesUiItems(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 52.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+                                        .padding(start = UpdatesTrayStartOffset, end = 12.dp, top = 2.dp, bottom = 8.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                    color = UpdatesTrayContainerColor,
                                     border = BorderStroke(1.dp, Color(0x12FFFFFF)),
                                 ) {
                                     Column {
@@ -252,6 +258,12 @@ internal fun LazyListScope.updatesUiItems(
                                                 downloadStateProvider = updatesItem.downloadStateProvider,
                                                 downloadProgressProvider = updatesItem.downloadProgressProvider,
                                             )
+                                            if (index < mangaGroup.lastIndex) {
+                                                HorizontalDivider(
+                                                    color = Color(0x0AFFFFFF),
+                                                    thickness = 0.5.dp,
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -284,85 +296,127 @@ internal fun groupUpdatesByManga(items: List<UpdatesItem>): List<List<UpdatesIte
 
 @Composable
 private fun UpdatesMangaGroupHeader(
-    coverData: tachiyomi.domain.manga.model.MangaCover,
-    title: String,
+    update: UpdatesWithRelations,
     chapterCount: Int,
     isCollapsed: Boolean,
     onToggleCollapse: () -> Unit,
     onClickCover: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    hasUnread: Boolean = false,
+    selected: Boolean = false,
 ) {
+    val context = LocalContext.current
+    val textAlpha = if (!hasUnread) DISABLED_ALPHA else 1f
+
+    val relativeTime = relativeTimeSpanString(update.dateFetch.toEpochMilliseconds())
+    val sourceName by produceState(initialValue = "", update.sourceId) {
+        value = runCatching { context.appGraph.sourceManager.getOrStub(update.sourceId).name }.getOrDefault("")
+    }
+
     val rotation by animateFloatAsState(
         targetValue = if (isCollapsed) -90f else 0f,
         label = "collapse_chevron_rotation",
     )
+
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggleCollapse)
-            .padding(horizontal = MaterialTheme.padding.medium, vertical = 8.dp),
+            .selectedBackground(selected)
+            .clickable(
+                role = Role.Button,
+                onClick = onToggleCollapse,
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MangaCover.Square(
-            modifier = Modifier.size(40.dp),
-            data = coverData,
+        UpdatesShowcaseCover(
+            coverData = update.coverData,
             onClick = onClickCover,
         )
 
-        Text(
-            text = title,
-            maxLines = 2,
-            fontWeight = FontWeight.Medium,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            overflow = TextOverflow.Ellipsis,
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = MaterialTheme.padding.medium),
-        )
-
-        Surface(
-            shape = RoundedCornerShape(9999.dp),
-            color = MaterialTheme.colorScheme.surfaceInset,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+                .padding(start = 12.dp, end = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = pluralStringResource(MR.plurals.manga_num_chapters, count = chapterCount, chapterCount),
-                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                text = update.mangaTitle,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = Color(0xFFF4F4F2).copy(alpha = textAlpha),
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 18.sp,
+                ),
             )
-        }
 
-        Spacer(modifier = Modifier.width(4.dp))
+            Surface(
+                shape = RoundedCornerShape(9999.dp),
+                color = MaterialTheme.colorScheme.surfaceInset,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.borderHairline),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (hasUnread) {
+                        Icon(
+                            imageVector = MaterialSymbols.RoundedFilled.Circle,
+                            contentDescription = stringResource(MR.strings.unread),
+                            modifier = Modifier.size(6.dp),
+                            tint = Color(0xFFA9BFA9),
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = pluralStringResource(MR.plurals.manga_num_chapters, count = chapterCount, chapterCount),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFeatureSettings = "tnum",
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        color = Color(0xFFF4F4F2).copy(alpha = textAlpha),
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (sourceName.isNotBlank()) {
+                    Text(
+                        text = sourceName,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF8A8C92).copy(alpha = textAlpha),
+                    )
+                    DotSeparatorText()
+                }
+                Text(
+                    text = relativeTime,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFeatureSettings = "tnum",
+                    ),
+                    color = Color(0xFF8A8C92).copy(alpha = textAlpha),
+                )
+            }
+        }
 
         Icon(
             imageVector = MaterialSymbols.Rounded.KeyboardArrowDown,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
+                .padding(end = 4.dp)
                 .size(24.dp)
                 .rotate(rotation),
         )
     }
 }
-
-@Composable
-private fun UpdatesMangaHeader(
-    coverData: tachiyomi.domain.manga.model.MangaCover,
-    title: String,
-    chapterCount: Int,
-    onClickCover: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) = UpdatesMangaGroupHeader(
-    coverData = coverData,
-    title = title,
-    chapterCount = chapterCount,
-    isCollapsed = false,
-    onToggleCollapse = {},
-    onClickCover = onClickCover,
-    modifier = modifier,
-)
 
 @Composable
 private fun UpdatesChapterUiItem(
@@ -391,7 +445,7 @@ private fun UpdatesChapterUiItem(
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 },
             )
-            .height(48.dp)
+            .height(40.dp)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

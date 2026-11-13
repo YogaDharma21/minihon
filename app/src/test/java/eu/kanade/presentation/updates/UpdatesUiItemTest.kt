@@ -1,5 +1,7 @@
 package eu.kanade.presentation.updates
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import io.kotest.matchers.shouldBe
@@ -29,6 +31,12 @@ class UpdatesUiItemTest {
             downloadStateProvider = { Download.State.NOT_DOWNLOADED },
             downloadProgressProvider = { 0 },
         )
+    }
+
+    @Test
+    fun `updates tray container constants match specification`() {
+        UpdatesTrayContainerColor shouldBe Color(0xFF0D0E11)
+        UpdatesTrayStartOffset shouldBe 116.dp
     }
 
     @Test
@@ -74,5 +82,17 @@ class UpdatesUiItemTest {
 
         groups.size shouldBe 3
         groups.all { it.size == 1 } shouldBe true
+    }
+
+    @Test
+    fun `groupUpdatesByManga detects multi chapter groups with size of 2 or more`() {
+        val item1 = createUpdateItem(mangaId = 1L, chapterId = 101L)
+        val item2 = createUpdateItem(mangaId = 1L, chapterId = 102L)
+        val item3 = createUpdateItem(mangaId = 1L, chapterId = 103L)
+
+        val groups = groupUpdatesByManga(listOf(item1, item2, item3))
+
+        groups.size shouldBe 1
+        groups.first().size shouldBe 3
     }
 }
