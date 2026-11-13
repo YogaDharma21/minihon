@@ -1,7 +1,6 @@
 package eu.kanade.presentation.updates
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import io.kotest.matchers.shouldBe
@@ -36,7 +35,6 @@ class UpdatesUiItemTest {
     @Test
     fun `updates tray container constants match specification`() {
         UpdatesTrayContainerColor shouldBe Color(0xFF0D0E11)
-        UpdatesTrayStartOffset shouldBe 116.dp
     }
 
     @Test

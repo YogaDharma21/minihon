@@ -80,7 +80,6 @@ import tachiyomi.presentation.core.theme.surfaceInset
 import tachiyomi.presentation.core.util.selectedBackground
 
 internal val UpdatesTrayContainerColor = Color(0xFF0D0E11)
-internal val UpdatesTrayStartOffset = 116.dp
 
 internal fun LazyListScope.updatesLastUpdatedItem(
     lastUpdated: Long,
@@ -220,7 +219,7 @@ internal fun LazyListScope.updatesUiItems(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = UpdatesTrayStartOffset, end = 12.dp, top = 2.dp, bottom = 8.dp),
+                                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     color = UpdatesTrayContainerColor,
                                     border = BorderStroke(1.dp, Color(0x12FFFFFF)),
