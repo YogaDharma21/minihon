@@ -18,21 +18,31 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -45,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -73,6 +84,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowForward
+import mihon.icons.materialsymbols.rounded.CloudOff
+import mihon.icons.materialsymbols.rounded.Eyeglasses2
 import mihon.icons.materialsymbols.rounded.Settings
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
@@ -80,6 +94,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.collectAsState
 
 object HomeScreen : Screen() {
 
@@ -116,6 +131,10 @@ object HomeScreen : Screen() {
 
             val context = LocalContext.current
             val graph = remember { context.appGraph }
+            val downloadedOnly by graph.basePreferences.downloadedOnly.collectAsState()
+            val incognitoMode by graph.basePreferences.incognitoMode.collectAsState()
+            var showQuickSettings by remember { mutableStateOf(false) }
+
             val updatesBadgeCount by remember(graph) {
                 combine(
                     graph.libraryPreferences.newShowUpdatesCount.changes(),
@@ -160,6 +179,19 @@ object HomeScreen : Screen() {
                         }
                     }
 
+                    if (showQuickSettings) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    showQuickSettings = false
+                                },
+                        )
+                    }
+
                     AnimatedVisibility(
                         visible = showBottomNav,
                         enter = slideInVertically { it } + fadeIn(),
@@ -170,78 +202,149 @@ object HomeScreen : Screen() {
                             .padding(horizontal = 24.dp)
                             .padding(bottom = 16.dp),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
+                        Column(
+                            horizontalAlignment = Alignment.End,
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = Color(0xFF121316),
-                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                                shadowElevation = 8.dp,
+                            AnimatedVisibility(
+                                visible = showQuickSettings,
+                                enter = fadeIn(animationSpec = tween(180)) + slideInVertically(
+                                    animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                ) { it / 3 },
+                                exit = fadeOut(animationSpec = tween(140)) + slideOutVertically(
+                                    animationSpec = tween(140, easing = FastOutSlowInEasing),
+                                ) { it / 3 },
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    TABS.fastForEach { tab ->
-                                        val selected = tabNavigator.current::class == tab::class
-                                        val badgeCount = when (tab) {
-                                            is ActivityTab -> updatesBadgeCount
-                                            is UpdatesTab -> updatesBadgeCount
-                                            is BrowseTab -> extensionBadgeCount
-                                            else -> 0
-                                        }
-                                        val (title, painter) = when (tab) {
-                                            is LibraryTab ->
-                                                libraryTitle to
-                                                    rememberAnimatedVectorPainter(libraryImage, selected)
-                                            is ActivityTab ->
-                                                activityTitle to
-                                                    rememberAnimatedVectorPainter(activityImage, selected)
-                                            is BrowseTab ->
-                                                browseTitle to
-                                                    rememberAnimatedVectorPainter(browseEnter, browseExit, selected)
-                                            else -> tab.options.title to tab.options.icon!!
-                                        }
-                                        FloatingDockItem(
-                                            title = title,
-                                            painter = painter,
-                                            tab = tab,
-                                            badgeCount = badgeCount,
-                                            selected = selected,
-                                            onClick = {
-                                                if (!selected) {
-                                                    tabNavigator.current = tab
-                                                } else {
-                                                    scope.launch { tab.onReselect(navigator) }
-                                                }
-                                            },
-                                        )
-                                    }
-                                }
+                                QuickSettingsPopover(
+                                    downloadedOnly = downloadedOnly,
+                                    onToggleDownloadedOnly = {
+                                        graph.basePreferences.downloadedOnly.set(!downloadedOnly)
+                                    },
+                                    incognitoMode = incognitoMode,
+                                    onToggleIncognitoMode = {
+                                        graph.basePreferences.incognitoMode.set(!incognitoMode)
+                                    },
+                                    onOpenAllSettings = {
+                                        showQuickSettings = false
+                                        navigator.push(MoreTab)
+                                    },
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
                             }
 
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Surface(
-                                shape = CircleShape,
-                                color = Color(0xFF121316),
-                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                                shadowElevation = 8.dp,
-                                onClick = { navigator.push(MoreTab) },
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
                             ) {
-                                Box(
-                                    modifier = Modifier.size(46.dp),
-                                    contentAlignment = Alignment.Center,
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFF121316),
+                                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                    shadowElevation = 8.dp,
                                 ) {
-                                    Icon(
-                                        imageVector = MaterialSymbols.Rounded.Settings,
-                                        contentDescription = stringResource(MR.strings.label_settings),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp),
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        TABS.fastForEach { tab ->
+                                            val selected = tabNavigator.current::class == tab::class
+                                            val badgeCount = when (tab) {
+                                                is ActivityTab -> updatesBadgeCount
+                                                is UpdatesTab -> updatesBadgeCount
+                                                is BrowseTab -> extensionBadgeCount
+                                                else -> 0
+                                            }
+                                            val (title, painter) = when (tab) {
+                                                is LibraryTab ->
+                                                    libraryTitle to
+                                                        rememberAnimatedVectorPainter(libraryImage, selected)
+                                                is ActivityTab ->
+                                                    activityTitle to
+                                                        rememberAnimatedVectorPainter(activityImage, selected)
+                                                is BrowseTab ->
+                                                    browseTitle to
+                                                        rememberAnimatedVectorPainter(browseEnter, browseExit, selected)
+                                                else -> tab.options.title to tab.options.icon!!
+                                            }
+                                            FloatingDockItem(
+                                                title = title,
+                                                painter = painter,
+                                                tab = tab,
+                                                badgeCount = badgeCount,
+                                                selected = selected,
+                                                onClick = {
+                                                    showQuickSettings = false
+                                                    if (!selected) {
+                                                        tabNavigator.current = tab
+                                                    } else {
+                                                        scope.launch { tab.onReselect(navigator) }
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFF121316),
+                                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                    shadowElevation = 8.dp,
+                                    onClick = { showQuickSettings = !showQuickSettings },
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(46.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = MaterialSymbols.Rounded.Settings,
+                                            contentDescription = stringResource(MR.strings.label_settings),
+                                            tint = if (showQuickSettings) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                            modifier = Modifier.size(20.dp),
+                                        )
+
+                                        if (incognitoMode && downloadedOnly) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(top = 9.dp, end = 9.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(5.dp)
+                                                        .background(Color(0xFFD2BD93), CircleShape),
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(5.dp)
+                                                        .background(Color(0xFFA6B0BD), CircleShape),
+                                                )
+                                            }
+                                        } else if (incognitoMode) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(top = 9.dp, end = 9.dp)
+                                                    .size(6.dp)
+                                                    .background(Color(0xFFD2BD93), CircleShape),
+                                            )
+                                        } else if (downloadedOnly) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(top = 9.dp, end = 9.dp)
+                                                    .size(6.dp)
+                                                    .background(Color(0xFFA6B0BD), CircleShape),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -249,9 +352,16 @@ object HomeScreen : Screen() {
                 }
             }
 
-            val goToLibraryTab = { tabNavigator.current = LibraryTab }
+            val goToLibraryTab = {
+                showQuickSettings = false
+                tabNavigator.current = LibraryTab
+            }
 
-            BackHandler(enabled = tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
+            BackHandler(enabled = showQuickSettings) {
+                showQuickSettings = false
+            }
+
+            BackHandler(enabled = !showQuickSettings && tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
 
             LaunchedEffect(Unit) {
                 launch {
@@ -291,6 +401,132 @@ object HomeScreen : Screen() {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun QuickSettingsPopover(
+        downloadedOnly: Boolean,
+        onToggleDownloadedOnly: () -> Unit,
+        incognitoMode: Boolean,
+        onToggleIncognitoMode: () -> Unit,
+        onOpenAllSettings: () -> Unit,
+        modifier: Modifier = Modifier,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF17181C),
+            border = BorderStroke(1.dp, Color(0x14FFFFFF)),
+            shadowElevation = 12.dp,
+            modifier = modifier.width(240.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onToggleDownloadedOnly)
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.CloudOff,
+                            contentDescription = null,
+                            tint = if (downloadedOnly) Color(0xFFA6B0BD) else Color(0xFF8A8C92),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(MR.strings.label_downloaded_only),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFF4F4F2),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = downloadedOnly,
+                            onCheckedChange = null,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFF0A0A0B),
+                                checkedTrackColor = Color(0xFFA6B0BD),
+                                uncheckedThumbColor = Color(0xFF8A8C92),
+                                uncheckedTrackColor = Color(0x1AFFFFFF),
+                                uncheckedBorderColor = Color(0x26FFFFFF),
+                            ),
+                            modifier = Modifier.scale(0.8f),
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onToggleIncognitoMode)
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Eyeglasses2,
+                            contentDescription = null,
+                            tint = if (incognitoMode) Color(0xFFD2BD93) else Color(0xFF8A8C92),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = stringResource(MR.strings.pref_incognito_mode),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFF4F4F2),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = incognitoMode,
+                            onCheckedChange = null,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color(0xFF0A0A0B),
+                                checkedTrackColor = Color(0xFFD2BD93),
+                                uncheckedThumbColor = Color(0xFF8A8C92),
+                                uncheckedTrackColor = Color(0x1AFFFFFF),
+                                uncheckedBorderColor = Color(0x26FFFFFF),
+                            ),
+                            modifier = Modifier.scale(0.8f),
+                        )
+                    }
+
+                    HorizontalDivider(
+                        color = Color(0x14FFFFFF),
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenAllSettings)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Settings,
+                            contentDescription = null,
+                            tint = Color(0xFF8A8C92),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "All settings",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFF4F4F2),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(
+                            imageVector = MaterialSymbols.AutoMirroredRounded.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFF8A8C92),
+                            modifier = Modifier.size(16.dp),
+                        )
                     }
                 }
             }
