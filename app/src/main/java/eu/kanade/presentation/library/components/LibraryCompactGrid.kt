@@ -68,7 +68,6 @@ internal fun LibraryCompactGrid(
                         url = manga.thumbnailUrl,
                         lastModified = manga.coverLastModified,
                     ),
-                    spineTag = manga.genre?.firstOrNull() ?: "MANGA",
                     unreadCount = libraryItem.badges.unreadCount,
                     readProgress = progress,
                     coverBadgeStart = {

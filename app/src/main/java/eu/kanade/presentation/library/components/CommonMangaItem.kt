@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,69 +94,14 @@ private class NotchedRibbonShape(private val notchDepth: Dp = 4.dp) : Shape {
 private val DefaultNotchedRibbonShape = NotchedRibbonShape(notchDepth = 4.dp)
 
 @Composable
-private fun VerticalSpineTag(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Layout(
-        modifier = modifier,
-        content = {
-            Text(
-                text = text,
-                style = TextStyle(
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp,
-                    color = Color(0xFFA6B0BD),
-                    fontFeatureSettings = "tnum",
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                softWrap = false,
-            )
-        },
-    ) { measurables, constraints ->
-        if (measurables.isEmpty()) {
-            layout(constraints.minWidth, constraints.minHeight) {}
-        } else {
-            val targetMaxWidth = if (constraints.hasBoundedHeight) constraints.maxHeight else 300
-            val targetMaxHeight = if (constraints.hasBoundedWidth) constraints.maxWidth else 60
-            val placeable = measurables.first().measure(
-                constraints.copy(
-                    minWidth = 0,
-                    maxWidth = targetMaxWidth,
-                    minHeight = 0,
-                    maxHeight = targetMaxHeight,
-                ),
-            )
-            val parentWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else placeable.height
-            val parentHeight = if (constraints.hasBoundedHeight) constraints.maxHeight else placeable.width
-            layout(parentWidth, parentHeight) {
-                val x = (parentWidth - placeable.width) / 2
-                val y = (parentHeight - placeable.height) / 2
-                placeable.placeRelativeWithLayer(x = x, y = y) {
-                    rotationZ = -90f
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TankobonSpine(
-    tag: String,
+private fun TactilePaperCreaseLine(
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
-            .width(20.dp)
+            .width(8.dp)
             .fillMaxHeight(),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xF0121316)),
-        )
         Box(
             modifier = Modifier
                 .fillMaxHeight()
@@ -168,12 +112,6 @@ private fun TankobonSpine(
                         colors = listOf(Color(0x40000000), Color.Transparent),
                     ),
                 ),
-        )
-        VerticalSpineTag(
-            text = tag.uppercase(),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 8.dp),
         )
         Box(
             modifier = Modifier
@@ -255,7 +193,6 @@ fun MangaCompactGridItem(
     title: String? = null,
     onClickContinueReading: (() -> Unit)? = null,
     coverAlpha: Float = 1f,
-    spineTag: String? = null,
     unreadCount: Long = 0L,
     readProgress: Float? = null,
     coverBadgeStart: @Composable (RowScope.() -> Unit)? = null,
@@ -275,7 +212,6 @@ fun MangaCompactGridItem(
                     data = coverData,
                 )
             },
-            spineTag = spineTag,
             unreadCount = unreadCount,
             badgesStart = coverBadgeStart,
             badgesEnd = coverBadgeEnd,
@@ -369,7 +305,6 @@ fun MangaComfortableGridItem(
     isSelected: Boolean = false,
     titleMaxLines: Int = 2,
     coverAlpha: Float = 1f,
-    spineTag: String? = null,
     unreadCount: Long = 0L,
     readProgress: Float? = null,
     coverBadgeStart: (@Composable RowScope.() -> Unit)? = null,
@@ -394,7 +329,6 @@ fun MangaComfortableGridItem(
                         shape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp),
                     )
                 },
-                spineTag = spineTag,
                 unreadCount = unreadCount,
                 badgesStart = coverBadgeStart,
                 badgesEnd = coverBadgeEnd,
@@ -438,7 +372,6 @@ fun MangaComfortableGridItem(
 @Composable
 private fun MangaGridCover(
     modifier: Modifier = Modifier,
-    spineTag: String? = null,
     unreadCount: Long = 0L,
     cover: @Composable BoxScope.() -> Unit = {},
     badgesStart: (@Composable RowScope.() -> Unit)? = null,
@@ -452,8 +385,7 @@ private fun MangaGridCover(
     ) {
         cover()
 
-        TankobonSpine(
-            tag = spineTag?.takeIf { it.isNotBlank() } ?: "MANGA",
+        TactilePaperCreaseLine(
             modifier = Modifier.align(Alignment.CenterStart),
         )
 
@@ -469,7 +401,7 @@ private fun MangaGridCover(
         if (badgesStart != null) {
             BadgeGroup(
                 modifier = Modifier
-                    .padding(start = 24.dp, top = 6.dp)
+                    .padding(start = 12.dp, top = 6.dp)
                     .align(Alignment.TopStart),
                 content = badgesStart,
             )
