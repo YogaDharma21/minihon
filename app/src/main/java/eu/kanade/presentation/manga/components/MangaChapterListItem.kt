@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.tachiyomi.data.download.model.Download
@@ -501,3 +502,43 @@ private fun swipeAction(
 }
 
 private val swipeActionThreshold = 56.dp
+
+val SUB_CHAPTER_NODE_UNREAD_SIZE: Dp = 6.5.dp
+val SUB_CHAPTER_NODE_READ_SIZE: Dp = 6.dp
+val SUB_CHAPTER_NODE_READ_BORDER_WIDTH: Dp = 1.5.dp
+
+fun shouldShowInnerUnreadDot(read: Boolean, isSubChapter: Boolean): Boolean = !read && !isSubChapter
+
+data class SubChapterNodeProperties(
+    val size: Dp,
+    val isSolidFill: Boolean,
+    val isHollowOutline: Boolean = !isSolidFill,
+    val borderWidth: Dp = if (isHollowOutline) SUB_CHAPTER_NODE_READ_BORDER_WIDTH else 0.dp,
+)
+
+fun getSubChapterNodeProperties(read: Boolean): SubChapterNodeProperties {
+    return if (read) {
+        SubChapterNodeProperties(
+            size = SUB_CHAPTER_NODE_READ_SIZE,
+            isSolidFill = false,
+            isHollowOutline = true,
+            borderWidth = SUB_CHAPTER_NODE_READ_BORDER_WIDTH,
+        )
+    } else {
+        SubChapterNodeProperties(
+            size = SUB_CHAPTER_NODE_UNREAD_SIZE,
+            isSolidFill = true,
+            isHollowOutline = false,
+            borderWidth = 0.dp,
+        )
+    }
+}
+
+object SubChapterNode {
+    val UNREAD_SIZE: Dp = SUB_CHAPTER_NODE_UNREAD_SIZE
+    val READ_SIZE: Dp = SUB_CHAPTER_NODE_READ_SIZE
+    val READ_BORDER_WIDTH: Dp = SUB_CHAPTER_NODE_READ_BORDER_WIDTH
+
+    fun properties(read: Boolean): SubChapterNodeProperties = getSubChapterNodeProperties(read)
+}
+
