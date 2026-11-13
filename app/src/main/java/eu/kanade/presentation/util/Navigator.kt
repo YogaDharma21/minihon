@@ -4,17 +4,13 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,7 +29,6 @@ import cafe.adriel.voyager.transitions.ScreenTransitionContent
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
-import kotlin.math.roundToInt
 
 /**
  * For invoking back press to the parent activity
@@ -67,34 +62,21 @@ fun DefaultNavigatorScreenTransition(
 
             when {
                 isPushingManga -> {
-                    // Variant C: elevated bottom sheet rise in 0.5x slow-mo (~700ms)
-                    val enter = slideInVertically(
-                        initialOffsetY = { (it * 0.70f).roundToInt() },
+                    val enter = fadeIn(
                         animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
-                        ),
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 550,
+                            durationMillis = 280,
                             easing = LinearOutSlowInEasing,
                         ),
                     ) + scaleIn(
-                        initialScale = 0.94f,
+                        initialScale = 0.98f,
                         animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
+                            durationMillis = 280,
+                            easing = LinearOutSlowInEasing,
                         ),
                     )
-                    val exit = scaleOut(
-                        targetScale = 0.92f,
+                    val exit = fadeOut(
                         animationSpec = tween(
-                            durationMillis = 700,
-                            easing = CubicBezierEasing(0.2f, 0f, 0f, 1.0f),
-                        ),
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 450,
+                            durationMillis = 250,
                             easing = FastOutLinearInEasing,
                         ),
                     )
@@ -103,34 +85,22 @@ fun DefaultNavigatorScreenTransition(
                     }
                 }
                 isPoppingManga -> {
-                    val enter = scaleIn(
-                        initialScale = 0.92f,
+                    val enter = fadeIn(
                         animationSpec = tween(
-                            durationMillis = 600,
-                            easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f),
-                        ),
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 500,
+                            durationMillis = 250,
                             easing = LinearOutSlowInEasing,
                         ),
                     )
-                    val exit = slideOutVertically(
-                        targetOffsetY = { (it * 0.70f).roundToInt() },
+                    val exit = fadeOut(
                         animationSpec = tween(
-                            durationMillis = 600,
-                            easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
-                        ),
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 450,
+                            durationMillis = 250,
                             easing = FastOutLinearInEasing,
                         ),
                     ) + scaleOut(
-                        targetScale = 0.94f,
+                        targetScale = 0.98f,
                         animationSpec = tween(
-                            durationMillis = 600,
-                            easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f),
+                            durationMillis = 250,
+                            easing = FastOutLinearInEasing,
                         ),
                     )
                     (enter togetherWith exit).apply {
