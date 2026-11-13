@@ -2,40 +2,63 @@
 
 - Always apply humanize style: minimal words, zero fluff, zero emojis, zero em dashes.
 - On every prompt, call skill tool with ID `humanize` before answering.
+- Lead with the action: line 1 gives command, file path, code diff, or concrete answer.
 - Every subagent prompt must call or enforce `humanize` from the start.
 - Always use my git and github account for git and github operations.
 - Give important links in response when necessary.
 
-## The Canonical 5-Step Lifecycle
+## Lifecycles
 
-Every task (features, bug fixes, refactors, chores) strictly follows this 5-step flow. No alternate or skipped flows:
+### Canonical 5-Step Lifecycle (Default, Interactive)
+
+Default interactive flow for tasks:
 `scout` -> `spec` -> `build` -> `review` -> `launch`
 
-### 1. scout (Main Thread)
-- Inspect codebase first. Never ask questions the code already answers.
-- Interview user via `question` tool with high-signal questions.
-- Multi-choice with `(Recommended)` on the top option. User can type custom answers.
+#### 1. scout (Main Thread)
+- Think before coding: inspect codebase first; never ask questions the code already answers.
+- Interview user via `ask_question` tool with high-signal questions.
+- Always set `is_multi_select: true` to allow multiple selections. Never force single-select radio buttons.
+- Always support custom input: include an option for personal thoughts (e.g. `Custom (specify own answer)`) so the user can always type custom direction.
+- Cap multiple-choice options at 5 items, placing `(Recommended)` on the top option.
 - Settle destination, trade-offs, and scope boundaries before moving forward.
 
-### 2. spec (Subagent)
+#### 2. spec (Subagent)
 - Runs in a child subagent (`general`) with `humanize` enforced.
-- Produces lean technical specification and vertical slice DAG.
+- Produces lean technical specification and vertical slice DAG with verifiable success criteria.
 - Displays plan to user in main thread; refines with user feedback until approved.
 
-### 3. build (Subagents)
+#### 3. build (Subagents)
 - Runs in child subagents (`general`) per slice with `humanize` enforced.
-- Implements minimal code, writes test-first checks at seams, creates atomic commits.
+- Simplicity first and surgical changes: implement minimal code, write test-first checks at seams, touch only what is needed.
+- Creates atomic commits: `<type>(<scope>): <what this enables>`.
 - Main thread stays clean: outputs only 1 line per slice (`Slice complete: <Name> (<SHA>)`).
 
-### 4. review (Subagent)
+#### 4. review (Subagent)
 - Runs in a child subagent (`general`) immediately after build with `humanize` enforced.
 - Combines test verification (seams, edge cases, green suite) and code review (quality, performance, security).
-- Loops with build autonomously on findings. Hard cap of 15 iterations to prevent runaway infinite loops.
+- Loops with build autonomously on findings. Hard cap of 15 iterations.
+- Debug spiral circuit breaker: halt immediately and report if 3 consecutive iterations fail on identical failure seam.
 
-### 5. launch (Subagent)
+#### 5. launch (Subagent)
 - Runs in a child subagent (`general`) once review passes with 0 blockers.
 - Verifies tests and git status, pushes branch, manages PR via `.pr_description.md` (UTF-8).
+- Enforces Portability Test on PR notes (zero generic boilerplate bullets).
 - Reports only the final PR link to the main thread.
+
+### YOLO Autonomous Lifecycle
+
+Triggered when user invokes `yolo` or `$yolo`.
+Unattended execution from initial prompt straight to PR:
+- Automatically selects recommended choices with zero questions.
+- Auto-approves spec and vertical slices DAG.
+- Sequentially executes build slices via subagents.
+- Loops review autonomously up to 15 iterations.
+- Publishes PR via launch subagent.
+- Halts only on unrecoverable blockers (15 review iterations exceeded, git push failure, fatal test failure).
+
+### Standalone Shaping Skills
+
+- **prototype:** Reach for this when a state machine, edge case, or UI layout question cannot be settled by talking. Emits self-contained HTML harnesses (logic/state demos with pure modules, live inspectors, and walkthrough tabs) or structural UI variations on throwaway `prototype/<name>` branches. Never merges prototype code into default branches; extracts the settlement directly into `scout` or `spec`.
 
 ## Core Engineering Principles (Karpathy Guidelines)
 
@@ -78,7 +101,7 @@ Every task (features, bug fixes, refactors, chores) strictly follows this 5-step
 ### 3. Commits & Verification
 - Atomic commits per slice: `<type>(<scope>): <what this enables>`.
 - One concern per commit; each compiles on its own.
-- Zero emojis, zero em dashes or en dashes.
+- Zero emojis, zero em dashes (`—`) or en dashes (`–`).
 - Verify changes with real tests or builds. Never claim a check passed without running it.
 - Run `./gradlew check` before committing and fix what fails; never skip or disable a check. If you can't run it,
   stop and tell the user.
