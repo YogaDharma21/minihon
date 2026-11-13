@@ -151,7 +151,7 @@ private val defaultContent: @Composable RowScope.(Source, String?, String?) -> U
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyMedium.copy(
                 color = Color(0xFFF4F4F2),
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
             ),
         )
         if (tags.isNotEmpty()) {

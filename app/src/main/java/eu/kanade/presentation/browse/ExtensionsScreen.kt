@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -18,25 +19,29 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -182,11 +187,18 @@ private fun ExtensionContent(
                         val action: @Composable RowScope.() -> Unit =
                             if (header.textRes == MR.strings.ext_updates_pending) {
                                 {
-                                    Button(onClick = { onClickUpdateAll() }) {
+                                    Surface(
+                                        onClick = { onClickUpdateAll() },
+                                        shape = RoundedCornerShape(9999.dp),
+                                        color = Color(0xFFF2F1EC),
+                                    ) {
                                         Text(
                                             text = stringResource(MR.strings.ext_update_all),
-                                            style = LocalTextStyle.current.copy(
-                                                color = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                color = Color(0xFF0A0A0B),
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontFeatureSettings = "tnum",
                                             ),
                                         )
                                     }
@@ -335,7 +347,6 @@ private fun ExtensionItem(
         ) {
             ExtensionItemContent(
                 extension = extension,
-                installStep = installStep,
                 store = store,
                 modifier = Modifier.weight(1f),
             )
@@ -346,31 +357,27 @@ private fun ExtensionItem(
 @Composable
 private fun ExtensionItemContent(
     extension: Extension,
-    installStep: InstallStep,
     store: ExtensionStore?,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.padding(start = MaterialTheme.padding.medium),
+        modifier = modifier.padding(start = 14.dp, end = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = extension.name,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = Color(0xFFF4F4F2),
+                fontWeight = FontWeight.Bold,
+            ),
         )
 
-        if (store != null) {
-            Text(
-                text = store.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        ExtensionItemMetadata(extension = extension, installStep = installStep)
+        ExtensionItemMetadata(
+            extension = extension,
+            store = store,
+        )
     }
 }
 
@@ -380,99 +387,81 @@ private fun ExtensionItemIcon(
     installStep: InstallStep,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Surface(
         modifier = modifier.size(48.dp),
-        contentAlignment = Alignment.Center,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF17181C),
+        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+        shadowElevation = 2.dp,
     ) {
-        val idle = installStep.isCompleted()
-        if (!idle) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                strokeWidth = 2.dp,
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            val idle = installStep.isCompleted()
+            if (!idle) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp),
+                    strokeWidth = 2.dp,
+                    color = Color(0xFFF2F1EC),
+                )
+            }
+
+            val padding by animateDpAsState(
+                targetValue = if (idle) 0.dp else 4.dp,
+                label = "iconPadding",
+            )
+            ExtensionIcon(
+                extension = extension,
+                modifier = Modifier
+                    .padding(padding)
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp)),
             )
         }
-
-        val padding by animateDpAsState(
-            targetValue = if (idle) 0.dp else 8.dp,
-            label = "iconPadding",
-        )
-        ExtensionIcon(
-            extension = extension,
-            modifier = Modifier
-                .matchParentSize()
-                .padding(padding),
-        )
     }
 }
 
-/**
- * Plain text for what an extension simply is, pills for the few things worth noticing about it.
- * Won't look good when it wraps, but it's not like overflowing content can be ellipsized.
- */
 @Composable
 private fun ExtensionItemMetadata(
     extension: Extension,
-    installStep: InstallStep,
+    store: ExtensionStore?,
     modifier: Modifier = Modifier,
 ) {
     FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall / 2),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        val facts = listOfNotNull(
-            (extension as? Extension.Loaded)
-                ?.lang
-                ?.takeIf { it.isNotEmpty() }
-                ?.let { LocaleHelper.getSourceDisplayName(it, LocalContext.current) },
-            extension.versionName.takeIf { it.isNotEmpty() },
+        val repoProvenance = store?.badgeLabel?.ifBlank { store.name }
+            ?: store?.name
+            ?: "Official"
+        ExtensionPill(
+            text = repoProvenance,
+            color = Color(0xFFA6B0BD),
+            backgroundColor = Color(0x1FA6B0BD),
         )
-        if (facts.isNotEmpty()) {
-            Text(
-                text = facts.joinToString(" • "),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+        val lang = extension.lang?.takeIf { it.isNotBlank() }
+        val langBadge = lang?.let { LocaleHelper.getSourceDisplayName(it, LocalContext.current) }
+        if (langBadge != null) {
+            ExtensionPill(
+                text = langBadge,
+                color = Color(0xFF8A8C92),
+                backgroundColor = Color(0x14FFFFFF),
             )
         }
 
-        val installStepTag = when (installStep) {
-            InstallStep.Pending -> MR.strings.ext_pending to MaterialTheme.colorScheme.primary
-            InstallStep.Downloading -> MR.strings.ext_downloading to MaterialTheme.colorScheme.primary
-            InstallStep.Installing -> MR.strings.ext_installing to MaterialTheme.colorScheme.primary
-            else -> null
+        val rawVersion = extension.versionName.takeIf { it.isNotBlank() }
+        val versionTag = rawVersion?.let {
+            if (it.startsWith("v", ignoreCase = true)) it else "v$it"
         }
-
-        val statusTag = when {
-            extension is Extension.NotLoaded -> {
-                val label = extension.reason.labelRes ?: MR.strings.ext_untrusted
-                Triple(label, Color(0xFFC99A90), Color(0x1FC99A90))
-            }
-            extension is Extension.Loaded && extension.isObsolete -> {
-                Triple(MR.strings.ext_obsolete, Color(0xFFC99A90), Color(0x1FC99A90))
-            }
-            extension is Extension.Loaded -> {
-                Triple(MR.strings.ext_installed, Color(0xFFA9BFA9), Color(0x1FA9BFA9))
-            }
-            extension is Extension.Available -> {
-                Triple(MR.strings.ext_install, Color(0xFFA6B0BD), Color(0x1FA6B0BD))
-            }
-            else -> null
-        }
-
-        if (installStepTag != null) {
+        if (versionTag != null) {
             ExtensionPill(
-                text = stringResource(installStepTag.first),
-                color = installStepTag.second,
-                backgroundColor = installStepTag.second.copy(alpha = 0.12f),
-            )
-        } else if (statusTag != null) {
-            ExtensionPill(
-                text = stringResource(statusTag.first),
-                color = statusTag.second,
-                backgroundColor = statusTag.third,
+                text = versionTag,
+                color = Color(0xFF8A8C92),
+                backgroundColor = Color(0x14FFFFFF),
             )
         }
 
@@ -489,9 +478,61 @@ private fun ExtensionItemMetadata(
             ?.let {
                 ExtensionPill(
                     text = stringResource(MR.strings.ext_installer_private),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFF8A8C92),
+                    backgroundColor = Color(0x14FFFFFF),
                 )
             }
+    }
+}
+
+@Composable
+private fun ExtensionStatusPill(
+    text: String,
+    color: Color,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        modifier = modifier,
+        shape = RoundedCornerShape(9999.dp),
+        color = backgroundColor,
+        border = BorderStroke(1.dp, color.copy(alpha = 0.25f)),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = color,
+                fontWeight = FontWeight.Medium,
+                fontFeatureSettings = "tnum",
+            ),
+        )
+    }
+}
+
+@Composable
+private fun ExtensionIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = Color(0xFF8A8C92),
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier.size(32.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
@@ -506,48 +547,127 @@ private fun ExtensionItemActions(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (!installStep.isCompleted()) {
-            IconButton(onClick = { onClickItemCancel(extension) }) {
-                Icon(
-                    imageVector = MaterialSymbols.Rounded.Close,
-                    contentDescription = stringResource(MR.strings.action_cancel),
+            val stepLabel = when (installStep) {
+                InstallStep.Pending -> MR.strings.ext_pending
+                InstallStep.Downloading -> MR.strings.ext_downloading
+                InstallStep.Installing -> MR.strings.ext_installing
+                else -> null
+            }
+            if (stepLabel != null) {
+                ExtensionStatusPill(
+                    text = stringResource(stepLabel),
+                    color = Color(0xFFD2BD93),
+                    backgroundColor = Color(0x1FD2BD93),
                 )
             }
+            ExtensionIconButton(
+                icon = MaterialSymbols.Rounded.Close,
+                contentDescription = stringResource(MR.strings.action_cancel),
+                onClick = { onClickItemCancel(extension) },
+                tint = Color(0xFFC99A90),
+            )
             return@Row
         }
 
-        val secondaryAction = when (extension) {
-            is Extension.Available -> {
-                (MaterialSymbols.Rounded.Public to MR.strings.action_open_in_web_view)
-                    .takeIf { extension.sources.isNotEmpty() }
-            }
-            is Extension.Loaded -> MaterialSymbols.Rounded.Settings to MR.strings.action_settings
-            is Extension.NotLoaded -> if (extension.reason is Extension.NotLoaded.Reason.Untrusted) {
-                MaterialSymbols.Rounded.VerifiedUser to MR.strings.ext_trust
-            } else {
-                MaterialSymbols.Rounded.Info to MR.strings.ext_not_loaded_details
-            }
+        if (installStep == InstallStep.Error) {
+            ExtensionStatusPill(
+                text = stringResource(MR.strings.action_retry),
+                color = Color(0xFFC99A90),
+                backgroundColor = Color(0x1FC99A90),
+                onClick = { onClickItemAction(extension) },
+            )
+            ExtensionIconButton(
+                icon = MaterialSymbols.Rounded.Refresh,
+                contentDescription = stringResource(MR.strings.action_retry),
+                onClick = { onClickItemAction(extension) },
+                tint = Color(0xFFC99A90),
+            )
+            return@Row
         }
-        secondaryAction?.let { (icon, label) ->
-            IconButton(onClick = { onClickItemSecondaryAction(extension) }) {
-                Icon(imageVector = icon, contentDescription = stringResource(label))
+
+        when {
+            extension is Extension.Installed && extension.hasUpdate -> {
+                ExtensionStatusPill(
+                    text = stringResource(MR.strings.ext_update),
+                    color = Color(0xFFD2BD93),
+                    backgroundColor = Color(0x1FD2BD93),
+                    onClick = { onClickItemAction(extension) },
+                )
+            }
+            extension is Extension.Loaded && extension.isObsolete -> {
+                ExtensionStatusPill(
+                    text = stringResource(MR.strings.ext_obsolete),
+                    color = Color(0xFFC99A90),
+                    backgroundColor = Color(0x1FC99A90),
+                )
+            }
+            extension is Extension.Loaded -> {
+                ExtensionStatusPill(
+                    text = stringResource(MR.strings.ext_installed),
+                    color = Color(0xFFA9BFA9),
+                    backgroundColor = Color(0x1FA9BFA9),
+                )
+            }
+            extension is Extension.NotLoaded -> {
+                val label = extension.reason.labelRes ?: MR.strings.ext_untrusted
+                ExtensionStatusPill(
+                    text = stringResource(label),
+                    color = Color(0xFFC99A90),
+                    backgroundColor = Color(0x1FC99A90),
+                    onClick = if (extension.reason is Extension.NotLoaded.Reason.Untrusted) {
+                        { onClickItemSecondaryAction(extension) }
+                    } else {
+                        null
+                    },
+                )
             }
         }
 
-        val action = when {
-            installStep == InstallStep.Error -> MaterialSymbols.Rounded.Refresh to MR.strings.action_retry
-            extension is Extension.Available -> MaterialSymbols.Rounded.Download to MR.strings.ext_install
-            extension is Extension.Installed && extension.hasUpdate -> {
-                MaterialSymbols.Rounded.Download to MR.strings.ext_update
+        when (extension) {
+            is Extension.Available -> {
+                if (extension.sources.isNotEmpty()) {
+                    ExtensionIconButton(
+                        icon = MaterialSymbols.Rounded.Public,
+                        contentDescription = stringResource(MR.strings.action_open_in_web_view),
+                        onClick = { onClickItemSecondaryAction(extension) },
+                        tint = Color(0xFF8A8C92),
+                    )
+                }
+                ExtensionIconButton(
+                    icon = MaterialSymbols.Rounded.Download,
+                    contentDescription = stringResource(MR.strings.ext_install),
+                    onClick = { onClickItemAction(extension) },
+                    tint = Color(0xFFF2F1EC),
+                )
             }
-            else -> null
-        }
-        action?.let { (icon, label) ->
-            IconButton(onClick = { onClickItemAction(extension) }) {
-                Icon(imageVector = icon, contentDescription = stringResource(label))
+            is Extension.Loaded -> {
+                ExtensionIconButton(
+                    icon = MaterialSymbols.Rounded.Settings,
+                    contentDescription = stringResource(MR.strings.action_settings),
+                    onClick = { onClickItemSecondaryAction(extension) },
+                    tint = Color(0xFF8A8C92),
+                )
+            }
+            is Extension.NotLoaded -> {
+                if (extension.reason is Extension.NotLoaded.Reason.Untrusted) {
+                    ExtensionIconButton(
+                        icon = MaterialSymbols.Rounded.VerifiedUser,
+                        contentDescription = stringResource(MR.strings.ext_trust),
+                        onClick = { onClickItemSecondaryAction(extension) },
+                        tint = Color(0xFFD2BD93),
+                    )
+                } else {
+                    ExtensionIconButton(
+                        icon = MaterialSymbols.Rounded.Info,
+                        contentDescription = stringResource(MR.strings.ext_not_loaded_details),
+                        onClick = { onClickItemSecondaryAction(extension) },
+                        tint = Color(0xFF8A8C92),
+                    )
+                }
             }
         }
     }
@@ -573,7 +693,7 @@ private fun ExtensionHeader(
     action: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
-        modifier = modifier.padding(horizontal = MaterialTheme.padding.medium),
+        modifier = modifier.padding(horizontal = 24.dp, vertical = MaterialTheme.padding.small),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -581,7 +701,9 @@ private fun ExtensionHeader(
             modifier = Modifier
                 .padding(vertical = 8.dp)
                 .weight(1f),
-            style = MaterialTheme.typography.header,
+            style = MaterialTheme.typography.header.copy(
+                color = Color(0xFF8A8C92),
+            ),
         )
         action()
     }
