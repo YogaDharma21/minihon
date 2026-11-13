@@ -5,7 +5,6 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -18,8 +17,6 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import dev.zacsweers.metrox.viewmodel.metroViewModel
-import eu.kanade.core.preference.asState
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.MoreScreen
 import eu.kanade.presentation.more.settings.screen.SettingsAdvancedScreen
 import eu.kanade.presentation.more.settings.screen.SettingsAppearanceScreen
@@ -74,10 +71,6 @@ data object MoreTab : Tab {
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },
-            downloadedOnly = viewModel.downloadedOnly,
-            onDownloadedOnlyChange = { viewModel.downloadedOnly = it },
-            incognitoMode = viewModel.incognitoMode,
-            onIncognitoModeChange = { viewModel.incognitoMode = it },
             onClickDownloadQueue = { navigator.push(DownloadQueueScreen) },
             onClickCategories = { navigator.push(CategoryScreen()) },
             onClickStats = { navigator.push(StatsScreen()) },
@@ -106,11 +99,7 @@ data object MoreTab : Tab {
 @ContributesIntoMap(AppScope::class)
 class MoreViewModel(
     private val downloadManager: DownloadManager,
-    preferences: BasePreferences,
 ) : ViewModel() {
-
-    var downloadedOnly by preferences.downloadedOnly.asState(viewModelScope)
-    var incognitoMode by preferences.incognitoMode.asState(viewModelScope)
 
     private var _downloadQueueState: MutableStateFlow<DownloadQueueState> = MutableStateFlow(DownloadQueueState.Stopped)
     val downloadQueueState: StateFlow<DownloadQueueState> = _downloadQueueState.asStateFlow()
