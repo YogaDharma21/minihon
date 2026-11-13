@@ -3,6 +3,7 @@ package eu.kanade.presentation.manga.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -143,16 +144,28 @@ fun MangaChapterListItem(
                             .height(20.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                        alpha = if (read) DISABLED_ALPHA else 0.7f,
+                        if (!read) {
+                            Box(
+                                modifier = Modifier
+                                    .size(SUB_CHAPTER_NODE_UNREAD_SIZE)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape,
                                     ),
-                                    shape = CircleShape,
-                                ),
-                        )
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(SUB_CHAPTER_NODE_READ_SIZE)
+                                    .border(
+                                        border = BorderStroke(
+                                            SUB_CHAPTER_NODE_READ_BORDER_WIDTH,
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DISABLED_ALPHA),
+                                        ),
+                                        shape = CircleShape,
+                                    ),
+                            )
+                        }
                     }
                 }
                 Column(
@@ -164,7 +177,7 @@ fun MangaChapterListItem(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         var textHeight by remember { mutableIntStateOf(0) }
-                        if (!read) {
+                        if (shouldShowInnerUnreadDot(read = read, isSubChapter = isSubChapter)) {
                             Icon(
                                 imageVector = MaterialSymbols.RoundedFilled.Circle,
                                 contentDescription = stringResource(MR.strings.unread),
