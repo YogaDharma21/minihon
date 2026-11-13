@@ -31,7 +31,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -92,44 +91,6 @@ private class NotchedRibbonShape(private val notchDepth: Dp = 4.dp) : Shape {
 }
 
 private val DefaultNotchedRibbonShape = NotchedRibbonShape(notchDepth = 4.dp)
-
-@Composable
-private fun TactilePaperCreaseLine(
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .width(8.dp)
-            .fillMaxHeight(),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(4.dp)
-                .align(Alignment.CenterStart)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(Color(0x40000000), Color.Transparent),
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(1.dp)
-                .align(Alignment.CenterEnd)
-                .background(Color(0x66000000)),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(1.dp)
-                .align(Alignment.CenterEnd)
-                .padding(end = 1.dp)
-                .background(Color(0x1FFFFFFF)),
-        )
-    }
-}
 
 @Composable
 private fun NotchedRibbonBookmark(
@@ -384,10 +345,6 @@ private fun MangaGridCover(
             .aspectRatio(MangaCover.Book.ratio),
     ) {
         cover()
-
-        TactilePaperCreaseLine(
-            modifier = Modifier.align(Alignment.CenterStart),
-        )
 
         if (unreadCount > 0) {
             NotchedRibbonBookmark(
