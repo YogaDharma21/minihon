@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,8 +49,9 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.browse.components.BentoCard
-import eu.kanade.presentation.browse.components.CatalogContainer
-import eu.kanade.presentation.browse.components.CatalogContainerDefaults
+import eu.kanade.presentation.browse.components.BrowseSkeletonScreen
+import eu.kanade.presentation.browse.components.CatalogRowContainer
+import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
@@ -80,7 +82,6 @@ import tachiyomi.presentation.core.components.material.topSmallPaddingValues
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
-import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 
@@ -108,7 +109,7 @@ fun ExtensionScreen(
         enabled = !state.isLoading,
     ) {
         when {
-            state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
+            state.isLoading -> BrowseSkeletonScreen(modifier = Modifier.padding(contentPadding))
             state.isEmpty -> {
                 val msg = if (!searchQuery.isNullOrEmpty()) {
                     MR.strings.no_results_found
@@ -343,81 +344,44 @@ private fun ExtensionContent(
                 key = "catalogHeader-${header.hashCode()}",
             ) {
                 when (header) {
-                    is ExtensionUiModel.Header.Resource -> {
-                        ExtensionHeader(
-                            textRes = header.textRes,
-                            modifier = Modifier.animateItem(),
-                        )
-                    }
-                    is ExtensionUiModel.Header.Text -> {
-                        ExtensionHeader(
-                            text = header.text,
-                            modifier = Modifier.animateItem(),
-                        )
-                    }
+                    is ExtensionUiModel.Header.Resource -> ExtensionHeader(
+                        textRes = header.textRes,
+                        modifier = Modifier.animateItem(),
+                    )
+                    is ExtensionUiModel.Header.Text -> ExtensionHeader(
+                        text = header.text,
+                        modifier = Modifier.animateItem(),
+                    )
                 }
             }
 
-            item(
-                contentType = "catalog-container",
-                key = "catalogContainer-${header.hashCode()}",
-            ) {
-                CatalogContainer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .animateItem(),
+            itemsIndexed(
+                items = items,
+                contentType = { _, _ -> "catalog-row" },
+                key = { _, item -> "catalog-ext-${item.extension.key()}" },
+            ) { index, item ->
+                CatalogRowContainer(
+                    position = CatalogRowPosition.from(index, items.size),
+                    modifier = Modifier.animateItem(),
                 ) {
-                    items.forEachIndexed { index, item ->
-                        if (index > 0) {
-                            CatalogContainerDefaults.Divider(
-                                color = Color(0x0AFFFFFF),
-                                thickness = 1.dp,
-                            )
-                        }
-                        CatalogExtensionRow(
-                            item = item,
-                            onClickItem = {
-                                when (it) {
-                                    is Extension.Available -> onInstallExtension(it)
-                                    is Extension.Loaded -> onOpenExtension(it)
-                                    is Extension.NotLoaded -> {
-                                        notLoadedState = it
-                                    }
-                                }
-                            },
-                            onLongClickItem = onLongClickItem,
-                            onClickItemSecondaryAction = {
-                                when (it) {
-                                    is Extension.Available -> onOpenWebView(it)
-                                    is Extension.Loaded -> onOpenExtension(it)
-                                    is Extension.NotLoaded -> {
-                                        notLoadedState = it
-                                    }
-                                }
-                            },
-                            onClickItemCancel = onClickItemCancel,
-                            onClickItemAction = {
-                                when (it) {
-                                    is Extension.Available -> onInstallExtension(it)
-                                    is Extension.Loaded -> {
-                                        if (it.hasUpdate) {
-                                            onUpdateExtension(it)
-                                        } else {
-                                            onOpenExtension(it)
-                                        }
-                                    }
-                                    is Extension.NotLoaded -> {
-                                        if (it.hasUpdate) {
-                                            onUpdateExtension(it)
-                                        } else {
-                                            notLoadedState = it
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
+                    CatalogExtensionRow(
+                        item = item,
+                        onClickItem = {
+                            when (it) {
+                                is Extension.Available -> onInstallExtension(it)
+                                is Extension.Loaded -> onOpenExtension(it)
+                                is Extension.NotLoaded -> notLoadedState = it
+                            }
+                        },
+                        onLongClickItem = onLongClickItem,
+                        onClickItemSecondaryAction = {
+                            when (it) {
+                                is Extension.Available -> onOpenWebView(it)
+                                is Extension.Installed -> onUninstallExtension(it)
+                            }
+                        },
+                        onClickItemCancel = onClickItemCancel,
+                    )
                 }
             }
         }
@@ -447,6 +411,11 @@ private fun ExtensionContent(
             )
         }
     }
+}
+
+internal fun Extension.key(): String = when (this) {
+    is Extension.Available -> "$pkgName-$apkUrl"
+    else -> "$pkgName-$versionCode"
 }
 
 internal fun formatInstalledEnginesHeader(count: Int): String = "Installed Engines ($count)"
@@ -804,9 +773,9 @@ private fun CatalogExtensionRow(
     onClickItem: (Extension) -> Unit,
     onLongClickItem: (Extension) -> Unit,
     onClickItemCancel: (Extension) -> Unit,
-    onClickItemAction: (Extension) -> Unit,
     onClickItemSecondaryAction: (Extension) -> Unit,
     modifier: Modifier = Modifier,
+    onClickItemAction: (Extension) -> Unit = onClickItem,
 ) {
     val (extension, installStep) = item
     val store = when (extension) {
@@ -1091,8 +1060,6 @@ private fun ExtensionIconButton(
         }
     }
 }
-
-
 
 @Composable
 private fun ExtensionHeader(
