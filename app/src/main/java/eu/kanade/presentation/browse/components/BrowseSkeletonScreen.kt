@@ -221,10 +221,7 @@ fun BrowseSkeletonScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
         ) {
-            repeat(BrowseSkeletonDefaults.CatalogRowCount) { index ->
-                if (index > 0) {
-                    CatalogContainerDefaults.Divider()
-                }
+            repeat(BrowseSkeletonDefaults.CatalogRowCount) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
