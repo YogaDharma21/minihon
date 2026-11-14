@@ -13,6 +13,7 @@ import eu.kanade.presentation.browse.SourceOptionsDialog
 import eu.kanade.presentation.browse.SourcesScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.presentation.util.CascadeSurface
 import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.rememberCascadeMotionTrigger
@@ -53,6 +54,10 @@ fun Screen.sourcesTab(): TabContent {
                 title = stringResource(MR.strings.label_migration),
                 icon = MaterialSymbols.Rounded.SwapCalls,
                 onClick = { navigator.push(MigrateSourceScreen) },
+            ),
+            AppBar.OverflowAction(
+                title = stringResource(MR.strings.extensionStores),
+                onClick = { navigator.push(ExtensionStoresScreen()) },
             ),
         ),
         content = { contentPadding, snackbarHostState ->
