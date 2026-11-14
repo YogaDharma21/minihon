@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.browse.components.BaseBrowseItem
+import eu.kanade.presentation.browse.components.BentoCard
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.browse.components.ExtensionPill
 import eu.kanade.presentation.browse.components.label
@@ -161,6 +163,39 @@ private fun ExtensionContent(
     var notLoadedState by remember { mutableStateOf<Extension.NotLoaded?>(null) }
     val installGranted = rememberRequestPackageInstallsPermissionState(initialValue = true)
 
+    val consolidatedItems = remember(state.items) {
+        buildMap {
+            val updates = state.items.entries.find { (h, _) ->
+                h is ExtensionUiModel.Header.Resource && h.textRes == MR.strings.ext_updates_pending
+            }?.value.orEmpty()
+            val loaded = state.items.entries.find { (h, _) ->
+                h is ExtensionUiModel.Header.Resource && h.textRes == MR.strings.ext_installed
+            }?.value.orEmpty()
+
+            val allInstalled = (updates + loaded)
+                .distinctBy { it.extension.pkgName }
+                .sortedWith(
+                    compareByDescending<ExtensionUiModel.Item> {
+                        (it.extension as? Extension.Installed)?.hasUpdate == true
+                    }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.extension.name },
+                )
+
+            if (allInstalled.isNotEmpty()) {
+                put(ExtensionUiModel.Header.Resource(MR.strings.ext_installed), allInstalled)
+            }
+
+            state.items.forEach { (header, items) ->
+                if (header is ExtensionUiModel.Header.Resource &&
+                    (header.textRes == MR.strings.ext_installed || header.textRes == MR.strings.ext_updates_pending)
+                ) {
+                    // Handled in allInstalled
+                } else {
+                    put(header, items)
+                }
+            }
+        }
+    }
+
     FastScrollLazyColumn(
         contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
     ) {
@@ -175,104 +210,159 @@ private fun ExtensionContent(
             }
         }
 
-        state.items.forEach { (header, items) ->
+        consolidatedItems.forEach { (header, items) ->
+            val isInstalled = header is ExtensionUiModel.Header.Resource &&
+                header.textRes == MR.strings.ext_installed
+
             item(
                 contentType = "header",
                 key = "extensionHeader-${header.hashCode()}",
             ) {
-                when (header) {
-                    is ExtensionUiModel.Header.Resource -> {
-                        val action: @Composable RowScope.() -> Unit =
-                            if (header.textRes == MR.strings.ext_updates_pending) {
-                                {
-                                    Surface(
-                                        onClick = { onClickUpdateAll() },
-                                        shape = RoundedCornerShape(9999.dp),
-                                        color = Color(0xFFF2F1EC),
-                                    ) {
-                                        Text(
-                                            text = stringResource(MR.strings.ext_update_all),
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            style = MaterialTheme.typography.labelMedium.copy(
-                                                color = Color(0xFF0A0A0B),
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontFeatureSettings = "tnum",
-                                            ),
-                                        )
-                                    }
-                                }
-                            } else {
-                                {}
+                if (isInstalled) {
+                    val hasAnyUpdate = items.any { (it.extension as? Extension.Installed)?.hasUpdate == true }
+                    val action: @Composable RowScope.() -> Unit = if (hasAnyUpdate) {
+                        {
+                            Surface(
+                                onClick = { onClickUpdateAll() },
+                                shape = RoundedCornerShape(9999.dp),
+                                color = Color(0x1FD2BD93),
+                                border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
+                            ) {
+                                Text(
+                                    text = stringResource(MR.strings.ext_update_all),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = Color(0xFFD2BD93),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontFeatureSettings = "tnum",
+                                    ),
+                                )
                             }
-                        ExtensionHeader(
-                            textRes = header.textRes,
-                            modifier = Modifier.animateItem(),
-                            action = action,
-                        )
+                        }
+                    } else {
+                        {}
                     }
-                    is ExtensionUiModel.Header.Text -> {
-                        ExtensionHeader(
-                            text = header.text,
-                            modifier = Modifier.animateItem(),
-                        )
+                    ExtensionHeader(
+                        text = formatInstalledEnginesHeader(items.size),
+                        modifier = Modifier.animateItem(),
+                        action = action,
+                    )
+                } else {
+                    when (header) {
+                        is ExtensionUiModel.Header.Resource -> {
+                            ExtensionHeader(
+                                textRes = header.textRes,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                        is ExtensionUiModel.Header.Text -> {
+                            ExtensionHeader(
+                                text = header.text,
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
             }
 
-            items(
-                items = items,
-                contentType = { "item" },
-                key = { item ->
-                    when (item.extension) {
-                        is Extension.NotLoaded -> "extension-not-loaded-${item.hashCode()}"
-                        is Extension.Loaded -> "extension-loaded-${item.hashCode()}"
-                        is Extension.Available -> "extension-available-${item.hashCode()}"
+            if (isInstalled) {
+                val chunkedItems = items.chunked(2)
+                items(
+                    items = chunkedItems,
+                    contentType = { "bento-deck-row" },
+                    key = { row -> "bento-row-" + row.joinToString("-") { it.extension.pkgName } },
+                ) { row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        for (item in row) {
+                            val extension = item.extension
+                            val hasUpdate = (extension as? Extension.Installed)?.hasUpdate == true
+                            BentoExtensionCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .animateItem(),
+                                item = item,
+                                hasUpdate = hasUpdate,
+                                onClickItem = {
+                                    when (it) {
+                                        is Extension.Available -> onInstallExtension(it)
+                                        is Extension.Loaded -> onOpenExtension(it)
+                                        is Extension.NotLoaded -> {
+                                            notLoadedState = it
+                                        }
+                                    }
+                                },
+                                onLongClickItem = onLongClickItem,
+                                onOpenExtension = onOpenExtension,
+                                onUpdateExtension = onUpdateExtension,
+                                onClickItemCancel = onClickItemCancel,
+                            )
+                        }
+                        if (row.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
-                },
-            ) { item ->
-                ExtensionItem(
-                    modifier = Modifier.animateItem(),
-                    item = item,
-                    onClickItem = {
-                        when (it) {
-                            is Extension.Available -> onInstallExtension(it)
-                            is Extension.Loaded -> onOpenExtension(it)
-                            is Extension.NotLoaded -> {
-                                notLoadedState = it
-                            }
+                }
+            } else {
+                items(
+                    items = items,
+                    contentType = { "item" },
+                    key = { item ->
+                        when (item.extension) {
+                            is Extension.NotLoaded -> "extension-not-loaded-${item.hashCode()}"
+                            is Extension.Loaded -> "extension-loaded-${item.hashCode()}"
+                            is Extension.Available -> "extension-available-${item.hashCode()}"
                         }
                     },
-                    onLongClickItem = onLongClickItem,
-                    onClickItemSecondaryAction = {
-                        when (it) {
-                            is Extension.Available -> onOpenWebView(it)
-                            is Extension.Loaded -> onOpenExtension(it)
-                            is Extension.NotLoaded -> {
-                                notLoadedState = it
-                            }
-                        }
-                    },
-                    onClickItemCancel = onClickItemCancel,
-                    onClickItemAction = {
-                        when (it) {
-                            is Extension.Available -> onInstallExtension(it)
-                            is Extension.Loaded -> {
-                                if (it.hasUpdate) {
-                                    onUpdateExtension(it)
-                                } else {
-                                    onOpenExtension(it)
-                                }
-                            }
-                            is Extension.NotLoaded -> {
-                                if (it.hasUpdate) {
-                                    onUpdateExtension(it)
-                                } else {
+                ) { item ->
+                    ExtensionItem(
+                        modifier = Modifier.animateItem(),
+                        item = item,
+                        onClickItem = {
+                            when (it) {
+                                is Extension.Available -> onInstallExtension(it)
+                                is Extension.Loaded -> onOpenExtension(it)
+                                is Extension.NotLoaded -> {
                                     notLoadedState = it
                                 }
                             }
-                        }
-                    },
-                )
+                        },
+                        onLongClickItem = onLongClickItem,
+                        onClickItemSecondaryAction = {
+                            when (it) {
+                                is Extension.Available -> onOpenWebView(it)
+                                is Extension.Loaded -> onOpenExtension(it)
+                                is Extension.NotLoaded -> {
+                                    notLoadedState = it
+                                }
+                            }
+                        },
+                        onClickItemCancel = onClickItemCancel,
+                        onClickItemAction = {
+                            when (it) {
+                                is Extension.Available -> onInstallExtension(it)
+                                is Extension.Loaded -> {
+                                    if (it.hasUpdate) {
+                                        onUpdateExtension(it)
+                                    } else {
+                                        onOpenExtension(it)
+                                    }
+                                }
+                                is Extension.NotLoaded -> {
+                                    if (it.hasUpdate) {
+                                        onUpdateExtension(it)
+                                    } else {
+                                        notLoadedState = it
+                                    }
+                                }
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -301,6 +391,196 @@ private fun ExtensionContent(
             )
         }
     }
+}
+
+internal fun formatInstalledEnginesHeader(count: Int): String = "Installed Engines ($count)"
+
+internal fun formatRepoProvenance(badgeLabel: String?, storeName: String?): String {
+    return badgeLabel?.ifBlank { storeName } ?: storeName ?: "Official"
+}
+
+internal fun formatExtensionVersion(rawVersion: String?): String? {
+    return rawVersion?.takeIf { it.isNotBlank() }?.let {
+        if (it.startsWith("v", ignoreCase = true)) it else "v$it"
+    }
+}
+
+internal fun formatExtensionLanguage(lang: String?, localizedFallback: String? = null): String? {
+    return when {
+        lang.isNullOrBlank() -> null
+        lang.equals("all", ignoreCase = true) -> "Multi"
+        lang.length <= 3 -> lang.uppercase()
+        else -> localizedFallback
+    }
+}
+
+@Composable
+private fun BentoExtensionCard(
+    item: ExtensionUiModel.Item,
+    hasUpdate: Boolean,
+    onClickItem: (Extension) -> Unit,
+    onLongClickItem: (Extension) -> Unit,
+    onOpenExtension: (Extension.Loaded) -> Unit,
+    onUpdateExtension: (Extension.Installed) -> Unit,
+    onClickItemCancel: (Extension) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val (extension, installStep) = item
+    val store = when (extension) {
+        is Extension.Available -> extension.store
+        is Extension.Installed -> extension.store
+    }
+    val repoProvenance = formatRepoProvenance(store?.badgeLabel, store?.name)
+    val versionTag = formatExtensionVersion(extension.versionName)
+
+    val context = LocalContext.current
+    val extLang = extension.lang
+    val langLabel = formatExtensionLanguage(
+        lang = extLang,
+        localizedFallback = extLang?.let { LocaleHelper.getSourceDisplayName(it, context) },
+    )
+
+    BentoCard(
+        modifier = modifier,
+        onClick = { onClickItem(extension) },
+        onLongClick = { onLongClickItem(extension) },
+        hasUpdate = hasUpdate,
+        icon = {
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF17181C),
+                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val idle = installStep.isCompleted()
+                    if (!idle) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFFF2F1EC),
+                        )
+                    }
+
+                    val padding by animateDpAsState(
+                        targetValue = if (idle) 0.dp else 2.dp,
+                        label = "iconPadding",
+                    )
+                    ExtensionIcon(
+                        extension = extension,
+                        modifier = Modifier
+                            .padding(padding)
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                    )
+                }
+            }
+        },
+        action = {
+            if (!installStep.isCompleted()) {
+                ExtensionIconButton(
+                    icon = MaterialSymbols.Rounded.Close,
+                    contentDescription = stringResource(MR.strings.action_cancel),
+                    onClick = { onClickItemCancel(extension) },
+                    tint = Color(0xFFC99A90),
+                )
+            } else if (hasUpdate) {
+                Surface(
+                    onClick = {
+                        if (extension is Extension.Installed) {
+                            onUpdateExtension(extension)
+                        }
+                    },
+                    shape = RoundedCornerShape(9999.dp),
+                    color = Color(0x1FD2BD93),
+                    border = BorderStroke(1.dp, Color(0x40D2BD93)),
+                ) {
+                    Text(
+                        text = "UPDATE",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFFD2BD93),
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
+                }
+            } else {
+                ExtensionIconButton(
+                    icon = MaterialSymbols.Rounded.Settings,
+                    contentDescription = stringResource(MR.strings.action_settings),
+                    onClick = {
+                        if (extension is Extension.Loaded) {
+                            onOpenExtension(extension)
+                        } else {
+                            onClickItem(extension)
+                        }
+                    },
+                    tint = Color(0xFF8A8C92),
+                )
+            }
+        },
+        title = {
+            Text(
+                text = extension.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = Color(0xFFF4F4F2),
+                    fontWeight = FontWeight.SemiBold,
+                ),
+            )
+        },
+        subtitle = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = repoProvenance,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = Color(0xFFA6B0BD),
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (versionTag != null) {
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF5F6065)),
+                    )
+                    Text(
+                        text = versionTag,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFF8A8C92),
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
+                }
+                if (langLabel != null) {
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF5F6065)),
+                    )
+                    Text(
+                        text = langLabel,
+                        maxLines = 1,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFF8A8C92),
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
+                }
+            }
+        },
+    )
 }
 
 @Composable
