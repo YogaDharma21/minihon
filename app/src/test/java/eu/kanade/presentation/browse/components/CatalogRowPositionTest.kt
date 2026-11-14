@@ -1,8 +1,10 @@
 package eu.kanade.presentation.browse.components
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
@@ -59,5 +61,36 @@ class CatalogRowPositionTest {
         CatalogRowPosition.First.toShape(8.dp) shouldBe RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
         CatalogRowPosition.Middle.toShape(8.dp) shouldBe RectangleShape
         CatalogRowPosition.Last.toShape(8.dp) shouldBe RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
+    }
+
+    @Test
+    fun `CatalogRowPosition border assertions verify perimeter-only boundaries`() {
+        CatalogRowPosition.Single.hasTopBorder shouldBe true
+        CatalogRowPosition.Single.hasBottomBorder shouldBe true
+        CatalogRowPosition.Single.hasLeftBorder shouldBe true
+        CatalogRowPosition.Single.hasRightBorder shouldBe true
+
+        CatalogRowPosition.First.hasTopBorder shouldBe true
+        CatalogRowPosition.First.hasBottomBorder shouldBe false
+        CatalogRowPosition.First.hasLeftBorder shouldBe true
+        CatalogRowPosition.First.hasRightBorder shouldBe true
+
+        CatalogRowPosition.Middle.hasTopBorder shouldBe false
+        CatalogRowPosition.Middle.hasBottomBorder shouldBe false
+        CatalogRowPosition.Middle.hasLeftBorder shouldBe true
+        CatalogRowPosition.Middle.hasRightBorder shouldBe true
+
+        CatalogRowPosition.Last.hasTopBorder shouldBe false
+        CatalogRowPosition.Last.hasBottomBorder shouldBe true
+        CatalogRowPosition.Last.hasLeftBorder shouldBe true
+        CatalogRowPosition.Last.hasRightBorder shouldBe true
+    }
+
+    @Test
+    fun `Modifier drawCatalogRowBorder attaches modifier across all positions`() {
+        CatalogRowPosition.entries.forEach { position ->
+            val modifier = Modifier.drawCatalogRowBorder(position)
+            modifier.shouldNotBeNull()
+        }
     }
 }

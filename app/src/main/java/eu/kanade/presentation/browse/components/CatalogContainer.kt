@@ -12,12 +12,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -26,6 +33,18 @@ enum class CatalogRowPosition {
     First,
     Middle,
     Last;
+
+    val hasTopBorder: Boolean
+        get() = this == Single || this == First
+
+    val hasBottomBorder: Boolean
+        get() = this == Single || this == Last
+
+    val hasLeftBorder: Boolean
+        get() = true
+
+    val hasRightBorder: Boolean
+        get() = true
 
     companion object {
         fun from(index: Int, totalCount: Int): CatalogRowPosition {
@@ -45,6 +64,105 @@ fun CatalogRowPosition.toShape(cornerRadius: Dp = 14.dp): Shape {
         CatalogRowPosition.First -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
         CatalogRowPosition.Middle -> RectangleShape
         CatalogRowPosition.Last -> RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
+    }
+}
+
+fun Modifier.drawCatalogRowBorder(
+    position: CatalogRowPosition,
+    strokeWidth: Dp = 1.dp,
+    color: Color = CatalogContainerDefaults.HairlineBorderColor,
+    cornerRadius: Dp = 14.dp,
+): Modifier = drawWithContent {
+    drawContent()
+
+    val stroke = strokeWidth.toPx()
+    val halfStroke = stroke / 2f
+    val r = cornerRadius.toPx()
+    val w = size.width
+    val h = size.height
+
+    if (w <= 0f || h <= 0f) return@drawWithContent
+
+    val arcRadius = (r - halfStroke).coerceAtLeast(0f)
+    val arcDiameter = 2 * arcRadius
+    val cornerOffset = halfStroke + arcRadius
+
+    when (position) {
+        CatalogRowPosition.Single -> {
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(halfStroke, halfStroke),
+                size = Size(w - stroke, h - stroke),
+                cornerRadius = CornerRadius(arcRadius, arcRadius),
+                style = Stroke(width = stroke),
+            )
+        }
+        CatalogRowPosition.First -> {
+            val path = Path().apply {
+                moveTo(halfStroke, h)
+                lineTo(halfStroke, cornerOffset)
+                arcTo(
+                    rect = Rect(halfStroke, halfStroke, halfStroke + arcDiameter, halfStroke + arcDiameter),
+                    startAngleDegrees = 180f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false,
+                )
+                lineTo(w - cornerOffset, halfStroke)
+                arcTo(
+                    rect = Rect(w - halfStroke - arcDiameter, halfStroke, w - halfStroke, halfStroke + arcDiameter),
+                    startAngleDegrees = 270f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false,
+                )
+                lineTo(w - halfStroke, h)
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = stroke, cap = StrokeCap.Butt),
+            )
+        }
+        CatalogRowPosition.Middle -> {
+            drawLine(
+                color = color,
+                start = Offset(halfStroke, 0f),
+                end = Offset(halfStroke, h),
+                strokeWidth = stroke,
+                cap = StrokeCap.Butt,
+            )
+            drawLine(
+                color = color,
+                start = Offset(w - halfStroke, 0f),
+                end = Offset(w - halfStroke, h),
+                strokeWidth = stroke,
+                cap = StrokeCap.Butt,
+            )
+        }
+        CatalogRowPosition.Last -> {
+            val path = Path().apply {
+                moveTo(w - halfStroke, 0f)
+                lineTo(w - halfStroke, h - cornerOffset)
+                arcTo(
+                    rect = Rect(w - halfStroke - arcDiameter, h - halfStroke - arcDiameter, w - halfStroke, h - halfStroke),
+                    startAngleDegrees = 0f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false,
+                )
+                lineTo(cornerOffset, h - halfStroke)
+                arcTo(
+                    rect = Rect(halfStroke, h - halfStroke - arcDiameter, halfStroke + arcDiameter, h - halfStroke),
+                    startAngleDegrees = 90f,
+                    sweepAngleDegrees = 90f,
+                    forceMoveTo = false,
+                )
+                lineTo(halfStroke, 0f)
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = stroke, cap = StrokeCap.Butt),
+            )
+        }
     }
 }
 
@@ -85,10 +203,11 @@ fun CatalogRowContainer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .drawCatalogRowBorder(position),
         shape = shape,
         color = CatalogContainerDefaults.SurfaceColor,
-        border = CatalogContainerDefaults.Border,
+        border = null,
     ) {
         val clickableModifier = if (onClick != null || onLongClick != null) {
             Modifier
@@ -105,18 +224,8 @@ fun CatalogRowContainer(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(clickableModifier),
-        ) {
-            content()
-
-            if (position == CatalogRowPosition.First || position == CatalogRowPosition.Middle) {
-                CatalogDivider(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    startIndent = CatalogContainerDefaults.DividerStartIndent,
-                    color = CatalogContainerDefaults.DividerColor,
-                    thickness = CatalogContainerDefaults.DividerThickness,
-                )
-            }
-        }
+            content = content,
+        )
     }
 }
 
