@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.browse.components.BentoCard
@@ -72,6 +73,7 @@ import mihon.icons.materialsymbols.rounded.Info
 import mihon.icons.materialsymbols.rounded.Public
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.VerifiedUser
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
@@ -100,9 +102,9 @@ fun ExtensionScreen(
     onOpenExtension: (Extension.Loaded) -> Unit,
     onClickUpdateAll: () -> Unit,
     onRefresh: () -> Unit,
+    navigator: Navigator = LocalNavigator.currentOrThrow,
+    onOpenStores: () -> Unit = { navigator.push(ExtensionStoresScreen()) },
 ) {
-    val navigator = LocalNavigator.currentOrThrow
-
     PullRefresh(
         refreshing = state.isRefreshing,
         onRefresh = onRefresh,
@@ -122,8 +124,8 @@ fun ExtensionScreen(
                     actions = listOf(
                         EmptyScreenAction(
                             stringRes = MR.strings.extensionStores,
-                            icon = MaterialSymbols.Rounded.Settings,
-                            onClick = { navigator.push(ExtensionStoresScreen()) },
+                            icon = MaterialSymbols.Rounded.Storage,
+                            onClick = onOpenStores,
                         ),
                     ),
                 )
@@ -141,6 +143,7 @@ fun ExtensionScreen(
                     onTrustExtension = onTrustExtension,
                     onOpenExtension = onOpenExtension,
                     onClickUpdateAll = onClickUpdateAll,
+                    onOpenStores = onOpenStores,
                 )
             }
         }
@@ -160,6 +163,7 @@ private fun ExtensionContent(
     onTrustExtension: (Extension.NotLoaded) -> Unit,
     onOpenExtension: (Extension.Loaded) -> Unit,
     onClickUpdateAll: () -> Unit,
+    onOpenStores: () -> Unit,
 ) {
     val context = LocalContext.current
     var notLoadedState by remember { mutableStateOf<Extension.NotLoaded?>(null) }
@@ -250,27 +254,57 @@ private fun ExtensionContent(
                 key = "extensionHeader-installed",
             ) {
                 val hasAnyUpdate = updateItems.isNotEmpty()
-                val action: @Composable RowScope.() -> Unit = if (hasAnyUpdate) {
-                    {
+                val action: @Composable RowScope.() -> Unit = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Surface(
-                            onClick = { onClickUpdateAll() },
+                            onClick = onOpenStores,
                             shape = RoundedCornerShape(9999.dp),
-                            color = Color(0x1FD2BD93),
-                            border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
+                            color = Color(0x0AFFFFFF),
+                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
                         ) {
-                            Text(
-                                text = stringResource(MR.strings.ext_update_all),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    color = Color(0xFFD2BD93),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFeatureSettings = "tnum",
-                                ),
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = MaterialSymbols.Rounded.Storage,
+                                    contentDescription = null,
+                                    tint = Color(0xFF8A8C92),
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    text = stringResource(MR.strings.extensionStores),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = Color(0xFFC4C6CD),
+                                        fontWeight = FontWeight.Medium,
+                                        fontFeatureSettings = "tnum",
+                                    ),
+                                )
+                            }
+                        }
+                        if (hasAnyUpdate) {
+                            Surface(
+                                onClick = { onClickUpdateAll() },
+                                shape = RoundedCornerShape(9999.dp),
+                                color = Color(0x1FD2BD93),
+                                border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
+                            ) {
+                                Text(
+                                    text = stringResource(MR.strings.ext_update_all),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = Color(0xFFD2BD93),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontFeatureSettings = "tnum",
+                                    ),
+                                )
+                            }
                         }
                     }
-                } else {
-                    {}
                 }
                 ExtensionHeader(
                     text = formatInstalledEnginesHeader(installedItems.size),
@@ -331,6 +365,7 @@ private fun ExtensionContent(
                     chips = filterChips,
                     selectedFilterId = effectiveFilterId,
                     onSelectFilter = { selectedFilterId = it.id },
+                    onOpenStores = onOpenStores,
                     modifier = Modifier
                         .animateItem()
                         .padding(vertical = 8.dp),
@@ -735,6 +770,7 @@ private fun ExtensionsFilterRail(
     chips: List<ExtensionFilterChip>,
     selectedFilterId: String,
     onSelectFilter: (ExtensionFilterChip) -> Unit,
+    onOpenStores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyRow(
@@ -742,6 +778,35 @@ private fun ExtensionsFilterRail(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item(key = "action-stores") {
+            Surface(
+                onClick = onOpenStores,
+                shape = RoundedCornerShape(9999.dp),
+                color = Color(0x0FFFFFFF),
+                border = BorderStroke(1.dp, Color(0x1EFFFFFF)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = MaterialSymbols.Rounded.Storage,
+                        contentDescription = null,
+                        tint = Color(0xFFD2BD93),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource(MR.strings.extensionStores),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = Color(0xFFF2F1EC),
+                            fontWeight = FontWeight.Medium,
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
+                }
+            }
+        }
         items(
             items = chips,
             key = { it.id },

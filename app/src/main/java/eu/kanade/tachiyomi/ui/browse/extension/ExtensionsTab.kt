@@ -96,6 +96,7 @@ fun extensionsTab(
                 onUninstallExtension = { extensionsViewModel.uninstallExtension(it) },
                 onUpdateExtension = extensionsViewModel::updateExtension,
                 onRefresh = extensionsViewModel::findAvailableExtensions,
+                onOpenStores = { navigator.push(ExtensionStoresScreen()) },
             )
 
             privateExtensionToUninstall?.let { extension ->

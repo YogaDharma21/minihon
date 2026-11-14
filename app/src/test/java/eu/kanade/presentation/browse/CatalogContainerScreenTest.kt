@@ -185,4 +185,60 @@ class CatalogContainerScreenTest {
         val filteredMulti = filterCatalogEntries(entries, "lang-multi")
         filteredMulti shouldBe mapOf<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>(multiHeader to listOf(multiItem))
     }
+
+    @Test
+    fun `formatRepoProvenance respects badge label over store name and defaults to Official`() {
+        formatRepoProvenance("KEI", "Keiyoushi") shouldBe "KEI"
+        formatRepoProvenance("", "Keiyoushi") shouldBe "Keiyoushi"
+        formatRepoProvenance("   ", "Keiyoushi") shouldBe "Keiyoushi"
+        formatRepoProvenance(null, "Keiyoushi") shouldBe "Keiyoushi"
+        formatRepoProvenance(null, null) shouldBe "Official"
+    }
+
+    @Test
+    fun `formatExtensionVersion normalizes v-prefix`() {
+        formatExtensionVersion("1.4.2") shouldBe "v1.4.2"
+        formatExtensionVersion("v1.4.2") shouldBe "v1.4.2"
+        formatExtensionVersion("V2.0") shouldBe "V2.0"
+        formatExtensionVersion("") shouldBe null
+        formatExtensionVersion("  ") shouldBe null
+        formatExtensionVersion(null) shouldBe null
+    }
+
+    @Test
+    fun `formatExtensionLanguage formats multi, short uppercase and localized fallbacks`() {
+        formatExtensionLanguage("all") shouldBe "Multi"
+        formatExtensionLanguage("ALL") shouldBe "Multi"
+        formatExtensionLanguage("en") shouldBe "EN"
+        formatExtensionLanguage("ja") shouldBe "JA"
+        formatExtensionLanguage("portuguese", "Portuguese (Brazil)") shouldBe "Portuguese (Brazil)"
+        formatExtensionLanguage(null) shouldBe null
+        formatExtensionLanguage("") shouldBe null
+    }
+
+    @Test
+    fun `formatInstalledEnginesHeader renders expected count string`() {
+        formatInstalledEnginesHeader(0) shouldBe "Installed Engines (0)"
+        formatInstalledEnginesHeader(42) shouldBe "Installed Engines (42)"
+    }
+
+    @Test
+    fun `buildExtensionFilterChips deduplicates chips with identical identifiers`() {
+        val en1 = createAvailable("En1", "e1", "en")
+        val en2 = createAvailable("En2", "e2", "en")
+        val catalogEntries = mapOf<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>(
+            ExtensionUiModel.Header.Text("English") to listOf(en1),
+            ExtensionUiModel.Header.Text("English") to listOf(en2),
+        )
+
+        val chips = buildExtensionFilterChips(
+            catalogEntries = catalogEntries,
+            updatesCount = 0,
+        )
+
+        chips.map { it.id } shouldContainExactly listOf(
+            FILTER_ALL,
+            "lang-en",
+        )
+    }
 }
