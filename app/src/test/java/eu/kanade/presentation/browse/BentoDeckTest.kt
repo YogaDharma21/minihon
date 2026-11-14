@@ -1,5 +1,6 @@
 package eu.kanade.presentation.browse
 
+import androidx.compose.ui.graphics.SolidColor
 import eu.kanade.presentation.browse.components.BentoCardDefaults
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -47,7 +48,7 @@ class BentoDeckTest {
         val normalBorder = BentoCardDefaults.border(hasUpdate = false)
         val updateBorder = BentoCardDefaults.border(hasUpdate = true)
 
-        normalBorder.color shouldBe BentoCardDefaults.HairlineBorderColor
-        updateBorder.color shouldBe BentoCardDefaults.UpdateAccentBorderColor
+        (normalBorder.brush as SolidColor).value shouldBe BentoCardDefaults.HairlineBorderColor
+        (updateBorder.brush as SolidColor).value shouldBe BentoCardDefaults.UpdateAccentBorderColor
     }
 }
