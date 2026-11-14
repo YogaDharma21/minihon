@@ -42,7 +42,7 @@ fun CategoryScreen(
     Scaffold(
         topBar = { scrollBehavior ->
             AppBar(
-                title = stringResource(MR.strings.action_edit_categories),
+                title = stringResource(MR.strings.categories),
                 navigateUp = navigateUp,
                 scrollBehavior = scrollBehavior,
             )

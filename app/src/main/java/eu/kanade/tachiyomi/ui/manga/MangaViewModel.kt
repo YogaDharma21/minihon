@@ -181,15 +181,15 @@ class MangaViewModel(
 
     private val skipFiltered by readerPreferences.skipFiltered.asState(viewModelScope)
 
-    val isUpdateIntervalEnabled =
-        LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in libraryPreferences.autoUpdateMangaRestrictions.get()
-
     private val selectedPositions: Array<Int> = arrayOf(-1, -1) // first and last selected index in list
     private val selectedChapterIds = MutableStateFlow(emptySet<Long>())
 
     private val dialog = MutableStateFlow<Dialog?>(null)
 
     private val isRefreshingData = MutableStateFlow(false)
+
+    private val searchQuery = MutableStateFlow("")
+    private val expandedDuplicateChapterIds = MutableStateFlow(emptySet<Long>())
 
     private val downloadStates = MutableStateFlow(emptyMap<Long, Download.State>())
 
@@ -260,15 +260,26 @@ class MangaViewModel(
         mangaAndChapters,
         scanlators,
         trackers,
-        combine(selectedChapterIds, queuedDownloadStates.pausedWhileUnsubscribed(), ::Pair),
-        combine(dialog, isRefreshingData, basePreferences.downloadedOnly.changes(), ::Triple),
+        combine(
+            selectedChapterIds,
+            queuedDownloadStates.pausedWhileUnsubscribed(),
+            expandedDuplicateChapterIds,
+            ::Triple,
+        ),
+        combine(
+            dialog,
+            isRefreshingData,
+            combine(searchQuery, basePreferences.downloadedOnly.changes(), ::Pair),
+            ::Triple,
+        ),
     ) {
             mangaAndChapters,
             (availableScanlators, excludedScanlators),
             (trackingCount, hasLoggedInTrackers),
-            (selectedIds, downloads),
-            (dialog, isRefreshingData, downloadedOnly),
+            (selectedIds, downloads, expandedChapterIds),
+            (dialog, isRefreshingData, searchAndDownloadedOnly),
         ->
+        val (query, downloadedOnly) = searchAndDownloadedOnly
         State.Success(
             manga = mangaAndChapters.manga,
             source = mangaAndChapters.source,
@@ -290,6 +301,8 @@ class MangaViewModel(
             isRefreshingData = isRefreshingData,
             dialog = dialog,
             hideMissingChapters = hideMissingChapters,
+            searchQuery = query,
+            expandedDuplicateChapterIds = expandedChapterIds,
             downloadedOnly = downloadedOnly,
         )
     }
@@ -483,20 +496,6 @@ class MangaViewModel(
         }
     }
 
-    fun showSetFetchIntervalDialog() {
-        val manga = successState?.manga ?: return
-        dialog.value = Dialog.SetFetchInterval(manga)
-    }
-
-    fun setFetchInterval(manga: Manga, interval: Int) {
-        viewModelScope.launch {
-            updateManga.awaitUpdateFetchInterval(
-                // Custom intervals are negative
-                manga.copy(fetchInterval = -interval),
-            )
-        }
-    }
-
     /**
      * Returns true if the manga has any downloads.
      */
@@ -662,6 +661,25 @@ class MangaViewModel(
     fun getNextUnreadChapter(): Chapter? {
         val successState = successState ?: return null
         return successState.chapters.getNextUnread(successState.manga, successState.downloadedOnly)
+    }
+
+    /**
+     * Returns the best chapter to read: next unread, or first chapter if new, or latest read chapter if caught up.
+     */
+    fun getChapterToRead(): Chapter? {
+        val successState = successState ?: return null
+        val nextUnread = successState.chapters.getNextUnread(successState.manga, successState.downloadedOnly)
+        if (nextUnread != null) return nextUnread
+
+        val allChaptersList = allChapters.orEmpty().map { it.chapter }
+        if (allChaptersList.isEmpty()) return null
+
+        val sortedAsc = allChaptersList.sortedWith(getChapterSort(successState.manga, sortDescending = false))
+        return if (!successState.hasReadChapters) {
+            sortedAsc.firstOrNull()
+        } else {
+            sortedAsc.lastOrNull { it.read } ?: sortedAsc.lastOrNull()
+        }
     }
 
     private fun getUnreadChapters(): List<Chapter> {
@@ -991,14 +1009,17 @@ class MangaViewModel(
         fromLongPress: Boolean = false,
     ) {
         val chapters = successState?.processedChapters ?: return
-        val selectedIndex = chapters.indexOfFirst { it.id == item.chapter.id }
+        val selectedIndex = chapters.indexOfFirst {
+            it.id == item.chapter.id ||
+                it.versions.any { v -> v.id == item.chapter.id }
+        }
         if (selectedIndex < 0) return
 
         // Read from the ids, as the state catches up with a selection only after it's been made
         val selectedIds = HashSet(selectedChapterIds.value)
         if ((item.id in selectedIds) == selected) return
 
-        val firstSelection = chapters.none { it.id in selectedIds }
+        val firstSelection = chapters.none { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
         selectedIds.addOrRemove(item.id, selected)
 
         if (selected && fromLongPress) {
@@ -1024,9 +1045,11 @@ class MangaViewModel(
         } else if (!fromLongPress) {
             if (!selected) {
                 if (selectedIndex == selectedPositions[0]) {
-                    selectedPositions[0] = chapters.indexOfFirst { it.id in selectedIds }
+                    selectedPositions[0] =
+                        chapters.indexOfFirst { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
                 } else if (selectedIndex == selectedPositions[1]) {
-                    selectedPositions[1] = chapters.indexOfLast { it.id in selectedIds }
+                    selectedPositions[1] =
+                        chapters.indexOfLast { it.id in selectedIds || it.versions.any { v -> v.id in selectedIds } }
                 }
             } else {
                 if (selectedIndex < selectedPositions[0]) {
@@ -1062,7 +1085,6 @@ class MangaViewModel(
         data class DeleteChapters(val chapters: List<Chapter>) : Dialog
         data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
-        data class SetFetchInterval(val manga: Manga) : Dialog
         data object RemoveFromLibrary : Dialog
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
@@ -1100,6 +1122,20 @@ class MangaViewModel(
         }
     }
 
+    fun searchChapters(query: String) {
+        searchQuery.value = query
+    }
+
+    fun toggleDuplicateChapterExpanded(chapterId: Long) {
+        expandedDuplicateChapterIds.update { expandedIds ->
+            if (chapterId in expandedIds) {
+                expandedIds - chapterId
+            } else {
+                expandedIds + chapterId
+            }
+        }
+    }
+
     private data class MangaAndChapters(
         val manga: Manga,
         val source: Source,
@@ -1125,10 +1161,14 @@ class MangaViewModel(
             val isRefreshingData: Boolean = false,
             val dialog: Dialog? = null,
             val hideMissingChapters: Boolean = false,
+            val searchQuery: String = "",
+            val expandedDuplicateChapterIds: Set<Long> = emptySet(),
             val downloadedOnly: Boolean = false,
         ) : State {
             val processedChapters by lazy {
                 chapters.applyFilters(manga).toList()
+                    .groupByDuplicateChapterNumber()
+                    .groupSubChaptersWithParent(manga.sortDescending())
             }
 
             val isAnySelected by lazy {
@@ -1136,11 +1176,19 @@ class MangaViewModel(
             }
 
             val selectedChapters by lazy {
-                processedChapters.fastFilter { it.selected }
+                processedChapters.flatMap { item ->
+                    if (item.versions.isNotEmpty()) {
+                        item.versions.filter { it.selected }
+                    } else {
+                        if (item.selected) listOf(item) else emptyList()
+                    }
+                }
             }
 
             val hasUnreadChapters by lazy {
-                processedChapters.fastAny { !it.chapter.read }
+                processedChapters.fastAny { item ->
+                    !item.chapter.read || item.versions.any { !it.chapter.read }
+                }
             }
 
             val hasReadChapters by lazy {
@@ -1148,39 +1196,40 @@ class MangaViewModel(
             }
 
             val missingChapterCount by lazy {
-                if (hideMissingChapters) return@lazy 0
+                if (hideMissingChapters || searchQuery.isNotBlank()) return@lazy 0
                 processedChapters.fastMap { it.chapter.chapterNumber }.missingChaptersCount()
             }
 
             val chapterListItems by lazy {
-                if (hideMissingChapters) {
-                    return@lazy processedChapters
-                }
-
-                processedChapters.insertSeparators { before, after ->
-                    val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
-                        after to before
-                    } else {
-                        before to after
-                    }
-                    if (higherChapter == null) return@insertSeparators null
-
-                    if (lowerChapter == null) {
-                        floor(higherChapter.chapter.chapterNumber)
-                            .toInt()
-                            .minus(1)
-                            .coerceAtLeast(0)
-                    } else {
-                        calculateChapterGap(higherChapter.chapter, lowerChapter.chapter)
-                    }
-                        .takeIf { it > 0 }
-                        ?.let { missingCount ->
-                            ChapterList.MissingCount(
-                                id = "${lowerChapter?.id}-${higherChapter.id}",
-                                count = missingCount,
-                            )
+                val rawItems = if (hideMissingChapters || searchQuery.isNotBlank()) {
+                    processedChapters
+                } else {
+                    processedChapters.insertSeparators { before, after ->
+                        val (lowerChapter, higherChapter) = if (manga.sortDescending()) {
+                            after to before
+                        } else {
+                            before to after
                         }
+                        if (higherChapter == null) return@insertSeparators null
+
+                        if (lowerChapter == null) {
+                            floor(higherChapter.chapter.chapterNumber)
+                                .toInt()
+                                .minus(1)
+                                .coerceAtLeast(0)
+                        } else {
+                            calculateChapterGap(higherChapter.chapter, lowerChapter.chapter)
+                        }
+                            .takeIf { it > 0 }
+                            ?.let { missingCount ->
+                                ChapterList.MissingCount(
+                                    id = "${lowerChapter?.id}-${higherChapter.id}",
+                                    count = missingCount,
+                                )
+                            }
+                    }
                 }
+                rawItems.insertEncapsulatedGroupHeaders(manga.sortDescending())
             }
 
             val scanlatorFilterActive: Boolean
@@ -1199,31 +1248,22 @@ class MangaViewModel(
                 val downloadedFilter = manga.downloadedFilter(downloadedOnly)
                 val bookmarkedFilter = manga.bookmarkedFilter
                 val chapterSort = getChapterSort(manga)
+                val query = searchQuery.trim()
+                val queryDouble = query.toDoubleOrNull()
                 return asSequence()
                     .filter { (chapter) -> applyFilter(unreadFilter) { !chapter.read } }
                     .filter { (chapter) -> applyFilter(bookmarkedFilter) { chapter.bookmark } }
                     .filter { applyFilter(downloadedFilter) { it.isDownloaded || isLocalManga } }
+                    .filter { (chapter) ->
+                        if (query.isBlank()) return@filter true
+                        chapter.name.contains(query, ignoreCase = true) ||
+                            (queryDouble != null && chapter.chapterNumber == queryDouble) ||
+                            chapter.chapterNumber.toString().removeSuffix(".0") == query ||
+                            chapter.chapterNumber.toString() == query ||
+                            chapter.scanlator?.contains(query, ignoreCase = true) == true
+                    }
                     .sortedWith { (chapter1), (chapter2) -> chapterSort(chapter1, chapter2) }
             }
         }
-    }
-}
-
-@Immutable
-sealed class ChapterList {
-    @Immutable
-    data class MissingCount(
-        val id: String,
-        val count: Int,
-    ) : ChapterList()
-
-    @Immutable
-    data class Item(
-        val chapter: Chapter,
-        val downloadState: Download.State,
-        val selected: Boolean = false,
-    ) : ChapterList() {
-        val id = chapter.id
-        val isDownloaded = downloadState == Download.State.DOWNLOADED
     }
 }

@@ -2,6 +2,7 @@ package eu.kanade.presentation.updates
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import eu.kanade.presentation.components.AppBar
@@ -30,11 +32,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.CalendarMonth
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.SelectAll
+import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.UnfoldLess
+import mihon.icons.materialsymbols.rounded.UnfoldMore
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -43,17 +47,17 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.active
+import tachiyomi.presentation.core.util.plus
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun UpdateScreen(
+fun UpdatesScreen(
     state: UpdatesViewModel.State,
     snackbarHostState: SnackbarHostState,
     lastUpdated: Long,
     onClickCover: (UpdatesItem) -> Unit,
     onSelectAll: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
-    onCalendarClicked: () -> Unit,
     onUpdateLibrary: suspend () -> Boolean,
     onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
     onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
@@ -63,26 +67,43 @@ fun UpdateScreen(
     onOpenChapter: (UpdatesItem) -> Unit,
     onFilterClicked: () -> Unit,
     hasActiveFilters: Boolean,
+    collapsedMangaIds: Set<Long>,
+    onToggleMangaCollapse: (Long) -> Unit,
+    onToggleCollapseAll: () -> Unit,
+    onClickSettings: (() -> Unit)? = null,
+    showTopBar: Boolean = true,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     BackHandler(enabled = state.selectionMode) {
         onSelectAll(false)
     }
 
     val scope = rememberCoroutineScope()
+    val multiChapterMangaIds = remember(state.items) {
+        state.items.groupingBy { it.update.mangaId }
+            .eachCount()
+            .filterValues { it > 1 }
+            .keys
+    }
+    val allCollapsed = multiChapterMangaIds.isNotEmpty() && multiChapterMangaIds.all { it in collapsedMangaIds }
 
     Scaffold(
         topBar = { scrollBehavior ->
-            UpdatesAppBar(
-                onCalendarClicked = { onCalendarClicked() },
-                onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
-                onFilterClicked = { onFilterClicked() },
-                hasFilters = hasActiveFilters,
-                actionModeCounter = state.selected.size,
-                onSelectAll = { onSelectAll(true) },
-                onInvertSelection = { onInvertSelection() },
-                onCancelActionMode = { onSelectAll(false) },
-                scrollBehavior = scrollBehavior,
-            )
+            if (showTopBar || state.selectionMode) {
+                UpdatesAppBar(
+                    onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
+                    onFilterClicked = { onFilterClicked() },
+                    hasFilters = hasActiveFilters,
+                    allCollapsed = allCollapsed,
+                    onToggleCollapseAll = onToggleCollapseAll,
+                    actionModeCounter = state.selected.size,
+                    onSelectAll = { onSelectAll(true) },
+                    onInvertSelection = { onInvertSelection() },
+                    onCancelActionMode = { onSelectAll(false) },
+                    scrollBehavior = scrollBehavior,
+                    onClickSettings = onClickSettings,
+                )
+            }
         },
         bottomBar = {
             UpdatesBottomBar(
@@ -94,9 +115,10 @@ fun UpdateScreen(
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-    ) { contentPadding ->
+    ) { innerPadding ->
+        val effectivePadding = contentPadding + innerPadding
         when {
-            state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
+            state.isLoading -> LoadingScreen(Modifier.padding(effectivePadding))
             else -> {
                 var isRefreshing by remember { mutableStateOf(false) }
 
@@ -112,12 +134,12 @@ fun UpdateScreen(
                         }
                     },
                     enabled = !state.selectionMode,
-                    indicatorPadding = contentPadding,
+                    indicatorPadding = effectivePadding,
                 ) {
                     if (state.items.isEmpty()) {
                         Column(
                             modifier = Modifier
-                                .padding(contentPadding)
+                                .padding(effectivePadding)
                                 .fillMaxSize(),
                         ) {
                             UpdatesLastUpdatedHeader(lastUpdated = lastUpdated)
@@ -132,7 +154,7 @@ fun UpdateScreen(
                         }
                     } else {
                         FastScrollLazyColumn(
-                            contentPadding = contentPadding,
+                            contentPadding = effectivePadding + PaddingValues(bottom = 96.dp),
                         ) {
                             updatesLastUpdatedItem(lastUpdated)
 
@@ -143,6 +165,8 @@ fun UpdateScreen(
                                 onClickCover = onClickCover,
                                 onClickUpdate = onOpenChapter,
                                 onDownloadChapter = onDownloadChapter,
+                                collapsedMangaIds = collapsedMangaIds,
+                                onToggleMangaCollapse = onToggleMangaCollapse,
                             )
                         }
                     }
@@ -153,11 +177,55 @@ fun UpdateScreen(
 }
 
 @Composable
+fun UpdateScreen(
+    state: UpdatesViewModel.State,
+    snackbarHostState: SnackbarHostState,
+    lastUpdated: Long,
+    onClickCover: (UpdatesItem) -> Unit,
+    onSelectAll: (Boolean) -> Unit,
+    onInvertSelection: () -> Unit,
+    onUpdateLibrary: suspend () -> Boolean,
+    onDownloadChapter: (List<UpdatesItem>, ChapterDownloadAction) -> Unit,
+    onMultiBookmarkClicked: (List<UpdatesItem>, bookmark: Boolean) -> Unit,
+    onMultiMarkAsReadClicked: (List<UpdatesItem>, read: Boolean) -> Unit,
+    onMultiDeleteClicked: (List<UpdatesItem>) -> Unit,
+    onUpdateSelected: (UpdatesItem, Boolean, Boolean) -> Unit,
+    onOpenChapter: (UpdatesItem) -> Unit,
+    onFilterClicked: () -> Unit,
+    hasActiveFilters: Boolean,
+    collapsedMangaIds: Set<Long> = state.collapsedMangaIds,
+    onToggleMangaCollapse: (Long) -> Unit = {},
+    onToggleCollapseAll: () -> Unit = {},
+    onClickSettings: (() -> Unit)? = null,
+) = UpdatesScreen(
+    state = state,
+    snackbarHostState = snackbarHostState,
+    lastUpdated = lastUpdated,
+    onClickCover = onClickCover,
+    onSelectAll = onSelectAll,
+    onInvertSelection = onInvertSelection,
+    onUpdateLibrary = onUpdateLibrary,
+    onDownloadChapter = onDownloadChapter,
+    onMultiBookmarkClicked = onMultiBookmarkClicked,
+    onMultiMarkAsReadClicked = onMultiMarkAsReadClicked,
+    onMultiDeleteClicked = onMultiDeleteClicked,
+    onUpdateSelected = onUpdateSelected,
+    onOpenChapter = onOpenChapter,
+    onFilterClicked = onFilterClicked,
+    hasActiveFilters = hasActiveFilters,
+    collapsedMangaIds = collapsedMangaIds,
+    onToggleMangaCollapse = onToggleMangaCollapse,
+    onToggleCollapseAll = onToggleCollapseAll,
+    onClickSettings = onClickSettings,
+)
+
+@Composable
 private fun UpdatesAppBar(
-    onCalendarClicked: () -> Unit,
     onUpdateLibrary: () -> Unit,
     onFilterClicked: () -> Unit,
     hasFilters: Boolean,
+    allCollapsed: Boolean,
+    onToggleCollapseAll: () -> Unit,
     // For action mode
     actionModeCounter: Int,
     onSelectAll: () -> Unit,
@@ -165,30 +233,50 @@ private fun UpdatesAppBar(
     onCancelActionMode: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
     modifier: Modifier = Modifier,
+    onClickSettings: (() -> Unit)? = null,
 ) {
     AppBar(
         modifier = modifier,
         title = stringResource(MR.strings.label_recent_updates),
         actions = {
             AppBarActions(
-                listOf(
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_filter),
-                        icon = MaterialSymbols.Rounded.FilterList,
-                        iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
-                        onClick = onFilterClicked,
-                    ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_view_upcoming),
-                        icon = MaterialSymbols.Rounded.CalendarMonth,
-                        onClick = onCalendarClicked,
-                    ),
-                    AppBar.Action(
-                        title = stringResource(MR.strings.action_update_library),
-                        icon = MaterialSymbols.Rounded.Refresh,
-                        onClick = onUpdateLibrary,
-                    ),
-                ),
+                buildList {
+                    add(
+                        AppBar.Action(
+                            title = "Collapse/Expand all",
+                            icon = if (allCollapsed) {
+                                MaterialSymbols.Rounded.UnfoldMore
+                            } else {
+                                MaterialSymbols.Rounded.UnfoldLess
+                            },
+                            onClick = onToggleCollapseAll,
+                        ),
+                    )
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_filter),
+                            icon = MaterialSymbols.Rounded.FilterList,
+                            iconTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current,
+                            onClick = onFilterClicked,
+                        ),
+                    )
+                    if (onClickSettings != null) {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(MR.strings.label_settings),
+                                icon = MaterialSymbols.Rounded.Settings,
+                                onClick = onClickSettings,
+                            ),
+                        )
+                    }
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.action_update_library),
+                            icon = MaterialSymbols.Rounded.Refresh,
+                            onClick = onUpdateLibrary,
+                        ),
+                    )
+                },
             )
         },
         actionModeCounter = actionModeCounter,

@@ -10,6 +10,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.SourcesFilterScreen
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.util.system.toast
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.screens.LoadingScreen
@@ -43,6 +44,7 @@ class SourcesFilterScreen : Screen() {
             state = successState,
             onClickLanguage = viewModel::toggleLanguage,
             onClickSource = viewModel::toggleSource,
+            onClickSettings = { navigator.push(MoreTab) },
         )
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -18,16 +17,23 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import dev.zacsweers.metrox.viewmodel.metroViewModel
-import eu.kanade.core.preference.asState
-import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.MoreScreen
+import eu.kanade.presentation.more.settings.screen.SettingsAdvancedScreen
+import eu.kanade.presentation.more.settings.screen.SettingsAppearanceScreen
+import eu.kanade.presentation.more.settings.screen.SettingsBrowseScreen
+import eu.kanade.presentation.more.settings.screen.SettingsDataScreen
+import eu.kanade.presentation.more.settings.screen.SettingsDownloadScreen
+import eu.kanade.presentation.more.settings.screen.SettingsLibraryScreen
+import eu.kanade.presentation.more.settings.screen.SettingsReaderScreen
+import eu.kanade.presentation.more.settings.screen.SettingsSecurityScreen
+import eu.kanade.presentation.more.settings.screen.SettingsTrackingScreen
+import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.rememberAnimatedVectorPainter
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
-import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,13 +55,13 @@ data object MoreTab : Tab {
             val exit = AnimatedImageVector.animatedVectorResource(R.drawable.animated_more_exit)
             return TabOptions(
                 index = 4u,
-                title = stringResource(MR.strings.label_more),
+                title = stringResource(MR.strings.label_settings),
                 icon = rememberAnimatedVectorPainter(enter, exit, isSelected),
             )
         }
 
     override suspend fun onReselect(navigator: Navigator) {
-        navigator.push(SettingsScreen())
+        // Already on Settings screen
     }
 
     @Composable
@@ -65,17 +71,25 @@ data object MoreTab : Tab {
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },
-            downloadedOnly = viewModel.downloadedOnly,
-            onDownloadedOnlyChange = { viewModel.downloadedOnly = it },
-            incognitoMode = viewModel.incognitoMode,
-            onIncognitoModeChange = { viewModel.incognitoMode = it },
             onClickDownloadQueue = { navigator.push(DownloadQueueScreen) },
             onClickCategories = { navigator.push(CategoryScreen()) },
             onClickStats = { navigator.push(StatsScreen()) },
-            onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
-            onClickSettings = { navigator.push(SettingsScreen()) },
+            onClickAppearance = { navigator.push(SettingsAppearanceScreen) },
+            onClickLibrarySettings = { navigator.push(SettingsLibraryScreen) },
+            onClickReaderSettings = { navigator.push(SettingsReaderScreen) },
+            onClickDownloadsSettings = { navigator.push(SettingsDownloadScreen) },
+            onClickTrackingSettings = { navigator.push(SettingsTrackingScreen) },
+            onClickBrowseSettings = { navigator.push(SettingsBrowseScreen) },
+            onClickDataAndStorage = { navigator.push(SettingsDataScreen) },
+            onClickSecurity = { navigator.push(SettingsSecurityScreen) },
+            onClickAdvanced = { navigator.push(SettingsAdvancedScreen) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
-            onClickAbout = { navigator.push(SettingsScreen(SettingsScreen.Destination.About)) },
+            onClickAbout = { navigator.push(AboutScreen) },
+            onNavigateUp = if (navigator.canPop) {
+                { navigator.pop() }
+            } else {
+                null
+            },
         )
     }
 }
@@ -85,11 +99,7 @@ data object MoreTab : Tab {
 @ContributesIntoMap(AppScope::class)
 class MoreViewModel(
     private val downloadManager: DownloadManager,
-    preferences: BasePreferences,
 ) : ViewModel() {
-
-    var downloadedOnly by preferences.downloadedOnly.asState(viewModelScope)
-    var incognitoMode by preferences.incognitoMode.asState(viewModelScope)
 
     private var _downloadQueueState: MutableStateFlow<DownloadQueueState> = MutableStateFlow(DownloadQueueState.Stopped)
     val downloadQueueState: StateFlow<DownloadQueueState> = _downloadQueueState.asStateFlow()

@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.source
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -12,12 +13,19 @@ import eu.kanade.presentation.browse.SourceOptionsDialog
 import eu.kanade.presentation.browse.SourcesScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.presentation.util.CascadeSurface
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
+import eu.kanade.presentation.util.rememberCascadeMotionTrigger
+import eu.kanade.tachiyomi.ui.browse.migration.sources.MigrateSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Settings
+import mihon.icons.materialsymbols.rounded.SwapCalls
 import mihon.icons.materialsymbols.rounded.TravelExplore
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -41,40 +49,49 @@ fun Screen.sourcesTab(): TabContent {
                 icon = MaterialSymbols.Rounded.FilterList,
                 onClick = { navigator.push(SourcesFilterScreen()) },
             ),
+            AppBar.Action(
+                title = stringResource(MR.strings.label_migration),
+                icon = MaterialSymbols.Rounded.SwapCalls,
+                onClick = { navigator.push(MigrateSourceScreen) },
+            ),
         ),
         content = { contentPadding, snackbarHostState ->
-            SourcesScreen(
-                state = state,
-                contentPadding = contentPadding,
-                onClickItem = { source, listing ->
-                    navigator.push(BrowseSourceScreen(source.id, listing.query))
-                },
-                onClickPin = viewModel::togglePin,
-                onLongClickItem = viewModel::showSourceDialog,
-            )
-
-            state.dialog?.let { dialog ->
-                val source = dialog.source
-                SourceOptionsDialog(
-                    source = source,
-                    onClickPin = {
-                        viewModel.togglePin(source)
-                        viewModel.closeDialog()
+            CompositionLocalProvider(
+                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.Sources),
+            ) {
+                SourcesScreen(
+                    state = state,
+                    contentPadding = contentPadding,
+                    onClickItem = { source, listing ->
+                        navigator.push(BrowseSourceScreen(source.id, listing.query))
                     },
-                    onClickDisable = {
-                        viewModel.toggleSource(source)
-                        viewModel.closeDialog()
-                    },
-                    onDismiss = viewModel::closeDialog,
+                    onClickPin = viewModel::togglePin,
+                    onLongClickItem = viewModel::showSourceDialog,
                 )
-            }
 
-            val internalErrString = stringResource(MR.strings.internal_error)
-            LaunchedEffect(Unit) {
-                viewModel.events.collectLatest { event ->
-                    when (event) {
-                        SourcesViewModel.Event.FailedFetchingSources -> {
-                            launch { snackbarHostState.showSnackbar(internalErrString) }
+                state.dialog?.let { dialog ->
+                    val source = dialog.source
+                    SourceOptionsDialog(
+                        source = source,
+                        onClickPin = {
+                            viewModel.togglePin(source)
+                            viewModel.closeDialog()
+                        },
+                        onClickDisable = {
+                            viewModel.toggleSource(source)
+                            viewModel.closeDialog()
+                        },
+                        onDismiss = viewModel::closeDialog,
+                    )
+                }
+
+                val internalErrString = stringResource(MR.strings.internal_error)
+                LaunchedEffect(Unit) {
+                    viewModel.events.collectLatest { event ->
+                        when (event) {
+                            SourcesViewModel.Event.FailedFetchingSources -> {
+                                launch { snackbarHostState.showSnackbar(internalErrString) }
+                            }
                         }
                     }
                 }

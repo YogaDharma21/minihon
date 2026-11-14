@@ -92,27 +92,9 @@ class AppLanguageScreen : Screen() {
         }
     }
 
-    private fun getLangs(context: Context): List<Language> = buildList {
-        val parser = context.resources.getXml(R.xml.locales_config)
-        var eventType = parser.eventType
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            if (eventType == XmlPullParser.START_TAG && parser.name == "locale") {
-                for (i in 0..<parser.attributeCount) {
-                    if (parser.getAttributeName(i) == "name") {
-                        val langTag = parser.getAttributeValue(i)
-                        val displayName = LocaleHelper.getLocalizedDisplayName(langTag)
-                        if (displayName.isNotEmpty()) {
-                            add(Language(langTag, displayName, LocaleHelper.getDisplayName(langTag)))
-                        }
-                    }
-                }
-            }
-            eventType = parser.next()
-        }
-
-        sortBy { it.displayName }
-        add(0, Language("", context.stringResource(MR.strings.label_default), null))
-    }
+    private fun getLangs(context: Context): List<Language> = listOf(
+        Language("en", LocaleHelper.getLocalizedDisplayName("en"), LocaleHelper.getDisplayName("en")),
+    )
 
     private data class Language(
         val langTag: String,

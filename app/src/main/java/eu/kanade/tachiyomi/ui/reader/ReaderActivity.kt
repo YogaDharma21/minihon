@@ -67,7 +67,9 @@ import dev.zacsweers.metro.Inject
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.reader.DisplayRefreshHost
 import eu.kanade.presentation.reader.OrientationSelectDialog
+import eu.kanade.presentation.reader.ReaderChapterListSheet
 import eu.kanade.presentation.reader.ReaderContentOverlay
+import eu.kanade.presentation.reader.ReaderDisplayLayoutDialog
 import eu.kanade.presentation.reader.ReaderNavigationOverlay
 import eu.kanade.presentation.reader.ReaderNavigationOverlayState
 import eu.kanade.presentation.reader.ReaderPageActionsDialog
@@ -289,6 +291,33 @@ class ReaderActivity : BaseActivity() {
                         viewModel = settingsViewModel,
                     )
                 }
+                is ReaderViewModel.Dialog.DisplayLayout -> {
+                    val cropBorderPaged by readerPreferences.cropBorders.collectAsState()
+                    val cropBorderWebtoon by readerPreferences.cropBordersWebtoon.collectAsState()
+                    val isPagerType = ReadingMode.isPagerType(viewModel.getMangaReadingMode())
+                    val cropEnabled = if (isPagerType) cropBorderPaged else cropBorderWebtoon
+
+                    ReaderDisplayLayoutDialog(
+                        onDismissRequest = onDismissRequest,
+                        viewModel = settingsViewModel,
+                        cropEnabled = cropEnabled,
+                        onToggleCropBorder = {
+                            val enabled = viewModel.toggleCropBorders()
+                            menuToggleToast?.cancel()
+                            menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
+                        },
+                        onChangeReadingModeString = { stringRes ->
+                            menuToggleToast?.cancel()
+                            if (!readerPreferences.showReadingMode.get()) {
+                                menuToggleToast = toast(stringRes)
+                            }
+                        },
+                        onChangeOrientationString = { stringRes ->
+                            menuToggleToast?.cancel()
+                            menuToggleToast = toast(stringRes)
+                        },
+                    )
+                }
                 is ReaderViewModel.Dialog.ReadingModeSelect -> {
                     ReadingModeSelectDialog(
                         onDismissRequest = onDismissRequest,
@@ -317,6 +346,31 @@ class ReaderActivity : BaseActivity() {
                         onSetAsCover = viewModel::setAsCover,
                         onShare = viewModel::shareImage,
                         onSave = viewModel::saveImage,
+                    )
+                }
+                is ReaderViewModel.Dialog.ChapterList -> {
+                    ReaderChapterListSheet(
+                        chapters = viewModel.getChapters(),
+                        currentChapterId = state.currentChapter?.chapter?.id,
+                        pages = state.currentChapter?.pages ?: emptyList(),
+                        currentPageIndex = (state.currentPage - 1).coerceAtLeast(0),
+                        onDismissRequest = onDismissRequest,
+                        onChapterClicked = { chapter ->
+                            onDismissRequest()
+                            loadChapter(chapter)
+                        },
+                        onPageClicked = { pageIndex ->
+                            onDismissRequest()
+                            moveToPageIndex(pageIndex)
+                        },
+                        onToggleBookmark = { chapter ->
+                            viewModel.toggleChapterBookmark(chapter)
+                        },
+                        onSelectChapterForPreview = { chapter ->
+                            lifecycleScope.launch {
+                                viewModel.loadChapter(chapter)
+                            }
+                        },
                     )
                 }
                 null -> {}
@@ -560,7 +614,8 @@ class ReaderActivity : BaseActivity() {
             mangaTitle = state.manga?.title,
             chapterTitle = state.currentChapter?.chapter?.name,
             navigateUp = onBackPressedDispatcher::onBackPressed,
-            onClickTopAppBar = ::openMangaScreen,
+            onClickTopAppBar = viewModel::openChapterListDialog,
+            onClickChapterList = viewModel::openChapterListDialog,
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
             onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
@@ -598,17 +653,7 @@ class ReaderActivity : BaseActivity() {
             readingMode = ReadingMode.fromPreference(
                 viewModel.getMangaReadingMode(resolveDefault = false),
             ),
-            onClickReadingMode = viewModel::openReadingModeSelectDialog,
-            orientation = ReaderOrientation.fromPreference(
-                viewModel.getMangaOrientation(resolveDefault = false),
-            ),
-            onClickOrientation = viewModel::openOrientationModeSelectDialog,
-            cropEnabled = cropEnabled,
-            onClickCropBorder = {
-                val enabled = viewModel.toggleCropBorders()
-                menuToggleToast?.cancel()
-                menuToggleToast = toast(if (enabled) MR.strings.on else MR.strings.off)
-            },
+            onClickDisplayLayout = viewModel::openDisplayLayoutDialog,
             onClickSettings = viewModel::openSettingsDialog,
         )
     }
@@ -745,6 +790,13 @@ class ReaderActivity : BaseActivity() {
     private fun loadPreviousChapter() {
         lifecycleScope.launch {
             viewModel.loadPreviousChapter()
+            moveToPageIndex(0)
+        }
+    }
+
+    private fun loadChapter(chapter: ReaderChapter) {
+        lifecycleScope.launch {
+            viewModel.loadChapter(chapter)
             moveToPageIndex(0)
         }
     }

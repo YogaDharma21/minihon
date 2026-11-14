@@ -52,7 +52,7 @@ fun ChapterTransition(
     val currChapter = transition.from.chapter
     val goingToChapter = transition.to?.chapter
 
-    ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+    ProvideTextStyle(MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum")) {
         when (transition) {
             is ChapterTransition.Prev -> {
                 TransitionText(
