@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -33,8 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.browse.components.BentoCard
-import eu.kanade.presentation.browse.components.CatalogContainer
-import eu.kanade.presentation.browse.components.CatalogDivider
+import eu.kanade.presentation.browse.components.BrowseSkeletonScreen
+import eu.kanade.presentation.browse.components.CatalogRowContainer
+import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.browse.components.SourceLatestButton
 import eu.kanade.presentation.browse.components.SourcePinButton
@@ -50,7 +52,6 @@ import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
-import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
 import tachiyomi.source.local.isLocal
@@ -146,7 +147,7 @@ fun SourcesScreen(
     onLongClickItem: (Source) -> Unit,
 ) {
     when {
-        state.isLoading -> LoadingScreen(Modifier.padding(contentPadding))
+        state.isLoading -> BrowseSkeletonScreen(modifier = Modifier.padding(contentPadding))
         state.isEmpty -> EmptyScreen(
             stringRes = MR.strings.source_empty_screen,
             modifier = Modifier.padding(contentPadding),
@@ -234,28 +235,22 @@ fun SourcesScreen(
                         )
                     }
 
-                    item(
-                        contentType = "catalog-container",
-                        key = "catalog-container-$lang",
-                    ) {
-                        CatalogContainer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .animateItem(),
+                    itemsIndexed(
+                        items = sources,
+                        contentType = { _, _ -> "catalog-source-row" },
+                        key = { _, source -> "catalog-source-${source.key()}" },
+                    ) { index, source ->
+                        CatalogRowContainer(
+                            position = CatalogRowPosition.from(index, sources.size),
+                            modifier = Modifier.animateItem(),
                         ) {
-                            sources.forEachIndexed { index, source ->
-                                if (index > 0) {
-                                    CatalogDivider()
-                                }
-                                CatalogSourceRow(
-                                    source = source,
-                                    version = sourceVersions[source.id],
-                                    onClickItem = onClickItem,
-                                    onLongClickItem = onLongClickItem,
-                                    onClickPin = onClickPin,
-                                )
-                            }
+                            CatalogSourceRow(
+                                source = source,
+                                version = sourceVersions[source.id],
+                                onClickItem = onClickItem,
+                                onLongClickItem = onLongClickItem,
+                                onClickPin = onClickPin,
+                            )
                         }
                     }
                 }
