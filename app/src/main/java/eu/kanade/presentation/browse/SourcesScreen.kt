@@ -260,7 +260,6 @@ fun SourcesScreen(
                             modifier = Modifier.animateItem(
                                 fadeInSpec = itemFadeInSpec,
                                 fadeOutSpec = itemFadeOutSpec,
-                                placementSpec = itemPlacementSpec,
                             ),
                         ) {
                             CatalogSourceRow(

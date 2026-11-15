@@ -171,7 +171,7 @@ object HomeScreen : Screen() {
             // Provide usable navigator to content screen
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
-                LocalFloatingDockBottomPadding provides if (showBottomNav) 80.dp else 0.dp,
+                LocalFloatingDockBottomPadding provides 80.dp,
             ) {
                 Box(
                     modifier = Modifier

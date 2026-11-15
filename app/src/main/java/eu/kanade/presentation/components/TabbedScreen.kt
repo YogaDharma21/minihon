@@ -102,9 +102,9 @@ fun TabbedScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
-        var headerHeightPx by remember { mutableIntStateOf(0) }
-        val headerHeight = if (headerHeightPx > 0) {
-            LocalDensity.current.run { headerHeightPx.toDp() }
+        var baseHeaderHeightPx by remember { mutableIntStateOf(0) }
+        val headerHeight = if (baseHeaderHeightPx > 0) {
+            LocalDensity.current.run { baseHeaderHeightPx.toDp() }
         } else {
             136.dp
         }
@@ -147,7 +147,7 @@ fun TabbedScreen(
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
                     .zIndex(10f)
-                    .onSizeChanged { if (it.height > 0) headerHeightPx = it.height },
+                    .onSizeChanged { if (it.height > baseHeaderHeightPx) baseHeaderHeightPx = it.height },
                 contentAlignment = Alignment.TopCenter,
             ) {
                 AnimatedVisibility(

@@ -388,7 +388,6 @@ private fun ExtensionContent(
                     modifier = Modifier.animateItem(
                         fadeInSpec = itemFadeInSpec,
                         fadeOutSpec = itemFadeOutSpec,
-                        placementSpec = itemPlacementSpec,
                     ),
                 ) {
                     CatalogExtensionRow(
