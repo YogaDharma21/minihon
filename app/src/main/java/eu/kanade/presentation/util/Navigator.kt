@@ -4,13 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,9 +25,8 @@ import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransitionContent
+import eu.kanade.presentation.theme.springLowStiffness
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
-import soup.compose.material.motion.animation.materialSharedAxisX
-import soup.compose.material.motion.animation.rememberSlideDistance
 
 /**
  * For invoking back press to the parent activity
@@ -53,65 +51,59 @@ fun DefaultNavigatorScreenTransition(
     navigator: Navigator,
     modifier: Modifier = Modifier,
 ) {
-    val slideDistance = rememberSlideDistance()
     ScreenTransition(
         navigator = navigator,
         transition = {
+            val (enter, exit) = if (navigator.lastEvent != StackEvent.Pop) {
+                val enter = slideInHorizontally(
+                    animationSpec = springLowStiffness(),
+                    initialOffsetX = { it / 4 },
+                ) + fadeIn(
+                    animationSpec = springLowStiffness(),
+                ) + scaleIn(
+                    animationSpec = springLowStiffness(),
+                    initialScale = 0.97f,
+                )
+                val exit = slideOutHorizontally(
+                    animationSpec = springLowStiffness(),
+                    targetOffsetX = { -it / 4 },
+                ) + fadeOut(
+                    animationSpec = springLowStiffness(),
+                ) + scaleOut(
+                    animationSpec = springLowStiffness(),
+                    targetScale = 0.97f,
+                )
+                enter to exit
+            } else {
+                val enter = slideInHorizontally(
+                    animationSpec = springLowStiffness(),
+                    initialOffsetX = { -it / 4 },
+                ) + fadeIn(
+                    animationSpec = springLowStiffness(),
+                ) + scaleIn(
+                    animationSpec = springLowStiffness(),
+                    initialScale = 0.97f,
+                )
+                val exit = slideOutHorizontally(
+                    animationSpec = springLowStiffness(),
+                    targetOffsetX = { it / 4 },
+                ) + fadeOut(
+                    animationSpec = springLowStiffness(),
+                ) + scaleOut(
+                    animationSpec = springLowStiffness(),
+                    targetScale = 0.97f,
+                )
+                enter to exit
+            }
+
             val isPushingManga = targetState is MangaScreen && navigator.lastEvent != StackEvent.Pop
             val isPoppingManga = initialState is MangaScreen && navigator.lastEvent == StackEvent.Pop
 
-            when {
-                isPushingManga -> {
-                    val enter = fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 280,
-                            easing = LinearOutSlowInEasing,
-                        ),
-                    ) + scaleIn(
-                        initialScale = 0.98f,
-                        animationSpec = tween(
-                            durationMillis = 280,
-                            easing = LinearOutSlowInEasing,
-                        ),
-                    )
-                    val exit = fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 250,
-                            easing = FastOutLinearInEasing,
-                        ),
-                    )
-                    (enter togetherWith exit).apply {
-                        targetContentZIndex = 1f
-                    }
-                }
-                isPoppingManga -> {
-                    val enter = fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 250,
-                            easing = LinearOutSlowInEasing,
-                        ),
-                    )
-                    val exit = fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 250,
-                            easing = FastOutLinearInEasing,
-                        ),
-                    ) + scaleOut(
-                        targetScale = 0.98f,
-                        animationSpec = tween(
-                            durationMillis = 250,
-                            easing = FastOutLinearInEasing,
-                        ),
-                    )
-                    (enter togetherWith exit).apply {
-                        targetContentZIndex = -1f
-                    }
-                }
-                else -> {
-                    materialSharedAxisX(
-                        forward = navigator.lastEvent != StackEvent.Pop,
-                        slideDistance = slideDistance,
-                    )
+            (enter togetherWith exit).apply {
+                if (isPushingManga) {
+                    targetContentZIndex = 1f
+                } else if (isPoppingManga) {
+                    targetContentZIndex = -1f
                 }
             }
         },
