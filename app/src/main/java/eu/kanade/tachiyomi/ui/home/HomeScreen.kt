@@ -371,11 +371,14 @@ object HomeScreen : Screen() {
                 tabNavigator.current = LibraryTab
             }
 
-            BackHandler(enabled = showQuickSettings) {
+            BackHandler(enabled = navigator.lastItem == this && showQuickSettings) {
                 showQuickSettings = false
             }
 
-            BackHandler(enabled = !showQuickSettings && tabNavigator.current != LibraryTab, onBack = goToLibraryTab)
+            BackHandler(
+                enabled = navigator.lastItem == this && !showQuickSettings && tabNavigator.current != LibraryTab,
+                onBack = goToLibraryTab,
+            )
 
             LaunchedEffect(Unit) {
                 launch {
