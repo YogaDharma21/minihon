@@ -1,8 +1,13 @@
 package eu.kanade.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +48,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -54,6 +60,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -65,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.springLowStiffness
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -99,8 +108,22 @@ fun TabbedScreen(
         } else {
             136.dp
         }
+        var showTopBar by remember { mutableStateOf(true) }
+        val topBarScrollConnection = remember {
+            ScrollChromeConnection(
+                onVisibilityChanged = { show ->
+                    if (showTopBar != show) {
+                        showTopBar = show
+                    }
+                },
+            )
+        }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(topBarScrollConnection),
+        ) {
             HorizontalPager(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
@@ -124,91 +147,97 @@ fun TabbedScreen(
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
                     .zIndex(10f)
-                    .onSizeChanged { headerHeightPx = it.height },
+                    .onSizeChanged { if (it.height > 0) headerHeightPx = it.height },
                 contentAlignment = Alignment.TopCenter,
             ) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                    shadowElevation = 8.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                AnimatedVisibility(
+                    visible = showTopBar || isSearching,
+                    enter = slideInVertically(animationSpec = springLowStiffness()) { -it } + fadeIn(animationSpec = springLowStiffness()),
+                    exit = slideOutVertically(animationSpec = springLowStiffness()) { -it } + fadeOut(animationSpec = springLowStiffness()),
                 ) {
-                    Column(
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                        shadowElevation = 8.dp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 3.dp),
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (isSearching) {
-                                SearchRow(
-                                    searchQuery = searchQuery.orEmpty(),
-                                    onChangeSearchQuery = onChangeSearchQuery,
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(titleRes),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 19.sp,
-                                        letterSpacing = (-0.02).sp,
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(start = 8.dp),
-                                )
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    if (searchEnabled) {
-                                        IconButton(onClick = { onChangeSearchQuery("") }) {
-                                            Icon(
-                                                imageVector = MaterialSymbols.Rounded.Search,
-                                                contentDescription = stringResource(MR.strings.action_search),
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                            )
-                                        }
-                                    }
-                                    AppBarActions(tab.actions)
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0x0EFFFFFF),
-                            border = BorderStroke(1.dp, Color(0x10FFFFFF)),
-                            modifier = Modifier.fillMaxWidth(),
+                                .padding(horizontal = 4.dp, vertical = 3.dp),
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    .height(48.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                tabs.forEachIndexed { index, tabItem ->
-                                    SegmentedTabButton(
-                                        selected = state.currentPage == index,
-                                        onClick = { scope.launch { state.animateScrollToPage(index) } },
-                                        title = stringResource(tabItem.titleRes),
-                                        badgeCount = tabItem.badgeNumber,
-                                        modifier = Modifier.weight(1f),
+                                if (isSearching) {
+                                    SearchRow(
+                                        searchQuery = searchQuery.orEmpty(),
+                                        onChangeSearchQuery = onChangeSearchQuery,
                                     )
+                                } else {
+                                    Text(
+                                        text = stringResource(titleRes),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 19.sp,
+                                            letterSpacing = (-0.02).sp,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 8.dp),
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (searchEnabled) {
+                                            IconButton(onClick = { onChangeSearchQuery("") }) {
+                                                Icon(
+                                                    imageVector = MaterialSymbols.Rounded.Search,
+                                                    contentDescription = stringResource(MR.strings.action_search),
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                        }
+                                        AppBarActions(tab.actions)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0x0EFFFFFF),
+                                border = BorderStroke(1.dp, Color(0x10FFFFFF)),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    tabs.forEachIndexed { index, tabItem ->
+                                        SegmentedTabButton(
+                                            selected = state.currentPage == index,
+                                            onClick = { scope.launch { state.animateScrollToPage(index) } },
+                                            title = stringResource(tabItem.titleRes),
+                                            badgeCount = tabItem.badgeNumber,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
                                 }
                             }
                         }

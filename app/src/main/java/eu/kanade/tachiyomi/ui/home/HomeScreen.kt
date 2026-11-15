@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -66,6 +67,8 @@ import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
+import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.springLowStiffness
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberAnimatedVectorPainter
 import eu.kanade.tachiyomi.R
@@ -123,6 +126,15 @@ object HomeScreen : Screen() {
             key = TabNavigatorKey,
         ) { tabNavigator ->
             var showBottomNav by remember { mutableStateOf(true) }
+            val scrollChromeConnection = remember {
+                ScrollChromeConnection(
+                    onVisibilityChanged = { show ->
+                        if (showBottomNav != show) {
+                            showBottomNav = show
+                        }
+                    },
+                )
+            }
             LaunchedEffect(Unit) {
                 showBottomNavEvent.receiveAsFlow().collectLatest { show ->
                     showBottomNav = show
@@ -162,7 +174,9 @@ object HomeScreen : Screen() {
                 LocalFloatingDockBottomPadding provides if (showBottomNav) 80.dp else 0.dp,
             ) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollChromeConnection),
                 ) {
                     AnimatedContent(
                         targetState = tabNavigator.current,
@@ -194,8 +208,8 @@ object HomeScreen : Screen() {
 
                     AnimatedVisibility(
                         visible = showBottomNav,
-                        enter = slideInVertically { it } + fadeIn(),
-                        exit = slideOutVertically { it } + fadeOut(),
+                        enter = slideInVertically(animationSpec = springLowStiffness()) { it } + fadeIn(animationSpec = springLowStiffness()),
+                        exit = slideOutVertically(animationSpec = springLowStiffness()) { it } + fadeOut(animationSpec = springLowStiffness()),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
