@@ -3,6 +3,7 @@ package eu.kanade.presentation.reader
 import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -312,7 +313,9 @@ fun ReaderChapterListSheet(
 
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(),
                     verticalAlignment = Alignment.Top,
                 ) { page ->
                     when (page) {
