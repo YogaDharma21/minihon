@@ -40,6 +40,9 @@ import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.browse.components.SourceLatestButton
 import eu.kanade.presentation.browse.components.SourcePinButton
+import eu.kanade.presentation.theme.itemFadeInSpec
+import eu.kanade.presentation.theme.itemFadeOutSpec
+import eu.kanade.presentation.theme.itemPlacementSpec
 import eu.kanade.tachiyomi.ui.browse.source.SourcesViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
@@ -189,7 +192,11 @@ fun SourcesScreen(
                     ) {
                         SourceHeader(
                             text = formatPinnedEnginesHeader(pinnedSources.size),
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = itemFadeInSpec,
+                                fadeOutSpec = itemFadeOutSpec,
+                                placementSpec = itemPlacementSpec,
+                            ),
                         )
                     }
 
@@ -213,7 +220,11 @@ fun SourcesScreen(
                                     onLongClickItem = onLongClickItem,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .animateItem(),
+                                        .animateItem(
+                                            fadeInSpec = itemFadeInSpec,
+                                            fadeOutSpec = itemFadeOutSpec,
+                                            placementSpec = itemPlacementSpec,
+                                        ),
                                 )
                             }
                             if (row.size == 1) {
@@ -231,7 +242,11 @@ fun SourcesScreen(
                         val languageDisplayName = LocaleHelper.getSourceDisplayName(lang, context)
                         SourceHeader(
                             text = formatCatalogLanguageHeader(languageDisplayName, sources.size),
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = itemFadeInSpec,
+                                fadeOutSpec = itemFadeOutSpec,
+                                placementSpec = itemPlacementSpec,
+                            ),
                         )
                     }
 
@@ -242,7 +257,11 @@ fun SourcesScreen(
                     ) { index, source ->
                         CatalogRowContainer(
                             position = CatalogRowPosition.from(index, sources.size),
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = itemFadeInSpec,
+                                fadeOutSpec = itemFadeOutSpec,
+                                placementSpec = itemPlacementSpec,
+                            ),
                         ) {
                             CatalogSourceRow(
                                 source = source,
