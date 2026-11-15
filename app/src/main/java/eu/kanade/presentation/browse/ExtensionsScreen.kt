@@ -146,7 +146,6 @@ fun ExtensionScreen(
                     onTrustExtension = onTrustExtension,
                     onOpenExtension = onOpenExtension,
                     onClickUpdateAll = onClickUpdateAll,
-                    onOpenStores = onOpenStores,
                 )
             }
         }
@@ -166,7 +165,6 @@ private fun ExtensionContent(
     onTrustExtension: (Extension.NotLoaded) -> Unit,
     onOpenExtension: (Extension.Loaded) -> Unit,
     onClickUpdateAll: () -> Unit,
-    onOpenStores: () -> Unit,
 ) {
     val context = LocalContext.current
     var notLoadedState by remember { mutableStateOf<Extension.NotLoaded?>(null) }
@@ -258,54 +256,22 @@ private fun ExtensionContent(
             ) {
                 val hasAnyUpdate = updateItems.isNotEmpty()
                 val action: @Composable RowScope.() -> Unit = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    if (hasAnyUpdate) {
                         Surface(
-                            onClick = onOpenStores,
+                            onClick = { onClickUpdateAll() },
                             shape = RoundedCornerShape(9999.dp),
-                            color = Color(0x0AFFFFFF),
-                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                            color = Color(0x1FD2BD93),
+                            border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = MaterialSymbols.Rounded.Storage,
-                                    contentDescription = null,
-                                    tint = Color(0xFF8A8C92),
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Text(
-                                    text = stringResource(MR.strings.extensionStores),
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color(0xFFC4C6CD),
-                                        fontWeight = FontWeight.Medium,
-                                        fontFeatureSettings = "tnum",
-                                    ),
-                                )
-                            }
-                        }
-                        if (hasAnyUpdate) {
-                            Surface(
-                                onClick = { onClickUpdateAll() },
-                                shape = RoundedCornerShape(9999.dp),
-                                color = Color(0x1FD2BD93),
-                                border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
-                            ) {
-                                Text(
-                                    text = stringResource(MR.strings.ext_update_all),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color(0xFFD2BD93),
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontFeatureSettings = "tnum",
-                                    ),
-                                )
-                            }
+                            Text(
+                                text = stringResource(MR.strings.ext_update_all),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = Color(0xFFD2BD93),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFeatureSettings = "tnum",
+                                ),
+                            )
                         }
                     }
                 }
@@ -376,7 +342,6 @@ private fun ExtensionContent(
                     chips = filterChips,
                     selectedFilterId = effectiveFilterId,
                     onSelectFilter = { selectedFilterId = it.id },
-                    onOpenStores = onOpenStores,
                     modifier = Modifier
                         .animateItem(
                             fadeInSpec = itemFadeInSpec,
@@ -797,7 +762,6 @@ private fun ExtensionsFilterRail(
     chips: List<ExtensionFilterChip>,
     selectedFilterId: String,
     onSelectFilter: (ExtensionFilterChip) -> Unit,
-    onOpenStores: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyRow(
@@ -805,35 +769,6 @@ private fun ExtensionsFilterRail(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item(key = "action-stores") {
-            Surface(
-                onClick = onOpenStores,
-                shape = RoundedCornerShape(9999.dp),
-                color = Color(0x0FFFFFFF),
-                border = BorderStroke(1.dp, Color(0x1EFFFFFF)),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = MaterialSymbols.Rounded.Storage,
-                        contentDescription = null,
-                        tint = Color(0xFFD2BD93),
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Text(
-                        text = stringResource(MR.strings.extensionStores),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            color = Color(0xFFF2F1EC),
-                            fontWeight = FontWeight.Medium,
-                            fontFeatureSettings = "tnum",
-                        ),
-                    )
-                }
-            }
-        }
         items(
             items = chips,
             key = { it.id },
