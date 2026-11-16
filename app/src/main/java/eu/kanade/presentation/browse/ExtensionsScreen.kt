@@ -385,10 +385,6 @@ private fun ExtensionContent(
             ) { index, item ->
                 CatalogRowContainer(
                     position = CatalogRowPosition.from(index, items.size),
-                    modifier = Modifier.animateItem(
-                        fadeInSpec = itemFadeInSpec,
-                        fadeOutSpec = itemFadeOutSpec,
-                    ),
                 ) {
                     CatalogExtensionRow(
                         item = item,

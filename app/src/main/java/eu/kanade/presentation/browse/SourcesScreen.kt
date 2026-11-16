@@ -257,10 +257,6 @@ fun SourcesScreen(
                     ) { index, source ->
                         CatalogRowContainer(
                             position = CatalogRowPosition.from(index, sources.size),
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = itemFadeInSpec,
-                                fadeOutSpec = itemFadeOutSpec,
-                            ),
                         ) {
                             CatalogSourceRow(
                                 source = source,
