@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+import androidx.compose.animation.core.LinearEasing
+
 val DETAIL_ASSEMBLY_EASING: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 const val DETAIL_ASSEMBLY_DURATION: Int = 800
 
@@ -64,13 +66,25 @@ class MangaDetailAssemblyState internal constructor(
     val fabModifier: Modifier,
 )
 
+internal fun calculateAssemblyProgress(
+    elapsedMs: Float,
+    delayMs: Int,
+    durationMs: Int,
+    easing: Easing = DETAIL_ASSEMBLY_EASING,
+): Float {
+    if (elapsedMs <= delayMs) return 0f
+    if (elapsedMs >= delayMs + durationMs) return 1f
+    val fraction = (elapsedMs - delayMs) / durationMs.toFloat()
+    return easing.transform(fraction)
+}
+
 @Composable
 fun rememberMangaDetailAssemblyState(
     key: Any? = Unit,
 ): MangaDetailAssemblyState {
     val context = LocalContext.current
     val isInspection = LocalInspectionMode.current
-    val isReducedMotion = remember(context, isInspection) {
+    val isReducedMotion = remember(isInspection) {
         if (isInspection) return@remember true
         try {
             Settings.Global.getFloat(
@@ -97,63 +111,24 @@ fun rememberMangaDetailAssemblyState(
         }
     }
 
-    val topBarProgress = remember(key) { Animatable(0f) }
-    val coverProgress = remember(key) { Animatable(0f) }
-    val titlesProgress = remember(key) { Animatable(0f) }
-    val actionButtonsProgress = remember(key) { Animatable(0f) }
-    val descriptionProgress = remember(key) { Animatable(0f) }
-    val chaptersProgress = remember(key) { Animatable(0f) }
-    val fabAlpha = remember(key) { Animatable(0f) }
+    val masterTime = remember(key) { Animatable(0f) }
     val fabScale = remember(key) { Animatable(0f) }
 
     LaunchedEffect(key) {
         launch {
-            topBarProgress.animateTo(
-                1f,
-                tween(durationMillis = TOP_BAR_DURATION, delayMillis = TOP_BAR_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            coverProgress.animateTo(
-                1f,
-                tween(durationMillis = COVER_DURATION, delayMillis = COVER_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            titlesProgress.animateTo(
-                1f,
-                tween(durationMillis = TITLES_DURATION, delayMillis = TITLES_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            actionButtonsProgress.animateTo(
-                1f,
-                tween(durationMillis = ACTION_BUTTONS_DURATION, delayMillis = ACTION_BUTTONS_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            descriptionProgress.animateTo(
-                1f,
-                tween(durationMillis = DESCRIPTION_DURATION, delayMillis = DESCRIPTION_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            chaptersProgress.animateTo(
-                1f,
-                tween(durationMillis = CHAPTERS_DURATION, delayMillis = CHAPTERS_DELAY, easing = DETAIL_ASSEMBLY_EASING),
-            )
-        }
-        launch {
-            fabAlpha.animateTo(
-                1f,
-                tween(durationMillis = FAB_ALPHA_DURATION, delayMillis = FAB_DELAY, easing = DETAIL_ASSEMBLY_EASING),
+            masterTime.animateTo(
+                targetValue = DETAIL_ASSEMBLY_DURATION.toFloat(),
+                animationSpec = tween(
+                    durationMillis = DETAIL_ASSEMBLY_DURATION,
+                    easing = LinearEasing,
+                ),
             )
         }
         launch {
             delay(FAB_DELAY.toLong())
             fabScale.animateTo(
-                1f,
-                spring(
+                targetValue = 1f,
+                animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMediumLow,
                 ),
@@ -164,7 +139,7 @@ fun rememberMangaDetailAssemblyState(
     return remember(key) {
         MangaDetailAssemblyState(
             topBarModifier = Modifier.graphicsLayer {
-                val p = topBarProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, TOP_BAR_DELAY, TOP_BAR_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationY = TOP_BAR_START_TRANSLATION_Y.toPx() * (1f - p)
@@ -174,7 +149,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             coverModifier = Modifier.graphicsLayer {
-                val p = coverProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, COVER_DELAY, COVER_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationX = COVER_START_TRANSLATION_X.toPx() * (1f - p)
@@ -189,7 +164,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             titlesModifier = Modifier.graphicsLayer {
-                val p = titlesProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, TITLES_DELAY, TITLES_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationX = TITLES_START_TRANSLATION_X.toPx() * (1f - p)
@@ -199,7 +174,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             actionButtonsModifier = Modifier.graphicsLayer {
-                val p = actionButtonsProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, ACTION_BUTTONS_DELAY, ACTION_BUTTONS_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationY = ACTION_BUTTONS_START_TRANSLATION_Y.toPx() * (1f - p)
@@ -214,7 +189,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             descriptionModifier = Modifier.graphicsLayer {
-                val p = descriptionProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, DESCRIPTION_DELAY, DESCRIPTION_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationY = DESCRIPTION_START_TRANSLATION_Y.toPx() * (1f - p)
@@ -224,7 +199,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             chaptersModifier = Modifier.graphicsLayer {
-                val p = chaptersProgress.value
+                val p = calculateAssemblyProgress(masterTime.value, CHAPTERS_DELAY, CHAPTERS_DURATION)
                 if (p < 1f) {
                     alpha = p
                     translationY = CHAPTERS_START_TRANSLATION_Y.toPx() * (1f - p)
@@ -234,7 +209,7 @@ fun rememberMangaDetailAssemblyState(
                 }
             },
             fabModifier = Modifier.graphicsLayer {
-                val a = fabAlpha.value
+                val a = calculateAssemblyProgress(masterTime.value, FAB_DELAY, FAB_ALPHA_DURATION)
                 val s = fabScale.value
                 if (a < 1f || s != 1f) {
                     alpha = a.coerceIn(0f, 1f)

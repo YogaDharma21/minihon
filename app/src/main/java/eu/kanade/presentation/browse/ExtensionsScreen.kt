@@ -56,9 +56,6 @@ import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.ExtensionIcon
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
-import eu.kanade.presentation.theme.itemFadeInSpec
-import eu.kanade.presentation.theme.itemFadeOutSpec
-import eu.kanade.presentation.theme.itemPlacementSpec
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
@@ -277,11 +274,6 @@ private fun ExtensionContent(
                 }
                 ExtensionHeader(
                     text = formatInstalledEnginesHeader(installedItems.size),
-                    modifier = Modifier.animateItem(
-                        fadeInSpec = itemFadeInSpec,
-                        fadeOutSpec = itemFadeOutSpec,
-                        placementSpec = itemPlacementSpec,
-                    ),
                     action = action,
                 )
             }
@@ -302,13 +294,7 @@ private fun ExtensionContent(
                         val extension = item.extension
                         val hasUpdate = (extension as? Extension.Installed)?.hasUpdate == true
                         BentoExtensionCard(
-                            modifier = Modifier
-                                .weight(1f)
-                                .animateItem(
-                                    fadeInSpec = itemFadeInSpec,
-                                    fadeOutSpec = itemFadeOutSpec,
-                                    placementSpec = itemPlacementSpec,
-                                ),
+                            modifier = Modifier.weight(1f),
                             item = item,
                             hasUpdate = hasUpdate,
                             onClickItem = {
@@ -342,13 +328,7 @@ private fun ExtensionContent(
                     chips = filterChips,
                     selectedFilterId = effectiveFilterId,
                     onSelectFilter = { selectedFilterId = it.id },
-                    modifier = Modifier
-                        .animateItem(
-                            fadeInSpec = itemFadeInSpec,
-                            fadeOutSpec = itemFadeOutSpec,
-                            placementSpec = itemPlacementSpec,
-                        )
-                        .padding(vertical = 8.dp),
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
         }
@@ -361,19 +341,9 @@ private fun ExtensionContent(
                 when (header) {
                     is ExtensionUiModel.Header.Resource -> ExtensionHeader(
                         textRes = header.textRes,
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = itemFadeInSpec,
-                            fadeOutSpec = itemFadeOutSpec,
-                            placementSpec = itemPlacementSpec,
-                        ),
                     )
                     is ExtensionUiModel.Header.Text -> ExtensionHeader(
                         text = header.text,
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = itemFadeInSpec,
-                            fadeOutSpec = itemFadeOutSpec,
-                            placementSpec = itemPlacementSpec,
-                        ),
                     )
                 }
             }

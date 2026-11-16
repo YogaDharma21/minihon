@@ -68,8 +68,22 @@ val LocalCascadeMotionTrigger = staticCompositionLocalOf { CascadeMotionTrigger(
 
 @Composable
 fun rememberCascadeMotionTrigger(surface: CascadeSurface): CascadeMotionTrigger {
-    return remember(surface) {
-        if (CascadeMotionSession.hasPlayed(surface)) {
+    val context = LocalContext.current
+    val isInspection = LocalInspectionMode.current
+    val isReducedMotion = remember(context, isInspection) {
+        if (isInspection) return@remember true
+        try {
+            Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1.0f,
+            ) == 0f
+        } catch (_: Throwable) {
+            false
+        }
+    }
+    return remember(surface, isReducedMotion) {
+        if (isReducedMotion || CascadeMotionSession.hasPlayed(surface)) {
             CascadeMotionTrigger.Disabled
         } else {
             CascadeMotionSession.markPlayed(surface)
@@ -128,23 +142,8 @@ fun Modifier.cascadeItemMotion(
     index: Int,
     trigger: CascadeMotionTrigger = LocalCascadeMotionTrigger.current,
 ): Modifier {
-    if (trigger.disabled) return this
+    if (trigger.disabled || index >= 12) return this
     if (LocalInspectionMode.current) return this
-
-    val context = LocalContext.current
-    val isReducedMotion = remember(context) {
-        try {
-            Settings.Global.getFloat(
-                context.contentResolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE,
-                1.0f,
-            ) == 0f
-        } catch (_: Throwable) {
-            false
-        }
-    }
-    if (isReducedMotion) return this
-    if (index >= 12) return this
 
     val currentUptime = remember(trigger.id) { defaultUptimeMillis() }
     val timing = remember(trigger.id, index) {

@@ -48,12 +48,7 @@ internal fun LibraryComfortableGrid(
                 null
             }
             Surface(
-                modifier = Modifier
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                    )
-                    .cascadeItemMotion(index = index),
+                modifier = Modifier.cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
                 border = BorderStroke(

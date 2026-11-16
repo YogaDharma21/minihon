@@ -48,4 +48,35 @@ class MangaDetailAssemblyTest {
         DETAIL_ASSEMBLY_EASING.transform(0f) shouldBe (0f plusOrMinus 0.001f)
         DETAIL_ASSEMBLY_EASING.transform(1f) shouldBe (1f plusOrMinus 0.001f)
     }
+
+    @Test
+    fun `calculateAssemblyProgress returns 0 before delay and 1 after completion`() {
+        // Before delay
+        calculateAssemblyProgress(
+            elapsedMs = 50f,
+            delayMs = 100,
+            durationMs = 400,
+        ) shouldBe 0f
+
+        // At delay
+        calculateAssemblyProgress(
+            elapsedMs = 100f,
+            delayMs = 100,
+            durationMs = 400,
+        ) shouldBe (0f plusOrMinus 0.001f)
+
+        // After completion
+        calculateAssemblyProgress(
+            elapsedMs = 500f,
+            delayMs = 100,
+            durationMs = 400,
+        ) shouldBe (1f plusOrMinus 0.001f)
+
+        // Far past completion
+        calculateAssemblyProgress(
+            elapsedMs = 800f,
+            delayMs = 100,
+            durationMs = 400,
+        ) shouldBe 1f
+    }
 }

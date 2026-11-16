@@ -54,10 +54,6 @@ internal fun LibraryList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                    )
                     .cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),
