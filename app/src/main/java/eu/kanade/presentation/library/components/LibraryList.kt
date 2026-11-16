@@ -46,6 +46,7 @@ internal fun LibraryList(
 
         itemsIndexed(
             items = items,
+            key = { _, libraryItem -> libraryItem.libraryManga.manga.id },
             contentType = { _, _ -> "library_list_item" },
         ) { index, libraryItem ->
             val manga = libraryItem.libraryManga.manga
@@ -53,7 +54,10 @@ internal fun LibraryList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .animateItem()
+                    .animateItem(
+                        fadeInSpec = null,
+                        fadeOutSpec = null,
+                    )
                     .cascadeItemMotion(index = index),
                 shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF121316),

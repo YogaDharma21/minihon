@@ -144,6 +144,7 @@ fun Modifier.cascadeItemMotion(
         }
     }
     if (isReducedMotion) return this
+    if (index >= 12) return this
 
     val currentUptime = remember(trigger.id) { defaultUptimeMillis() }
     val timing = remember(trigger.id, index) {
@@ -171,10 +172,10 @@ fun Modifier.cascadeItemMotion(
         risePx
     }
 
-    val alphaAnimatable = remember(trigger.id) { Animatable(initialAlpha) }
-    val translationAnimatable = remember(trigger.id) { Animatable(initialTranslation) }
+    val alphaAnimatable = remember(trigger.id, index) { Animatable(initialAlpha) }
+    val translationAnimatable = remember(trigger.id, index) { Animatable(initialTranslation) }
 
-    LaunchedEffect(trigger.id) {
+    LaunchedEffect(trigger.id, index) {
         val duration = timing.remainingDurationMillis.toInt()
         val delay = timing.remainingDelayMillis.toInt()
         val spec = tween<Float>(
