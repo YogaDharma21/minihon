@@ -1,7 +1,8 @@
 package eu.kanade.presentation.browse
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,18 +19,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -447,7 +445,9 @@ internal fun getCachedCatalogMetadata(extension: Extension, context: android.con
         val extLang = extension.lang
         val langBadge = formatExtensionLanguage(
             lang = extLang,
-            localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+            localizedFallback = if (extLang != null && extLang.length > 3 &&
+                !extLang.equals("all", ignoreCase = true)
+            ) {
                 LocaleHelper.getSourceDisplayName(extLang, context)
             } else {
                 null
@@ -462,7 +462,9 @@ internal fun getCachedExtensionLangLabel(extension: Extension, context: android.
         val extLang = extension.lang
         formatExtensionLanguage(
             lang = extLang,
-            localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+            localizedFallback = if (extLang != null && extLang.length > 3 &&
+                !extLang.equals("all", ignoreCase = true)
+            ) {
                 LocaleHelper.getSourceDisplayName(extLang, context)
             } else {
                 null
@@ -499,6 +501,36 @@ private fun BentoExtensionCard(
     val context = LocalContext.current
     val langLabel = getCachedExtensionLangLabel(extension, context)
 
+    val typography = MaterialTheme.typography
+    val titleStyle = remember(typography.bodyMedium) {
+        typography.bodyMedium.copy(
+            color = Color(0xFFF4F4F2),
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+    val repoStyle = remember(typography.bodySmall) {
+        typography.bodySmall.copy(
+            color = Color(0xFFA6B0BD),
+            fontWeight = FontWeight.Medium,
+        )
+    }
+    val metaStyle = remember(typography.bodySmall) {
+        typography.bodySmall.copy(
+            color = Color(0xFF8A8C92),
+            fontFeatureSettings = "tnum",
+        )
+    }
+    val bulletStyle = remember(typography.bodySmall) {
+        typography.bodySmall.copy(color = Color(0xFF5F6065))
+    }
+    val updateStyle = remember(typography.labelSmall) {
+        typography.labelSmall.copy(
+            color = Color(0xFFD2BD93),
+            fontWeight = FontWeight.Bold,
+            fontFeatureSettings = "tnum",
+        )
+    }
+
     BentoCard(
         modifier = modifier,
         onClick = { onClickItem(extension) },
@@ -511,28 +543,12 @@ private fun BentoExtensionCard(
                 color = Color(0xFF17181C),
                 border = ExtensionCardIconBorder,
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val idle = installStep.isCompleted()
-                    if (!idle) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            strokeWidth = 2.dp,
-                            color = Color(0xFFF2F1EC),
-                        )
-                    }
-
-                    val padding = if (idle) 0.dp else 2.dp
-                    ExtensionIcon(
-                        extension = extension,
-                        modifier = Modifier
-                            .padding(padding)
-                            .size(36.dp)
-                            .clip(ExtensionCardIconShape),
-                    )
-                }
+                ExtensionIcon(
+                    extension = extension,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(ExtensionCardIconShape),
+                )
             }
         },
         action = {
@@ -557,11 +573,7 @@ private fun BentoExtensionCard(
                     Text(
                         text = "UPDATE",
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFFD2BD93),
-                            fontWeight = FontWeight.Bold,
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = updateStyle,
                     )
                 }
             } else {
@@ -584,10 +596,7 @@ private fun BentoExtensionCard(
                 text = extension.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFFF4F4F2),
-                    fontWeight = FontWeight.SemiBold,
-                ),
+                style = titleStyle,
             )
         },
         subtitle = {
@@ -600,38 +609,29 @@ private fun BentoExtensionCard(
                     text = repoProvenance,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFFA6B0BD),
-                        fontWeight = FontWeight.Medium,
-                    ),
+                    style = repoStyle,
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (versionTag != null) {
                     Text(
                         text = "•",
-                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF5F6065)),
+                        style = bulletStyle,
                     )
                     Text(
                         text = versionTag,
                         maxLines = 1,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF8A8C92),
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = metaStyle,
                     )
                 }
                 if (langLabel != null) {
                     Text(
                         text = "•",
-                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF5F6065)),
+                        style = bulletStyle,
                     )
                     Text(
                         text = langLabel,
                         maxLines = 1,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF8A8C92),
-                            fontFeatureSettings = "tnum",
-                        ),
+                        style = metaStyle,
                     )
                 }
             }
@@ -812,6 +812,27 @@ private fun CatalogExtensionRow(
     val context = LocalContext.current
     val metadataText = getCachedCatalogMetadata(extension, context)
 
+    val typography = MaterialTheme.typography
+    val titleStyle = remember(typography.bodyMedium) {
+        typography.bodyMedium.copy(
+            color = Color(0xFFF4F4F2),
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+    val metadataStyle = remember(typography.bodySmall) {
+        typography.bodySmall.copy(
+            color = Color(0xFF8A8C92),
+            fontFeatureSettings = "tnum",
+        )
+    }
+    val nsfwStyle = remember(typography.labelSmall) {
+        typography.labelSmall.copy(
+            color = Color(0xFFC99A90),
+            fontWeight = FontWeight.Bold,
+            fontFeatureSettings = "tnum",
+        )
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -824,33 +845,18 @@ private fun CatalogExtensionRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Surface(
-            modifier = Modifier.size(36.dp),
-            shape = ExtensionCardIconShape,
-            color = Color(0xFF17181C),
-            border = ExtensionCardIconBorder,
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(Color(0xFF17181C), ExtensionCardIconShape)
+                .border(ExtensionCardIconBorder, ExtensionCardIconShape),
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                val idle = installStep.isCompleted()
-                if (!idle) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        strokeWidth = 2.dp,
-                        color = Color(0xFFF2F1EC),
-                    )
-                }
-                val padding = if (idle) 0.dp else 2.dp
-                ExtensionIcon(
-                    extension = extension,
-                    modifier = Modifier
-                        .padding(padding)
-                        .size(36.dp)
-                        .clip(ExtensionCardIconShape),
-                )
-            }
+            ExtensionIcon(
+                extension = extension,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(ExtensionCardIconShape),
+            )
         }
 
         Column(
@@ -861,10 +867,7 @@ private fun CatalogExtensionRow(
                 text = extension.name,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color(0xFFF4F4F2),
-                    fontWeight = FontWeight.SemiBold,
-                ),
+                style = titleStyle,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -875,26 +878,19 @@ private fun CatalogExtensionRow(
                     text = metadataText,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFF8A8C92),
-                        fontFeatureSettings = "tnum",
-                    ),
+                    style = metadataStyle,
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (extension.contentWarning == ContentWarning.NSFW) {
-                    Surface(
-                        shape = ExtensionPillShape,
-                        color = Color(0x21C99A90),
-                        border = ExtensionNsfwBorder,
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0x21C99A90), ExtensionPillShape)
+                            .border(ExtensionNsfwBorder, ExtensionPillShape)
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
                     ) {
                         Text(
                             text = "18+",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFFC99A90),
-                                fontWeight = FontWeight.Bold,
-                                fontFeatureSettings = "tnum",
-                            ),
+                            style = nsfwStyle,
                         )
                     }
                 }
@@ -941,32 +937,30 @@ private fun CatalogExtensionActions(
         }
 
         if (installStep == InstallStep.Error) {
-            Surface(
-                onClick = { onClickItemAction(extension) },
-                shape = RoundedCornerShape(9999.dp),
-                color = Color(0x1FC99A90),
-                border = BorderStroke(1.dp, Color(0x40C99A90)),
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(9999.dp))
+                    .background(Color(0x1FC99A90))
+                    .border(BorderStroke(1.dp, Color(0x40C99A90)), RoundedCornerShape(9999.dp))
+                    .clickable { onClickItemAction(extension) }
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(
-                        imageVector = MaterialSymbols.Rounded.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color(0xFFC99A90),
-                    )
-                    Text(
-                        text = stringResource(MR.strings.action_retry),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFFC99A90),
-                            fontWeight = FontWeight.Bold,
-                            fontFeatureSettings = "tnum",
-                        ),
-                    )
-                }
+                Icon(
+                    imageVector = MaterialSymbols.Rounded.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = Color(0xFFC99A90),
+                )
+                Text(
+                    text = stringResource(MR.strings.action_retry),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = Color(0xFFC99A90),
+                        fontWeight = FontWeight.Bold,
+                        fontFeatureSettings = "tnum",
+                    ),
+                )
             }
             return@Row
         }
@@ -981,44 +975,44 @@ private fun CatalogExtensionActions(
                         tint = Color(0xFF8A8C92),
                     )
                 }
-                Surface(
-                    onClick = { onClickItemAction(extension) },
-                    shape = RoundedCornerShape(9999.dp),
-                    color = Color(0xFFF2F1EC),
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(9999.dp))
+                        .background(Color(0xFFF2F1EC))
+                        .clickable { onClickItemAction(extension) }
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = MaterialSymbols.Rounded.Download,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF0A0A0B),
-                        )
-                        Text(
-                            text = stringResource(MR.strings.ext_install),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF0A0A0B),
-                                fontWeight = FontWeight.Bold,
-                                fontFeatureSettings = "tnum",
-                            ),
-                        )
-                    }
+                    Icon(
+                        imageVector = MaterialSymbols.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF0A0A0B),
+                    )
+                    Text(
+                        text = stringResource(MR.strings.ext_install),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFF0A0A0B),
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
                 }
             }
             is Extension.Installed -> {
                 if (extension.hasUpdate) {
-                    Surface(
-                        onClick = { onClickItemAction(extension) },
-                        shape = RoundedCornerShape(9999.dp),
-                        color = Color(0x1FD2BD93),
-                        border = BorderStroke(1.dp, Color(0x40D2BD93)),
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9999.dp))
+                            .background(Color(0x1FD2BD93))
+                            .border(BorderStroke(1.dp, Color(0x40D2BD93)), RoundedCornerShape(9999.dp))
+                            .clickable { onClickItemAction(extension) }
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = "UPDATE",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = Color(0xFFD2BD93),
                                 fontWeight = FontWeight.Bold,
@@ -1063,18 +1057,19 @@ private fun ExtensionIconButton(
     modifier: Modifier = Modifier,
     tint: Color = Color(0xFF8A8C92),
 ) {
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        IconButton(
-            onClick = onClick,
-            modifier = modifier.size(32.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(18.dp),
-            )
-        }
+    Box(
+        modifier = modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 

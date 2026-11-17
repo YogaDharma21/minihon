@@ -32,7 +32,8 @@ enum class CatalogRowPosition {
     Single,
     First,
     Middle,
-    Last;
+    Last,
+    ;
 
     val hasTopBorder: Boolean
         get() = this == Single || this == First
@@ -81,27 +82,76 @@ fun CatalogRowPosition.toShape(cornerRadius: Dp = 14.dp): Shape {
     }
 }
 
-private val reusableBorderPath = ThreadLocal.withInitial { Path() }
+private val reusableRowPath = ThreadLocal.withInitial { Path() }
 
+private fun Path.addRowFill(position: CatalogRowPosition, w: Float, h: Float, radius: Float) {
+    rewind()
+    val d = radius * 2
+    when (position) {
+        CatalogRowPosition.Single -> {
+            moveTo(radius, 0f)
+            lineTo(w - radius, 0f)
+            arcTo(Rect(w - d, 0f, w, d), 270f, 90f, false)
+            lineTo(w, h - radius)
+            arcTo(Rect(w - d, h - d, w, h), 0f, 90f, false)
+            lineTo(radius, h)
+            arcTo(Rect(0f, h - d, d, h), 90f, 90f, false)
+            lineTo(0f, radius)
+            arcTo(Rect(0f, 0f, d, d), 180f, 90f, false)
+        }
+        CatalogRowPosition.First -> {
+            moveTo(0f, h)
+            lineTo(0f, radius)
+            arcTo(Rect(0f, 0f, d, d), 180f, 90f, false)
+            lineTo(w - radius, 0f)
+            arcTo(Rect(w - d, 0f, w, d), 270f, 90f, false)
+            lineTo(w, h)
+        }
+        CatalogRowPosition.Middle -> {
+            moveTo(0f, 0f)
+            lineTo(w, 0f)
+            lineTo(w, h)
+            lineTo(0f, h)
+        }
+        CatalogRowPosition.Last -> {
+            moveTo(w, 0f)
+            lineTo(w, h - radius)
+            arcTo(Rect(w - d, h - d, w, h), 0f, 90f, false)
+            lineTo(radius, h)
+            arcTo(Rect(0f, h - d, d, h), 90f, 90f, false)
+            lineTo(0f, 0f)
+        }
+    }
+    close()
+}
+
+/**
+ * Fills the row and strokes only the perimeter edges its [position] needs, in one draw pass.
+ */
 fun Modifier.drawCatalogRowBorder(
     position: CatalogRowPosition,
     strokeWidth: Dp = 1.dp,
     color: Color = CatalogContainerDefaults.HairlineBorderColor,
     cornerRadius: Dp = 14.dp,
+    fillColor: Color = CatalogContainerDefaults.SurfaceColor,
 ): Modifier = drawWithContent {
-    drawContent()
-
-    val stroke = strokeWidth.toPx()
-    val halfStroke = stroke / 2f
-    val r = cornerRadius.toPx()
     val w = size.width
     val h = size.height
 
     if (w <= 0f || h <= 0f) return@drawWithContent
 
+    val stroke = strokeWidth.toPx()
+    val halfStroke = stroke / 2f
+    val r = cornerRadius.toPx()
     val arcRadius = (r - halfStroke).coerceAtLeast(0f)
     val arcDiameter = 2 * arcRadius
     val cornerOffset = halfStroke + arcRadius
+    val path = reusableRowPath.get()
+
+    path.addRowFill(position, w, h, r)
+    drawPath(path = path, color = fillColor)
+
+    drawContent()
 
     when (position) {
         CatalogRowPosition.Single -> {
@@ -114,25 +164,23 @@ fun Modifier.drawCatalogRowBorder(
             )
         }
         CatalogRowPosition.First -> {
-            val path = reusableBorderPath.get().apply {
-                rewind()
-                moveTo(halfStroke, h)
-                lineTo(halfStroke, cornerOffset)
-                arcTo(
-                    rect = Rect(halfStroke, halfStroke, halfStroke + arcDiameter, halfStroke + arcDiameter),
-                    startAngleDegrees = 180f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(w - cornerOffset, halfStroke)
-                arcTo(
-                    rect = Rect(w - halfStroke - arcDiameter, halfStroke, w - halfStroke, halfStroke + arcDiameter),
-                    startAngleDegrees = 270f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(w - halfStroke, h)
-            }
+            path.rewind()
+            path.moveTo(halfStroke, h)
+            path.lineTo(halfStroke, cornerOffset)
+            path.arcTo(
+                rect = Rect(halfStroke, halfStroke, halfStroke + arcDiameter, halfStroke + arcDiameter),
+                startAngleDegrees = 180f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false,
+            )
+            path.lineTo(w - cornerOffset, halfStroke)
+            path.arcTo(
+                rect = Rect(w - halfStroke - arcDiameter, halfStroke, w - halfStroke, halfStroke + arcDiameter),
+                startAngleDegrees = 270f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false,
+            )
+            path.lineTo(w - halfStroke, h)
             drawPath(
                 path = path,
                 color = color,
@@ -156,25 +204,28 @@ fun Modifier.drawCatalogRowBorder(
             )
         }
         CatalogRowPosition.Last -> {
-            val path = reusableBorderPath.get().apply {
-                rewind()
-                moveTo(w - halfStroke, 0f)
-                lineTo(w - halfStroke, h - cornerOffset)
-                arcTo(
-                    rect = Rect(w - halfStroke - arcDiameter, h - halfStroke - arcDiameter, w - halfStroke, h - halfStroke),
-                    startAngleDegrees = 0f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(cornerOffset, h - halfStroke)
-                arcTo(
-                    rect = Rect(halfStroke, h - halfStroke - arcDiameter, halfStroke + arcDiameter, h - halfStroke),
-                    startAngleDegrees = 90f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(halfStroke, 0f)
-            }
+            path.rewind()
+            path.moveTo(w - halfStroke, 0f)
+            path.lineTo(w - halfStroke, h - cornerOffset)
+            path.arcTo(
+                rect = Rect(
+                    w - halfStroke - arcDiameter,
+                    h - halfStroke - arcDiameter,
+                    w - halfStroke,
+                    h - halfStroke,
+                ),
+                startAngleDegrees = 0f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false,
+            )
+            path.lineTo(cornerOffset, h - halfStroke)
+            path.arcTo(
+                rect = Rect(halfStroke, h - halfStroke - arcDiameter, halfStroke + arcDiameter, h - halfStroke),
+                startAngleDegrees = 90f,
+                sweepAngleDegrees = 90f,
+                forceMoveTo = false,
+            )
+            path.lineTo(halfStroke, 0f)
             drawPath(
                 path = path,
                 color = color,
@@ -218,33 +269,25 @@ fun CatalogRowContainer(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val shape = position.toShape()
-    Surface(
+    val clickableModifier = if (onClick != null || onLongClick != null) {
+        Modifier
+            .clip(shape)
+            .combinedClickable(
+                onClick = { onClick?.invoke() },
+                onLongClick = onLongClick,
+            )
+    } else {
+        Modifier
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .drawCatalogRowBorder(position),
-        shape = shape,
-        color = CatalogContainerDefaults.SurfaceColor,
-        border = null,
-    ) {
-        val clickableModifier = if (onClick != null || onLongClick != null) {
-            Modifier
-                .clip(shape)
-                .combinedClickable(
-                    onClick = { onClick?.invoke() },
-                    onLongClick = onLongClick,
-                )
-        } else {
-            Modifier
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(clickableModifier),
-            content = content,
-        )
-    }
+            .drawCatalogRowBorder(position)
+            .then(clickableModifier),
+        content = content,
+    )
 }
 
 @Composable

@@ -32,6 +32,8 @@ class ExtensionIconFetcher(
     private val context: Context,
     private val getPkgName: suspend () -> String?,
     private val density: Int?,
+    private val width: Int,
+    private val height: Int,
 ) : Fetcher {
 
     override suspend fun fetch(): FetchResult {
@@ -46,16 +48,27 @@ class ExtensionIconFetcher(
                 ?: error("Extension $pkgName has no icon")
         }
         // Adaptive icons aren't bitmaps, and only bitmaps are kept in the memory cache
+        val sampled = width > 0 && height > 0
         return ImageFetchResult(
-            image = drawable.toBitmap().asImage(),
-            isSampled = false,
+            image = if (sampled) {
+                drawable.toBitmap(width, height).asImage()
+            } else {
+                drawable.toBitmap().asImage()
+            },
+            isSampled = sampled,
             dataSource = DataSource.DISK,
         )
     }
 
     class ExtensionFactory(private val context: Context) : Fetcher.Factory<InstalledExtensionIcon> {
         override fun create(data: InstalledExtensionIcon, options: Options, imageLoader: ImageLoader): Fetcher {
-            return ExtensionIconFetcher(context, { data.pkgName }, data.density)
+            return ExtensionIconFetcher(
+                context = context,
+                getPkgName = { data.pkgName },
+                density = data.density,
+                width = options.size.widthPx(options.scale) { 0 },
+                height = options.size.heightPx(options.scale) { 0 },
+            )
         }
     }
 
@@ -68,6 +81,8 @@ class ExtensionIconFetcher(
                 context = context,
                 getPkgName = { extensionManager.value.getExtensionPackage(data.sourceId) },
                 density = null,
+                width = options.size.widthPx(options.scale) { 0 },
+                height = options.size.heightPx(options.scale) { 0 },
             )
         }
     }
@@ -75,7 +90,9 @@ class ExtensionIconFetcher(
 
 class InstalledExtensionIconKeyer : Keyer<InstalledExtensionIcon> {
     override fun key(data: InstalledExtensionIcon, options: Options): String {
-        return "extension;${data.pkgName};${data.versionCode};${data.density}"
+        val width = options.size.widthPx(options.scale) { 0 }
+        val height = options.size.heightPx(options.scale) { 0 }
+        return "extension;${data.pkgName};${data.versionCode};${data.density};${width}x$height"
     }
 }
 
