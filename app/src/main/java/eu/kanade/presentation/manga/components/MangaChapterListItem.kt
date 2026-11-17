@@ -93,11 +93,22 @@ fun MangaChapterListItem(
     onVersionDownloadClick: ((ChapterList.Item, ChapterDownloadAction) -> Unit)? = null,
     versionDownloadProgressProvider: ((Long) -> Int)? = null,
     isSubChapter: Boolean = false,
-    isFirstSubChapter: Boolean = false,
-    isLastSubChapter: Boolean = true,
-    hasParentAbove: Boolean = false,
-    hasSubChaptersBelow: Boolean = false,
 ) {
+    val bodyMedium = MaterialTheme.typography.bodyMedium
+    val titleStyle = remember(bodyMedium) {
+        bodyMedium.copy(fontFeatureSettings = "tnum")
+    }
+    val bodySmall = MaterialTheme.typography.bodySmall
+    val contentColor = LocalContentColor.current
+    val subtitleStyle = remember(bodySmall, contentColor, read) {
+        bodySmall
+            .merge(
+                color = contentColor
+                    .copy(alpha = if (read) DISABLED_ALPHA else SECONDARY_ALPHA),
+            )
+            .copy(fontFeatureSettings = "tnum")
+    }
+
     val start = getSwipeAction(
         action = chapterSwipeStartAction,
         read = read,
@@ -196,7 +207,7 @@ fun MangaChapterListItem(
                         }
                         Text(
                             text = title,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+                            style = titleStyle,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = LocalContentColor.current.copy(
@@ -214,12 +225,6 @@ fun MangaChapterListItem(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val subtitleStyle = MaterialTheme.typography.bodySmall
-                            .merge(
-                                color = LocalContentColor.current
-                                    .copy(alpha = if (read) DISABLED_ALPHA else SECONDARY_ALPHA),
-                            )
-                            .copy(fontFeatureSettings = "tnum")
                         ProvideTextStyle(value = subtitleStyle) {
                             if (date != null) {
                                 Text(

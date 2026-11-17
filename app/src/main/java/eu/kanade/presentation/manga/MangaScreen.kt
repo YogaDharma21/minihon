@@ -687,7 +687,7 @@ fun MangaScreenLargeImpl(
                             sharedChapterItems(
                                 manga = state.manga,
                                 chapters = listItem,
-                                isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
+                                isAnyChapterSelected = state.isAnySelected,
                                 chapterSwipeStartAction = chapterSwipeStartAction,
                                 chapterSwipeEndAction = chapterSwipeEndAction,
                                 expandedDuplicateChapterIds = state.expandedDuplicateChapterIds,
@@ -763,22 +763,22 @@ private fun LazyListScope.sharedChapterItems(
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
     itemModifier: Modifier = Modifier,
 ) {
-    itemsIndexed(
+    items(
         items = chapters,
-        key = { _, item ->
+        key = { item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
                 is ChapterList.GroupHeader -> item.id
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
-        contentType = { _, item ->
+        contentType = { item ->
             when (item) {
                 is ChapterList.GroupHeader -> MangaScreenItem.CHAPTER_GROUP_HEADER
                 else -> MangaScreenItem.CHAPTER
             }
         },
-    ) { index, item ->
+    ) { item ->
         val haptic = LocalHapticFeedback.current
 
         when (item) {
@@ -864,57 +864,7 @@ private fun LazyListScope.sharedChapterItems(
                         null
                     },
                     versionDownloadProgressProvider = downloadProgressProvider,
-                    isSubChapter = run {
-                        val currNum = item.chapter.chapterNumber
-                        currNum > 0.0 && (currNum % 1.0 != 0.0)
-                    },
-                    isFirstSubChapter = run {
-                        val currNum = item.chapter.chapterNumber
-                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
-                        if (!isSub) {
-                            false
-                        } else {
-                            val prevItem = chapters.getOrNull(index - 1) as? ChapterList.Item
-                            val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
-                            prevItem == null || prevNum <= 0.0 ||
-                                kotlin.math.floor(prevNum) != kotlin.math.floor(currNum)
-                        }
-                    },
-                    isLastSubChapter = run {
-                        val currNum = item.chapter.chapterNumber
-                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
-                        if (!isSub) {
-                            true
-                        } else {
-                            val nextItem = chapters.getOrNull(index + 1) as? ChapterList.Item
-                            val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
-                            nextItem == null || nextNum <= 0.0 || (nextNum % 1.0 == 0.0) ||
-                                kotlin.math.floor(nextNum) != kotlin.math.floor(currNum)
-                        }
-                    },
-                    hasParentAbove = run {
-                        val currNum = item.chapter.chapterNumber
-                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
-                        if (!isSub) {
-                            false
-                        } else {
-                            val prevItem = chapters.getOrNull(index - 1) as? ChapterList.Item
-                            val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
-                            prevItem != null && prevNum == kotlin.math.floor(currNum)
-                        }
-                    },
-                    hasSubChaptersBelow = run {
-                        val currNum = item.chapter.chapterNumber
-                        val isSub = currNum > 0.0 && (currNum % 1.0 != 0.0)
-                        if (isSub) {
-                            false
-                        } else {
-                            val nextItem = chapters.getOrNull(index + 1) as? ChapterList.Item
-                            val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
-                            nextItem != null && nextNum > 0.0 && (nextNum % 1.0 != 0.0) &&
-                                kotlin.math.floor(nextNum) == currNum
-                        }
-                    },
+                    isSubChapter = item.isSubChapter,
                     modifier = itemModifier,
                 )
             }

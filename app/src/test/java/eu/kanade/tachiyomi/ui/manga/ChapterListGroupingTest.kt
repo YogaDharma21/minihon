@@ -206,6 +206,37 @@ class ChapterListGroupingTest {
     }
 
     @Test
+    fun `groupSubChaptersWithParent marks sub-chapters but not parents`() {
+        val ch12 = createItem(createChapter(id = 1L, chapterNumber = 12.0))
+        val ch12Part5 = createItem(createChapter(id = 2L, chapterNumber = 12.5))
+        val ch13 = createItem(createChapter(id = 3L, chapterNumber = 13.0))
+
+        val result = listOf(ch12, ch12Part5, ch13).groupSubChaptersWithParent(sortDescending = false)
+
+        result.map { it.chapter.chapterNumber } shouldBe listOf(12.0, 12.5, 13.0)
+        result.map { it.isSubChapter } shouldBe listOf(false, true, false)
+    }
+
+    @Test
+    fun `isSubChapter survives duplicate version grouping`() {
+        val ch12 = createItem(createChapter(id = 1L, chapterNumber = 12.0))
+        val ch12Part5a = createItem(createChapter(id = 2L, chapterNumber = 12.5, scanlator = "Official"))
+        val ch12Part5b = createItem(createChapter(id = 3L, chapterNumber = 12.5, scanlator = "Unofficial"))
+
+        val result = listOf(ch12, ch12Part5a, ch12Part5b)
+            .groupByDuplicateChapterNumber()
+            .groupSubChaptersWithParent(sortDescending = true)
+
+        result.size shouldBe 2
+        result[0].chapter.chapterNumber shouldBe 12.0
+        result[0].isSubChapter shouldBe false
+        result[1].chapter.chapterNumber shouldBe 12.5
+        result[1].isSubChapter shouldBe true
+        result[1].versions.size shouldBe 2
+        result[1].versions.all { it.isSubChapter } shouldBe false
+    }
+
+    @Test
     fun `insertEncapsulatedGroupHeaders injects GroupHeader with accurate flags and counts`() {
         val ch20 = createItem(createChapter(id = 1L, chapterNumber = 20.0))
         val ch20Part1 = createItem(createChapter(id = 2L, chapterNumber = 20.1))

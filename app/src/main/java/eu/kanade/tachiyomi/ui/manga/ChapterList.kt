@@ -27,6 +27,7 @@ sealed class ChapterList {
         val downloadState: Download.State,
         val selected: Boolean = false,
         val versions: List<ChapterList.Item> = emptyList(),
+        val isSubChapter: Boolean = false,
     ) : ChapterList() {
         val id = chapter.id
         val isDownloaded = downloadState == Download.State.DOWNLOADED
@@ -97,13 +98,15 @@ fun List<ChapterList.Item>.groupSubChaptersWithParent(sortDescending: Boolean): 
                 }
             }
             val parentItems = group.filter { it.chapter.chapterNumber == baseNum }
-            val subChapters = group.filter { it.chapter.chapterNumber != baseNum }.let { subs ->
-                if (sortDescending) {
-                    subs.sortedByDescending { it.chapter.chapterNumber }
-                } else {
-                    subs.sortedBy { it.chapter.chapterNumber }
+            val subChapters = group.filter { it.chapter.chapterNumber != baseNum }
+                .map { it.copy(isSubChapter = true) }
+                .let { subs ->
+                    if (sortDescending) {
+                        subs.sortedByDescending { it.chapter.chapterNumber }
+                    } else {
+                        subs.sortedBy { it.chapter.chapterNumber }
+                    }
                 }
-            }
 
             result.addAll(parentItems)
             result.addAll(subChapters)
