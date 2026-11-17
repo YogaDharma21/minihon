@@ -250,29 +250,6 @@ private fun HistoryShowcaseCover(
             contentScale = ContentScale.Crop,
         )
 
-        // Book crease along spine
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(6.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0x40000000),
-                            Color(0x14000000),
-                            Color.Transparent,
-                        ),
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(start = 5.dp)
-                .width(1.dp)
-                .background(Color(0x1FFFFFFF)),
-        )
-
         // Progress bar overlay
         if (progress != null && progress > 0f) {
             val clampedProgress = progress.coerceIn(0f, 1f)
