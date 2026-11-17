@@ -215,6 +215,9 @@ fun MangaScreen(
     }
 }
 
+internal fun toolbarTitleAlpha(firstVisibleItemIndex: Int): Float =
+    if (firstVisibleItemIndex == 0) 0f else 1f
+
 @Composable
 private fun MangaScreenSmallImpl(
     state: MangaViewModel.State.Success,
@@ -284,14 +287,9 @@ private fun MangaScreenSmallImpl(
 
     Scaffold(
         topBar = {
-            val isFirstItemVisible by remember {
-                derivedStateOf { chapterListState.firstVisibleItemIndex == 0 }
+            val titleAlpha by remember {
+                derivedStateOf { toolbarTitleAlpha(chapterListState.firstVisibleItemIndex) }
             }
-            val isFirstItemScrolled by remember {
-                derivedStateOf { chapterListState.firstVisibleItemScrollOffset > 0 }
-            }
-            val titleAlpha = if (!isFirstItemVisible) 1f else 0f
-            val backgroundAlpha = if (!isFirstItemVisible || isFirstItemScrolled) 1f else 0f
             MangaToolbar(
                 modifier = assemblyState.topBarModifier,
                 title = state.manga.title,
@@ -309,7 +307,6 @@ private fun MangaScreenSmallImpl(
                 onSelectAll = { onAllChapterSelected(true) },
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { titleAlpha },
-                backgroundAlphaProvider = { backgroundAlpha },
                 searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
                 onSearchQueryChange = { query ->
                     if (query == null) {
@@ -556,7 +553,6 @@ fun MangaScreenLargeImpl(
                 onSelectAll = { onAllChapterSelected(true) },
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { 1f },
-                backgroundAlphaProvider = { 1f },
                 searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
                 onSearchQueryChange = { query ->
                     if (query == null) {

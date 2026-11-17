@@ -66,7 +66,6 @@ fun MangaToolbar(
     onInvertSelection: () -> Unit,
 
     titleAlphaProvider: () -> Float,
-    backgroundAlphaProvider: () -> Float,
     modifier: Modifier = Modifier,
     searchQuery: String? = null,
     onSearchQueryChange: ((String?) -> Unit)? = null,
