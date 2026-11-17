@@ -3,11 +3,11 @@ package eu.kanade.tachiyomi.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -140,7 +140,14 @@ object HomeScreen : Screen() {
             LaunchedEffect(Unit) {
                 showBottomNavEvent.receiveAsFlow().collectLatest { show ->
                     showBottomNav = show
+                    if (show) {
+                        scrollChromeConnection.reset()
+                    }
                 }
+            }
+            LaunchedEffect(tabNavigator.current) {
+                showBottomNav = true
+                scrollChromeConnection.reset()
             }
 
             val context = LocalContext.current

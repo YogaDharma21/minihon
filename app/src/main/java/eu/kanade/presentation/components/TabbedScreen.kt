@@ -121,6 +121,12 @@ fun TabbedScreen(
             )
         }
 
+        // Keyed on page only so fling start/stop doesn't re-show the header mid scroll.
+        LaunchedEffect(state.currentPage) {
+            showTopBar = true
+            topBarScrollConnection.reset()
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
