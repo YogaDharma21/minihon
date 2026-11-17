@@ -271,7 +271,6 @@ fun CatalogRowContainer(
     val shape = position.toShape()
     val clickableModifier = if (onClick != null || onLongClick != null) {
         Modifier
-            .clip(shape)
             .combinedClickable(
                 onClick = { onClick?.invoke() },
                 onLongClick = onLongClick,
@@ -285,6 +284,7 @@ fun CatalogRowContainer(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .drawCatalogRowBorder(position)
+            .clip(shape)
             .then(clickableModifier),
         content = content,
     )

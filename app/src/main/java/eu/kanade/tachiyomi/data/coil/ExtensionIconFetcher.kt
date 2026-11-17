@@ -98,6 +98,8 @@ class InstalledExtensionIconKeyer : Keyer<InstalledExtensionIcon> {
 
 class InstalledSourceIconKeyer : Keyer<InstalledSourceIcon> {
     override fun key(data: InstalledSourceIcon, options: Options): String {
-        return "source;${data.sourceId}"
+        val width = options.size.widthPx(options.scale) { 0 }
+        val height = options.size.heightPx(options.scale) { 0 }
+        return "source;${data.sourceId};${width}x$height"
     }
 }

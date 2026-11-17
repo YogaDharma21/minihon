@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,12 +29,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -218,6 +219,10 @@ fun MangaScreen(
 internal fun toolbarTitleAlpha(firstVisibleItemIndex: Int): Float =
     if (firstVisibleItemIndex == 0) 0f else 1f
 
+private const val CHAPTER_STREAM_INITIAL_BATCH = 35
+private const val CHAPTER_STREAM_BATCH_SIZE = 25
+private const val CHAPTER_STREAM_PREFETCH_DISTANCE = 10
+
 @Composable
 private fun MangaScreenSmallImpl(
     state: MangaViewModel.State.Success,
@@ -277,6 +282,29 @@ private fun MangaScreenSmallImpl(
             second = state.chapterListItems,
             third = state.isAnySelected,
         )
+    }
+
+    var streamingVisibleCount by remember(state.manga.id, state.searchQuery, state.filterActive) {
+        mutableIntStateOf(CHAPTER_STREAM_INITIAL_BATCH)
+    }
+    LaunchedEffect(chapterListState, listItem.size) {
+        snapshotFlow {
+            val layoutInfo = chapterListState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total to lastVisible
+        }.collect { (total, lastVisible) ->
+            if (streamingVisibleCount < listItem.size && lastVisible >= total - CHAPTER_STREAM_PREFETCH_DISTANCE) {
+                streamingVisibleCount = (streamingVisibleCount + CHAPTER_STREAM_BATCH_SIZE).coerceAtMost(listItem.size)
+            }
+        }
+    }
+    val streamedChapterListItems = remember(listItem, streamingVisibleCount) {
+        if (listItem.size <= CHAPTER_STREAM_INITIAL_BATCH) {
+            listItem
+        } else {
+            listItem.take(streamingVisibleCount)
+        }
     }
 
     BackHandler(enabled = isAnySelected) {
@@ -440,7 +468,7 @@ private fun MangaScreenSmallImpl(
 
                     sharedChapterItems(
                         manga = state.manga,
-                        chapters = listItem,
+                        chapters = streamedChapterListItems,
                         isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
                         chapterSwipeStartAction = chapterSwipeStartAction,
                         chapterSwipeEndAction = chapterSwipeEndAction,
@@ -520,10 +548,34 @@ fun MangaScreenLargeImpl(
         )
     }
 
+    val chapterListState = rememberLazyListState()
+
+    var streamingVisibleCount by remember(state.manga.id, state.searchQuery, state.filterActive) {
+        mutableIntStateOf(CHAPTER_STREAM_INITIAL_BATCH)
+    }
+    LaunchedEffect(chapterListState, listItem.size) {
+        snapshotFlow {
+            val layoutInfo = chapterListState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total to lastVisible
+        }.collect { (total, lastVisible) ->
+            if (streamingVisibleCount < listItem.size && lastVisible >= total - CHAPTER_STREAM_PREFETCH_DISTANCE) {
+                streamingVisibleCount = (streamingVisibleCount + CHAPTER_STREAM_BATCH_SIZE).coerceAtMost(listItem.size)
+            }
+        }
+    }
+    val streamedChapterListItems = remember(listItem, streamingVisibleCount) {
+        if (listItem.size <= CHAPTER_STREAM_INITIAL_BATCH) {
+            listItem
+        } else {
+            listItem.take(streamingVisibleCount)
+        }
+    }
+
     val insetPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues()
     var topBarHeight by remember { mutableIntStateOf(0) }
 
-    val chapterListState = rememberLazyListState()
     val assemblyState = rememberMangaDetailAssemblyState(key = state.manga.id)
 
     BackHandler(enabled = isAnySelected) {
@@ -686,7 +738,7 @@ fun MangaScreenLargeImpl(
 
                             sharedChapterItems(
                                 manga = state.manga,
-                                chapters = listItem,
+                                chapters = streamedChapterListItems,
                                 isAnyChapterSelected = state.isAnySelected,
                                 chapterSwipeStartAction = chapterSwipeStartAction,
                                 chapterSwipeEndAction = chapterSwipeEndAction,

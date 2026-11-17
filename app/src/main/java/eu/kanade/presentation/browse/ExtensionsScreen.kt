@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -29,16 +30,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -233,7 +238,49 @@ private fun ExtensionContent(
         )
     }
 
+    val totalCatalogItemsCount = remember(displayedCatalogEntries) {
+        displayedCatalogEntries.values.sumOf { it.size }
+    }
+
+    val extensionListState = rememberLazyListState()
+    var streamingVisibleCount by remember(effectiveFilterId, totalCatalogItemsCount) {
+        mutableIntStateOf(EXTENSION_STREAM_INITIAL_BATCH)
+    }
+
+    LaunchedEffect(extensionListState, totalCatalogItemsCount) {
+        snapshotFlow {
+            val layoutInfo = extensionListState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total to lastVisible
+        }.collect { (total, lastVisible) ->
+            if (streamingVisibleCount < totalCatalogItemsCount &&
+                lastVisible >= total - EXTENSION_STREAM_PREFETCH_DISTANCE
+            ) {
+                streamingVisibleCount =
+                    (streamingVisibleCount + EXTENSION_STREAM_BATCH_SIZE).coerceAtMost(totalCatalogItemsCount)
+            }
+        }
+    }
+
+    val streamedCatalogEntries = remember(displayedCatalogEntries, streamingVisibleCount, totalCatalogItemsCount) {
+        if (totalCatalogItemsCount <= EXTENSION_STREAM_INITIAL_BATCH) {
+            displayedCatalogEntries
+        } else {
+            var remaining = streamingVisibleCount
+            buildMap {
+                for ((header, items) in displayedCatalogEntries) {
+                    if (remaining <= 0) break
+                    val takeCount = items.size.coerceAtMost(remaining)
+                    put(header, items.take(takeCount))
+                    remaining -= takeCount
+                }
+            }
+        }
+    }
+
     FastScrollLazyColumn(
+        state = extensionListState,
         contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
     ) {
         if (!installGranted && state.installer?.requiresSystemPermission == true) {
@@ -333,7 +380,7 @@ private fun ExtensionContent(
             }
         }
 
-        displayedCatalogEntries.forEach { (header, items) ->
+        streamedCatalogEntries.forEach { (header, items) ->
             item(
                 contentType = "header",
                 key = "catalogHeader-${header.hashCode()}",
@@ -553,12 +600,22 @@ private fun BentoExtensionCard(
         },
         action = {
             if (!installStep.isCompleted()) {
-                ExtensionIconButton(
-                    icon = MaterialSymbols.Rounded.Close,
-                    contentDescription = stringResource(MR.strings.action_cancel),
-                    onClick = { onClickItemCancel(extension) },
-                    tint = Color(0xFFC99A90),
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color(0xFFF2F1EC),
+                    )
+                    ExtensionIconButton(
+                        icon = MaterialSymbols.Rounded.Close,
+                        contentDescription = stringResource(MR.strings.action_cancel),
+                        onClick = { onClickItemCancel(extension) },
+                        tint = Color(0xFFC99A90),
+                    )
+                }
             } else if (hasUpdate) {
                 Surface(
                     onClick = {
@@ -648,6 +705,10 @@ data class ExtensionFilterChip(
 internal const val FILTER_ALL = "all"
 internal const val FILTER_UPDATES = "updates"
 internal const val FILTER_NSFW = "18+"
+
+private const val EXTENSION_STREAM_INITIAL_BATCH = 25
+private const val EXTENSION_STREAM_BATCH_SIZE = 20
+private const val EXTENSION_STREAM_PREFETCH_DISTANCE = 8
 
 internal fun buildExtensionFilterChips(
     catalogEntries: Map<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>,
@@ -937,30 +998,32 @@ private fun CatalogExtensionActions(
         }
 
         if (installStep == InstallStep.Error) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9999.dp))
-                    .background(Color(0x1FC99A90))
-                    .border(BorderStroke(1.dp, Color(0x40C99A90)), RoundedCornerShape(9999.dp))
-                    .clickable { onClickItemAction(extension) }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            Surface(
+                onClick = { onClickItemAction(extension) },
+                shape = RoundedCornerShape(9999.dp),
+                color = Color(0x1FC99A90),
+                border = BorderStroke(1.dp, Color(0x40C99A90)),
             ) {
-                Icon(
-                    imageVector = MaterialSymbols.Rounded.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = Color(0xFFC99A90),
-                )
-                Text(
-                    text = stringResource(MR.strings.action_retry),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color(0xFFC99A90),
-                        fontWeight = FontWeight.Bold,
-                        fontFeatureSettings = "tnum",
-                    ),
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        imageVector = MaterialSymbols.Rounded.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFFC99A90),
+                    )
+                    Text(
+                        text = stringResource(MR.strings.action_retry),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFFC99A90),
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum",
+                        ),
+                    )
+                }
             }
             return@Row
         }
@@ -975,44 +1038,44 @@ private fun CatalogExtensionActions(
                         tint = Color(0xFF8A8C92),
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(9999.dp))
-                        .background(Color(0xFFF2F1EC))
-                        .clickable { onClickItemAction(extension) }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                Surface(
+                    onClick = { onClickItemAction(extension) },
+                    shape = RoundedCornerShape(9999.dp),
+                    color = Color(0xFFF2F1EC),
                 ) {
-                    Icon(
-                        imageVector = MaterialSymbols.Rounded.Download,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF0A0A0B),
-                    )
-                    Text(
-                        text = stringResource(MR.strings.ext_install),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF0A0A0B),
-                            fontWeight = FontWeight.Bold,
-                            fontFeatureSettings = "tnum",
-                        ),
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color(0xFF0A0A0B),
+                        )
+                        Text(
+                            text = stringResource(MR.strings.ext_install),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF0A0A0B),
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = "tnum",
+                            ),
+                        )
+                    }
                 }
             }
             is Extension.Installed -> {
                 if (extension.hasUpdate) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(9999.dp))
-                            .background(Color(0x1FD2BD93))
-                            .border(BorderStroke(1.dp, Color(0x40D2BD93)), RoundedCornerShape(9999.dp))
-                            .clickable { onClickItemAction(extension) }
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        contentAlignment = Alignment.Center,
+                    Surface(
+                        onClick = { onClickItemAction(extension) },
+                        shape = RoundedCornerShape(9999.dp),
+                        color = Color(0x1FD2BD93),
+                        border = BorderStroke(1.dp, Color(0x40D2BD93)),
                     ) {
                         Text(
                             text = "UPDATE",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = Color(0xFFD2BD93),
                                 fontWeight = FontWeight.Bold,
@@ -1061,7 +1124,7 @@ private fun ExtensionIconButton(
         modifier = modifier
             .size(32.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
