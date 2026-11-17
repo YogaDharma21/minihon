@@ -3,7 +3,9 @@ package eu.kanade.tachiyomi.ui.manga
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -12,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import eu.kanade.presentation.components.AppBar
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -84,13 +87,15 @@ class MangaScreen(
         val state by viewModel.state.collectAsStateWithLifecycle()
 
         if (state is MangaViewModel.State.Loading) {
-            var showLoading by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(150L)
-                showLoading = true
-            }
-            if (showLoading) {
-                LoadingScreen()
+            Scaffold(
+                topBar = {
+                    AppBar(
+                        title = "",
+                        navigateUp = navigator::pop,
+                    )
+                },
+            ) { paddingValues ->
+                LoadingScreen(Modifier.padding(paddingValues))
             }
             return
         }

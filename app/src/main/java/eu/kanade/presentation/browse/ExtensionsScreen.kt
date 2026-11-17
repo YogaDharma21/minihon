@@ -203,6 +203,9 @@ private fun ExtensionContent(
     val installedItems = remember(consolidatedItems) {
         consolidatedItems[ExtensionUiModel.Header.Resource(MR.strings.ext_installed)].orEmpty()
     }
+    val installedRows = remember(installedItems) {
+        installedItems.chunked(2)
+    }
     val updateItems = remember(installedItems) {
         installedItems.filter { (it.extension as? Extension.Installed)?.hasUpdate == true }
     }
@@ -278,11 +281,10 @@ private fun ExtensionContent(
                 )
             }
 
-            val chunkedItems = installedItems.chunked(2)
             items(
-                items = chunkedItems,
+                items = installedRows,
                 contentType = { "bento-deck-row" },
-                key = { row -> "bento-row-" + row.joinToString("-") { it.extension.pkgName } },
+                key = { row -> "bento-row-" + row.first().extension.pkgName },
             ) { row ->
                 Row(
                     modifier = Modifier
@@ -431,6 +433,44 @@ internal fun formatExtensionLanguage(lang: String?, localizedFallback: String? =
     }
 }
 
+private val extensionMetadataCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+private val extensionLangLabelCache = java.util.concurrent.ConcurrentHashMap<String, String?>()
+
+internal fun getCachedCatalogMetadata(extension: Extension, context: android.content.Context): String {
+    return extensionMetadataCache.getOrPut(extension.key()) {
+        val store = when (extension) {
+            is Extension.Available -> extension.store
+            is Extension.Installed -> extension.store
+        }
+        val repoProvenance = formatRepoProvenance(store?.badgeLabel, store?.name)
+        val versionTag = formatExtensionVersion(extension.versionName)
+        val extLang = extension.lang
+        val langBadge = formatExtensionLanguage(
+            lang = extLang,
+            localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+                LocaleHelper.getSourceDisplayName(extLang, context)
+            } else {
+                null
+            },
+        )
+        formatCatalogMetadata(repoProvenance, langBadge, versionTag)
+    }
+}
+
+internal fun getCachedExtensionLangLabel(extension: Extension, context: android.content.Context): String? {
+    return extensionLangLabelCache.getOrPut(extension.key()) {
+        val extLang = extension.lang
+        formatExtensionLanguage(
+            lang = extLang,
+            localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+                LocaleHelper.getSourceDisplayName(extLang, context)
+            } else {
+                null
+            },
+        )
+    }
+}
+
 private val ExtensionCardIconShape = RoundedCornerShape(8.dp)
 private val ExtensionCardIconBorder = BorderStroke(1.dp, Color(0x12FFFFFF))
 private val ExtensionPillShape = RoundedCornerShape(9999.dp)
@@ -457,15 +497,7 @@ private fun BentoExtensionCard(
     val versionTag = formatExtensionVersion(extension.versionName)
 
     val context = LocalContext.current
-    val extLang = extension.lang
-    val langLabel = formatExtensionLanguage(
-        lang = extLang,
-        localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
-            LocaleHelper.getSourceDisplayName(extLang, context)
-        } else {
-            null
-        },
-    )
+    val langLabel = getCachedExtensionLangLabel(extension, context)
 
     BentoCard(
         modifier = modifier,
@@ -777,23 +809,8 @@ private fun CatalogExtensionRow(
     onClickItemAction: (Extension) -> Unit = onClickItem,
 ) {
     val (extension, installStep) = item
-    val store = when (extension) {
-        is Extension.Available -> extension.store
-        is Extension.Installed -> extension.store
-    }
-    val repoProvenance = formatRepoProvenance(store?.badgeLabel, store?.name)
-    val versionTag = formatExtensionVersion(extension.versionName)
     val context = LocalContext.current
-    val extLang = extension.lang
-    val langBadge = formatExtensionLanguage(
-        lang = extLang,
-        localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
-            LocaleHelper.getSourceDisplayName(extLang, context)
-        } else {
-            null
-        },
-    )
-    val metadataText = formatCatalogMetadata(repoProvenance, langBadge, versionTag)
+    val metadataText = getCachedCatalogMetadata(extension, context)
 
     Row(
         modifier = modifier

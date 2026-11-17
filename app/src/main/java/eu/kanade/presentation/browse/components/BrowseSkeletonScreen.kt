@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,20 +84,11 @@ fun BrowseSkeletonScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
-    val transition = rememberInfiniteTransition(label = "BrowseSkeletonPulse")
-    val pulseAlpha by transition.animateFloat(
-        initialValue = BrowseSkeletonDefaults.MinAlpha,
-        targetValue = BrowseSkeletonDefaults.MaxAlpha,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = BrowseSkeletonDefaults.PulseDurationMillis,
-                easing = BrowseSkeletonDefaults.PulseEasing,
-            ),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "BrowseSkeletonPulseAlpha",
-    )
-    val placeholderColor = BrowseSkeletonDefaults.placeholderColor(pulseAlpha)
+    val placeholderColor = remember {
+        BrowseSkeletonDefaults.placeholderColor(
+            (BrowseSkeletonDefaults.MinAlpha + BrowseSkeletonDefaults.MaxAlpha) / 2f,
+        )
+    }
 
     Column(
         modifier = modifier

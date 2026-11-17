@@ -19,6 +19,9 @@ import tachiyomi.domain.manga.model.MangaCover
 import tachiyomi.presentation.core.components.FastScrollLazyColumn
 import tachiyomi.presentation.core.util.plus
 
+private val ItemShape = RoundedCornerShape(16.dp)
+private val ItemBorder = BorderStroke(1.dp, Color(0x12FFFFFF))
+
 @Composable
 internal fun LibraryList(
     items: List<LibraryItem>,
@@ -55,9 +58,9 @@ internal fun LibraryList(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .cascadeItemMotion(index = index),
-                shape = RoundedCornerShape(16.dp),
+                shape = ItemShape,
                 color = Color(0xFF121316),
-                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                border = ItemBorder,
             ) {
                 MangaListItem(
                     isSelected = manga.id in selection,

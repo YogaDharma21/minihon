@@ -452,7 +452,6 @@ private fun UpdatesChapterUiItem(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            var textHeight by remember { mutableIntStateOf(0) }
             if (!update.read) {
                 Icon(
                     imageVector = MaterialSymbols.RoundedFilled.Circle,
@@ -467,12 +466,7 @@ private fun UpdatesChapterUiItem(
                 Icon(
                     imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                     contentDescription = stringResource(MR.strings.action_filter_bookmarked),
-                    modifier = Modifier
-                        .sizeIn(
-                            maxHeight = with(LocalDensity.current) {
-                                (textHeight.toDp() - 2.dp).coerceAtLeast(0.dp)
-                            },
-                        ),
+                    modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(2.dp))
@@ -483,7 +477,6 @@ private fun UpdatesChapterUiItem(
                 style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                 color = LocalContentColor.current.copy(alpha = textAlpha),
                 overflow = TextOverflow.Ellipsis,
-                onTextLayout = { textHeight = it.size.height },
                 modifier = Modifier
                     .weight(weight = 1f, fill = false),
             )

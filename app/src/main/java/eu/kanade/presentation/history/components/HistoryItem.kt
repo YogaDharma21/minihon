@@ -218,6 +218,8 @@ fun HistoryItem(
     }
 }
 
+private val HistoryCoverShape = RoundedCornerShape(10.dp)
+
 @Composable
 private fun HistoryShowcaseCover(
     coverData: tachiyomi.domain.manga.model.MangaCover,
@@ -229,11 +231,11 @@ private fun HistoryShowcaseCover(
         modifier = modifier
             .size(width = 84.dp, height = 116.dp)
             .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(10.dp),
+                elevation = 2.dp,
+                shape = HistoryCoverShape,
                 clip = false,
             )
-            .clip(RoundedCornerShape(10.dp))
+            .clip(HistoryCoverShape)
             .clickable(
                 role = Role.Button,
                 onClick = onClick,

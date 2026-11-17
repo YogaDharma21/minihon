@@ -1,6 +1,8 @@
 package eu.kanade.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -152,8 +154,8 @@ fun TabbedScreen(
             ) {
                 AnimatedVisibility(
                     visible = showTopBar || isSearching,
-                    enter = slideInVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) { -it } + fadeIn(animationSpec = tween(180)),
-                    exit = slideOutVertically(animationSpec = tween(140, easing = FastOutSlowInEasing)) { -it } + fadeOut(animationSpec = tween(140)),
+                    enter = EnterTransition.None,
+                    exit = ExitTransition.None,
                 ) {
                     Surface(
                         shape = RoundedCornerShape(24.dp),

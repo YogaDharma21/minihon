@@ -16,6 +16,9 @@ import eu.kanade.tachiyomi.ui.library.LibraryItem
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.MangaCover
 
+private val ItemShape = RoundedCornerShape(16.dp)
+private val NormalBorder = BorderStroke(1.dp, Color(0x12FFFFFF))
+
 @Composable
 internal fun LibraryComfortableGrid(
     items: List<LibraryItem>,
@@ -49,12 +52,13 @@ internal fun LibraryComfortableGrid(
             }
             Surface(
                 modifier = Modifier.cascadeItemMotion(index = index),
-                shape = RoundedCornerShape(16.dp),
+                shape = ItemShape,
                 color = Color(0xFF121316),
-                border = BorderStroke(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0x12FFFFFF),
-                ),
+                border = if (isSelected) {
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                } else {
+                    NormalBorder
+                },
             ) {
                 MangaComfortableGridItem(
                     isSelected = isSelected,

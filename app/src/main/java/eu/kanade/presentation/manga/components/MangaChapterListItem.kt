@@ -102,7 +102,7 @@ fun MangaChapterListItem(
         action = chapterSwipeStartAction,
         read = read,
         bookmark = bookmark,
-        downloadState = downloadStateProvider(),
+        downloadStateProvider = downloadStateProvider,
         background = MaterialTheme.colorScheme.primaryContainer,
         onSwipe = { onChapterSwipe(chapterSwipeStartAction) },
     )
@@ -110,7 +110,7 @@ fun MangaChapterListItem(
         action = chapterSwipeEndAction,
         read = read,
         bookmark = bookmark,
-        downloadState = downloadStateProvider(),
+        downloadStateProvider = downloadStateProvider,
         background = MaterialTheme.colorScheme.primaryContainer,
         onSwipe = { onChapterSwipe(chapterSwipeEndAction) },
     )
@@ -176,7 +176,6 @@ fun MangaChapterListItem(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        var textHeight by remember { mutableIntStateOf(0) }
                         if (shouldShowInnerUnreadDot(read = read, isSubChapter = isSubChapter)) {
                             Icon(
                                 imageVector = MaterialSymbols.RoundedFilled.Circle,
@@ -191,8 +190,7 @@ fun MangaChapterListItem(
                             Icon(
                                 imageVector = MaterialSymbols.RoundedFilled.Bookmark,
                                 contentDescription = stringResource(MR.strings.action_filter_bookmarked),
-                                modifier = Modifier
-                                    .sizeIn(maxHeight = with(LocalDensity.current) { textHeight.toDp() - 2.dp }),
+                                modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -201,7 +199,6 @@ fun MangaChapterListItem(
                             style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            onTextLayout = { textHeight = it.size.height },
                             color = LocalContentColor.current.copy(
                                 alpha = if (read) {
                                     DISABLED_ALPHA
@@ -309,10 +306,7 @@ private fun ChapterVersionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val rotation by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        label = "version_chip_rotation",
-    )
+    val rotation = if (isExpanded) 180f else 0f
     Surface(
         shape = RoundedCornerShape(9999.dp),
         color = MaterialTheme.colorScheme.surfaceInset,
@@ -463,7 +457,7 @@ private fun getSwipeAction(
     action: LibraryPreferences.ChapterSwipeAction,
     read: Boolean,
     bookmark: Boolean,
-    downloadState: Download.State,
+    downloadStateProvider: () -> Download.State,
     background: Color,
     onSwipe: () -> Unit,
 ): me.saket.swipe.SwipeAction? {
@@ -481,7 +475,7 @@ private fun getSwipeAction(
             onSwipe = onSwipe,
         )
         LibraryPreferences.ChapterSwipeAction.Download -> swipeAction(
-            icon = when (downloadState) {
+            icon = when (downloadStateProvider()) {
                 Download.State.NOT_DOWNLOADED, Download.State.ERROR -> MaterialSymbols.Rounded.Download
                 Download.State.QUEUE, Download.State.DOWNLOADING -> MaterialSymbols.Rounded.FileDownloadOff
                 Download.State.DOWNLOADED -> MaterialSymbols.Rounded.Delete

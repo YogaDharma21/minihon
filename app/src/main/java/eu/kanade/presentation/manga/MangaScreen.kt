@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -289,14 +290,8 @@ private fun MangaScreenSmallImpl(
             val isFirstItemScrolled by remember {
                 derivedStateOf { chapterListState.firstVisibleItemScrollOffset > 0 }
             }
-            val titleAlpha by animateFloatAsState(
-                if (!isFirstItemVisible) 1f else 0f,
-                label = "Top Bar Title",
-            )
-            val backgroundAlpha by animateFloatAsState(
-                if (!isFirstItemVisible || isFirstItemScrolled) 1f else 0f,
-                label = "Top Bar Background",
-            )
+            val titleAlpha = if (!isFirstItemVisible) 1f else 0f
+            val backgroundAlpha = if (!isFirstItemVisible || isFirstItemScrolled) 1f else 0f
             MangaToolbar(
                 modifier = assemblyState.topBarModifier,
                 title = state.manga.title,
@@ -772,22 +767,22 @@ private fun LazyListScope.sharedChapterItems(
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
     itemModifier: Modifier = Modifier,
 ) {
-    items(
+    itemsIndexed(
         items = chapters,
-        key = { item ->
+        key = { _, item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
                 is ChapterList.GroupHeader -> item.id
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
-        contentType = { item ->
+        contentType = { _, item ->
             when (item) {
                 is ChapterList.GroupHeader -> MangaScreenItem.CHAPTER_GROUP_HEADER
                 else -> MangaScreenItem.CHAPTER
             }
         },
-    ) { item ->
+    ) { index, item ->
         val haptic = LocalHapticFeedback.current
 
         when (item) {
@@ -883,8 +878,7 @@ private fun LazyListScope.sharedChapterItems(
                         if (!isSub) {
                             false
                         } else {
-                            val currIndex = chapters.indexOf(item)
-                            val prevItem = chapters.getOrNull(currIndex - 1) as? ChapterList.Item
+                            val prevItem = chapters.getOrNull(index - 1) as? ChapterList.Item
                             val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
                             prevItem == null || prevNum <= 0.0 ||
                                 kotlin.math.floor(prevNum) != kotlin.math.floor(currNum)
@@ -896,8 +890,7 @@ private fun LazyListScope.sharedChapterItems(
                         if (!isSub) {
                             true
                         } else {
-                            val currIndex = chapters.indexOf(item)
-                            val nextItem = chapters.getOrNull(currIndex + 1) as? ChapterList.Item
+                            val nextItem = chapters.getOrNull(index + 1) as? ChapterList.Item
                             val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
                             nextItem == null || nextNum <= 0.0 || (nextNum % 1.0 == 0.0) ||
                                 kotlin.math.floor(nextNum) != kotlin.math.floor(currNum)
@@ -909,8 +902,7 @@ private fun LazyListScope.sharedChapterItems(
                         if (!isSub) {
                             false
                         } else {
-                            val currIndex = chapters.indexOf(item)
-                            val prevItem = chapters.getOrNull(currIndex - 1) as? ChapterList.Item
+                            val prevItem = chapters.getOrNull(index - 1) as? ChapterList.Item
                             val prevNum = prevItem?.chapter?.chapterNumber ?: -1.0
                             prevItem != null && prevNum == kotlin.math.floor(currNum)
                         }
@@ -921,8 +913,7 @@ private fun LazyListScope.sharedChapterItems(
                         if (isSub) {
                             false
                         } else {
-                            val currIndex = chapters.indexOf(item)
-                            val nextItem = chapters.getOrNull(currIndex + 1) as? ChapterList.Item
+                            val nextItem = chapters.getOrNull(index + 1) as? ChapterList.Item
                             val nextNum = nextItem?.chapter?.chapterNumber ?: -1.0
                             nextItem != null && nextNum > 0.0 && (nextNum % 1.0 != 0.0) &&
                                 kotlin.math.floor(nextNum) == currNum

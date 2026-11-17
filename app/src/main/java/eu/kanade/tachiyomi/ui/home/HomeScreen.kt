@@ -6,6 +6,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -181,9 +183,7 @@ object HomeScreen : Screen() {
                     AnimatedContent(
                         targetState = tabNavigator.current,
                         transitionSpec = {
-                            fadeIn(
-                                animationSpec = tween(TabFadeDuration),
-                            ) togetherWith fadeOut(animationSpec = tween(TabFadeDuration))
+                            EnterTransition.None togetherWith ExitTransition.None
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
@@ -208,8 +208,8 @@ object HomeScreen : Screen() {
 
                     AnimatedVisibility(
                         visible = showBottomNav,
-                        enter = slideInVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) { it } + fadeIn(animationSpec = tween(180)),
-                        exit = slideOutVertically(animationSpec = tween(140, easing = FastOutSlowInEasing)) { it } + fadeOut(animationSpec = tween(140)),
+                        enter = EnterTransition.None,
+                        exit = ExitTransition.None,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()

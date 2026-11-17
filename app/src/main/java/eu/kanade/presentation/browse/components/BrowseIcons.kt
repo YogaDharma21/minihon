@@ -23,7 +23,10 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.Dangerous
 import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.domain.source.model.Source
+import tachiyomi.presentation.core.util.LocalIsFastScrolling
 import tachiyomi.source.local.isLocal
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 
 private val defaultModifier = Modifier
     .height(40.dp)
@@ -63,18 +66,29 @@ fun SourceIcon(
     }
 }
 
+private val ExtensionPlaceholderColor = Color(0x1F888888)
+
 @Composable
 fun ExtensionIcon(
     extension: Extension,
     modifier: Modifier = Modifier,
     density: Int = DisplayMetrics.DENSITY_DEFAULT,
 ) {
+    if (LocalIsFastScrolling.current) {
+        Box(
+            modifier = modifier
+                .clip(MaterialTheme.shapes.extraSmall)
+                .background(ExtensionPlaceholderColor),
+        )
+        return
+    }
+
     when (extension) {
         is Extension.Available -> {
             AsyncImage(
                 model = extension.iconUrl,
                 contentDescription = null,
-                placeholder = ColorPainter(Color(0x1F888888)),
+                placeholder = ColorPainter(ExtensionPlaceholderColor),
                 error = rememberResourceBitmapPainter(id = R.drawable.cover_error),
                 modifier = modifier
                     .clip(MaterialTheme.shapes.extraSmall),

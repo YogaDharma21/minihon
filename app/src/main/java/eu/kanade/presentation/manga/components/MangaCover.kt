@@ -15,6 +15,10 @@ import coil3.compose.AsyncImage
 import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import tachiyomi.presentation.core.util.LocalIsFastScrolling
+
 enum class MangaCover(val ratio: Float) {
     Square(1f / 1f),
     Book(2f / 3f),
@@ -28,6 +32,26 @@ enum class MangaCover(val ratio: Float) {
         shape: Shape = MaterialTheme.shapes.extraSmall,
         onClick: (() -> Unit)? = null,
     ) {
+        val clickModifier = if (onClick != null) {
+            Modifier.clickable(
+                role = Role.Button,
+                onClick = onClick,
+            )
+        } else {
+            Modifier
+        }
+
+        if (LocalIsFastScrolling.current) {
+            Box(
+                modifier = modifier
+                    .aspectRatio(ratio)
+                    .clip(shape)
+                    .background(CoverPlaceholderColor)
+                    .then(clickModifier),
+            )
+            return
+        }
+
         AsyncImage(
             model = data,
             placeholder = ColorPainter(CoverPlaceholderColor),
@@ -36,16 +60,7 @@ enum class MangaCover(val ratio: Float) {
             modifier = modifier
                 .aspectRatio(ratio)
                 .clip(shape)
-                .then(
-                    if (onClick != null) {
-                        Modifier.clickable(
-                            role = Role.Button,
-                            onClick = onClick,
-                        )
-                    } else {
-                        Modifier
-                    },
-                ),
+                .then(clickModifier),
             contentScale = ContentScale.Crop,
         )
     }

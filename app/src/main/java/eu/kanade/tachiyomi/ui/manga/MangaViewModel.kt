@@ -208,17 +208,12 @@ class MangaViewModel(
 
     private var hasPromptedToAddBefore = false
 
-    private val defaultChapterFlagsJob = viewModelScope.launch {
-        val manga = getMangaAndChapters.awaitManga(mangaId)
-        if (!manga.favorite) {
-            setMangaDefaultChapterFlags.await(manga)
-        }
-    }
-
     private val mangaAndChapters = combine(
         flow {
-            // So an entry outside the library isn't shown with its old chapter settings first
-            defaultChapterFlagsJob.join()
+            val manga = getMangaAndChapters.awaitManga(mangaId)
+            if (!manga.favorite) {
+                setMangaDefaultChapterFlags.await(manga)
+            }
             emitAll(getMangaAndChapters.subscribe(mangaId, applyScanlatorFilter = true))
         }
             .distinctUntilChanged(),
