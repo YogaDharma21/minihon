@@ -152,8 +152,8 @@ fun TabbedScreen(
             ) {
                 AnimatedVisibility(
                     visible = showTopBar || isSearching,
-                    enter = slideInVertically(animationSpec = springLowStiffness()) { -it } + fadeIn(animationSpec = springLowStiffness()),
-                    exit = slideOutVertically(animationSpec = springLowStiffness()) { -it } + fadeOut(animationSpec = springLowStiffness()),
+                    enter = slideInVertically(animationSpec = tween(180, easing = FastOutSlowInEasing)) { -it } + fadeIn(animationSpec = tween(180)),
+                    exit = slideOutVertically(animationSpec = tween(140, easing = FastOutSlowInEasing)) { -it } + fadeOut(animationSpec = tween(140)),
                 ) {
                     Surface(
                         shape = RoundedCornerShape(24.dp),

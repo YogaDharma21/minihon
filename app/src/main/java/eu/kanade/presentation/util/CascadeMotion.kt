@@ -8,7 +8,10 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -17,6 +20,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Collections
 
@@ -70,7 +74,7 @@ val LocalCascadeMotionTrigger = staticCompositionLocalOf { CascadeMotionTrigger(
 fun rememberCascadeMotionTrigger(surface: CascadeSurface): CascadeMotionTrigger {
     val context = LocalContext.current
     val isInspection = LocalInspectionMode.current
-    val isReducedMotion = remember(context, isInspection) {
+    val isReducedMotion = remember(isInspection) {
         if (isInspection) return@remember true
         try {
             Settings.Global.getFloat(
@@ -82,14 +86,23 @@ fun rememberCascadeMotionTrigger(surface: CascadeSurface): CascadeMotionTrigger 
             false
         }
     }
-    return remember(surface, isReducedMotion) {
-        if (isReducedMotion || CascadeMotionSession.hasPlayed(surface)) {
-            CascadeMotionTrigger.Disabled
-        } else {
-            CascadeMotionSession.markPlayed(surface)
-            CascadeMotionTrigger()
+    var trigger by remember(surface, isReducedMotion) {
+        mutableStateOf(
+            if (isReducedMotion || CascadeMotionSession.hasPlayed(surface)) {
+                CascadeMotionTrigger.Disabled
+            } else {
+                CascadeMotionSession.markPlayed(surface)
+                CascadeMotionTrigger()
+            },
+        )
+    }
+    LaunchedEffect(surface, isReducedMotion) {
+        if (!trigger.disabled) {
+            delay((CASCADE_DURATION_MILLIS + 12 * CASCADE_STAGGER_MILLIS).toLong())
+            trigger = CascadeMotionTrigger.Disabled
         }
     }
+    return trigger
 }
 
 data class CascadeTiming(
@@ -160,19 +173,13 @@ fun Modifier.cascadeItemMotion(
 
     val density = LocalDensity.current
     val risePx = with(density) { CASCADE_RISE_DP.toPx() }
-    val initialAlpha = if (timing.initialFraction > 0f) {
-        CASCADE_EASING.transform(timing.initialFraction)
+    val initialProgress = if (timing.initialFraction > 0f) {
+        timing.initialFraction
     } else {
         0f
     }
-    val initialTranslation = if (timing.initialFraction > 0f) {
-        (1f - CASCADE_EASING.transform(timing.initialFraction)) * risePx
-    } else {
-        risePx
-    }
 
-    val alphaAnimatable = remember(trigger.id, index) { Animatable(initialAlpha) }
-    val translationAnimatable = remember(trigger.id, index) { Animatable(initialTranslation) }
+    val progressAnimatable = remember(trigger.id, index) { Animatable(initialProgress) }
 
     LaunchedEffect(trigger.id, index) {
         val duration = timing.remainingDurationMillis.toInt()
@@ -182,22 +189,15 @@ fun Modifier.cascadeItemMotion(
             delayMillis = delay,
             easing = CASCADE_EASING,
         )
-        launch {
-            alphaAnimatable.animateTo(
-                targetValue = 1f,
-                animationSpec = spec,
-            )
-        }
-        launch {
-            translationAnimatable.animateTo(
-                targetValue = 0f,
-                animationSpec = spec,
-            )
-        }
+        progressAnimatable.animateTo(
+            targetValue = 1f,
+            animationSpec = spec,
+        )
     }
 
     return this.graphicsLayer {
-        this.alpha = alphaAnimatable.value
-        this.translationY = translationAnimatable.value
+        val p = progressAnimatable.value
+        this.alpha = p
+        this.translationY = (1f - p) * risePx
     }
 }

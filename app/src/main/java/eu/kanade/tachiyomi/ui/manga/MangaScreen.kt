@@ -84,7 +84,14 @@ class MangaScreen(
         val state by viewModel.state.collectAsStateWithLifecycle()
 
         if (state is MangaViewModel.State.Loading) {
-            LoadingScreen()
+            var showLoading by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(150L)
+                showLoading = true
+            }
+            if (showLoading) {
+                LoadingScreen()
+            }
             return
         }
 

@@ -56,7 +56,7 @@ fun Modifier.bouncyClickable(
 
 class ScrollChromeConnection(
     private val onVisibilityChanged: (Boolean) -> Unit,
-    private val thresholdPx: Float = 48f,
+    private val thresholdPx: Float = 96f,
 ) : NestedScrollConnection {
 
     private var accumulatedDelta = 0f

@@ -58,14 +58,30 @@ enum class CatalogRowPosition {
     }
 }
 
+private val SingleRowShape14 = RoundedCornerShape(14.dp)
+private val FirstRowShape14 = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
+private val MiddleRowShape14 = RectangleShape
+private val LastRowShape14 = RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp)
+
 fun CatalogRowPosition.toShape(cornerRadius: Dp = 14.dp): Shape {
-    return when (this) {
-        CatalogRowPosition.Single -> RoundedCornerShape(cornerRadius)
-        CatalogRowPosition.First -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
-        CatalogRowPosition.Middle -> RectangleShape
-        CatalogRowPosition.Last -> RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
+    return if (cornerRadius == 14.dp) {
+        when (this) {
+            CatalogRowPosition.Single -> SingleRowShape14
+            CatalogRowPosition.First -> FirstRowShape14
+            CatalogRowPosition.Middle -> MiddleRowShape14
+            CatalogRowPosition.Last -> LastRowShape14
+        }
+    } else {
+        when (this) {
+            CatalogRowPosition.Single -> RoundedCornerShape(cornerRadius)
+            CatalogRowPosition.First -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+            CatalogRowPosition.Middle -> RectangleShape
+            CatalogRowPosition.Last -> RoundedCornerShape(bottomStart = cornerRadius, bottomEnd = cornerRadius)
+        }
     }
 }
+
+private val reusableBorderPath = ThreadLocal.withInitial { Path() }
 
 fun Modifier.drawCatalogRowBorder(
     position: CatalogRowPosition,
@@ -98,7 +114,8 @@ fun Modifier.drawCatalogRowBorder(
             )
         }
         CatalogRowPosition.First -> {
-            val path = Path().apply {
+            val path = reusableBorderPath.get().apply {
+                rewind()
                 moveTo(halfStroke, h)
                 lineTo(halfStroke, cornerOffset)
                 arcTo(
@@ -139,7 +156,8 @@ fun Modifier.drawCatalogRowBorder(
             )
         }
         CatalogRowPosition.Last -> {
-            val path = Path().apply {
+            val path = reusableBorderPath.get().apply {
+                rewind()
                 moveTo(w - halfStroke, 0f)
                 lineTo(w - halfStroke, h - cornerOffset)
                 arcTo(

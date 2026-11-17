@@ -71,6 +71,11 @@ private val ContinueReadingButtonListSpacing = 8.dp
 
 private const val GRID_SELECTED_COVER_ALPHA = 0.76f
 
+private val GridCardCornerShape = RoundedCornerShape(16.dp)
+private val PedestalBottomCornerShape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+private val ComfortableTopCornerShape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)
+private val ListCoverShape = RoundedCornerShape(12.dp)
+
 private class NotchedRibbonShape(private val notchDepth: Dp = 4.dp) : Shape {
     override fun createOutline(
         size: Size,
@@ -189,7 +194,7 @@ fun MangaCompactGridItem(
                             progress = readProgress,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)),
+                                .clip(PedestalBottomCornerShape),
                         )
                     }
                     if (onClickContinueReading != null) {
@@ -221,7 +226,7 @@ private fun BoxScope.CompactPedestalShelf(
         modifier = Modifier
             .fillMaxWidth()
             .align(Alignment.BottomCenter)
-            .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+            .clip(PedestalBottomCornerShape)
             .background(Color(0xFF121316)),
     ) {
         ReadingProgressBar(progress = readProgress)
@@ -287,7 +292,7 @@ fun MangaComfortableGridItem(
                             .fillMaxWidth()
                             .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
                         data = coverData,
-                        shape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp),
+                        shape = ComfortableTopCornerShape,
                     )
                 },
                 unreadCount = unreadCount,
@@ -410,7 +415,7 @@ private fun GridItemSelectable(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(GridCardCornerShape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
@@ -467,7 +472,7 @@ fun MangaListItem(
                 .fillMaxHeight()
                 .alpha(coverAlpha),
             data = coverData,
-            shape = RoundedCornerShape(12.dp),
+            shape = ListCoverShape,
         )
         Text(
             text = title,

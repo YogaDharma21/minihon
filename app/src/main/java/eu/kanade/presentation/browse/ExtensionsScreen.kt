@@ -431,6 +431,12 @@ internal fun formatExtensionLanguage(lang: String?, localizedFallback: String? =
     }
 }
 
+private val ExtensionCardIconShape = RoundedCornerShape(8.dp)
+private val ExtensionCardIconBorder = BorderStroke(1.dp, Color(0x12FFFFFF))
+private val ExtensionPillShape = RoundedCornerShape(9999.dp)
+private val ExtensionUpdateBorder = BorderStroke(1.dp, Color(0x40D2BD93))
+private val ExtensionNsfwBorder = BorderStroke(1.dp, Color(0x40C99A90))
+
 @Composable
 private fun BentoExtensionCard(
     item: ExtensionUiModel.Item,
@@ -454,7 +460,11 @@ private fun BentoExtensionCard(
     val extLang = extension.lang
     val langLabel = formatExtensionLanguage(
         lang = extLang,
-        localizedFallback = extLang?.let { LocaleHelper.getSourceDisplayName(it, context) },
+        localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+            LocaleHelper.getSourceDisplayName(extLang, context)
+        } else {
+            null
+        },
     )
 
     BentoCard(
@@ -465,9 +475,9 @@ private fun BentoExtensionCard(
         icon = {
             Surface(
                 modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(8.dp),
+                shape = ExtensionCardIconShape,
                 color = Color(0xFF17181C),
-                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                border = ExtensionCardIconBorder,
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -482,16 +492,13 @@ private fun BentoExtensionCard(
                         )
                     }
 
-                    val padding by animateDpAsState(
-                        targetValue = if (idle) 0.dp else 2.dp,
-                        label = "iconPadding",
-                    )
+                    val padding = if (idle) 0.dp else 2.dp
                     ExtensionIcon(
                         extension = extension,
                         modifier = Modifier
                             .padding(padding)
                             .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(ExtensionCardIconShape),
                     )
                 }
             }
@@ -511,9 +518,9 @@ private fun BentoExtensionCard(
                             onUpdateExtension(extension)
                         }
                     },
-                    shape = RoundedCornerShape(9999.dp),
+                    shape = ExtensionPillShape,
                     color = Color(0x1FD2BD93),
-                    border = BorderStroke(1.dp, Color(0x40D2BD93)),
+                    border = ExtensionUpdateBorder,
                 ) {
                     Text(
                         text = "UPDATE",
@@ -780,7 +787,11 @@ private fun CatalogExtensionRow(
     val extLang = extension.lang
     val langBadge = formatExtensionLanguage(
         lang = extLang,
-        localizedFallback = extLang?.let { LocaleHelper.getSourceDisplayName(it, context) },
+        localizedFallback = if (extLang != null && extLang.length > 3 && !extLang.equals("all", ignoreCase = true)) {
+            LocaleHelper.getSourceDisplayName(extLang, context)
+        } else {
+            null
+        },
     )
     val metadataText = formatCatalogMetadata(repoProvenance, langBadge, versionTag)
 
@@ -798,9 +809,9 @@ private fun CatalogExtensionRow(
     ) {
         Surface(
             modifier = Modifier.size(36.dp),
-            shape = RoundedCornerShape(8.dp),
+            shape = ExtensionCardIconShape,
             color = Color(0xFF17181C),
-            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+            border = ExtensionCardIconBorder,
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -814,16 +825,13 @@ private fun CatalogExtensionRow(
                         color = Color(0xFFF2F1EC),
                     )
                 }
-                val padding by animateDpAsState(
-                    targetValue = if (idle) 0.dp else 2.dp,
-                    label = "catalogIconPadding",
-                )
+                val padding = if (idle) 0.dp else 2.dp
                 ExtensionIcon(
                     extension = extension,
                     modifier = Modifier
                         .padding(padding)
                         .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(ExtensionCardIconShape),
                 )
             }
         }
@@ -858,9 +866,9 @@ private fun CatalogExtensionRow(
                 )
                 if (extension.contentWarning == ContentWarning.NSFW) {
                     Surface(
-                        shape = RoundedCornerShape(9999.dp),
+                        shape = ExtensionPillShape,
                         color = Color(0x21C99A90),
-                        border = BorderStroke(1.dp, Color(0x40C99A90)),
+                        border = ExtensionNsfwBorder,
                     ) {
                         Text(
                             text = "18+",
