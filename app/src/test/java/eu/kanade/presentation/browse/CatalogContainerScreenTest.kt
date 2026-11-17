@@ -183,7 +183,8 @@ class CatalogContainerScreenTest {
         filteredEn shouldBe mapOf<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>(enHeader to listOf(enItem))
 
         val filteredMulti = filterCatalogEntries(entries, "lang-multi")
-        filteredMulti shouldBe mapOf<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>(multiHeader to listOf(multiItem))
+        filteredMulti shouldBe
+            mapOf<ExtensionUiModel.Header, List<ExtensionUiModel.Item>>(multiHeader to listOf(multiItem))
     }
 
     @Test

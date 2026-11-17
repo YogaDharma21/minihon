@@ -9,7 +9,6 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
-
 import java.util.concurrent.ConcurrentHashMap
 
 private val resourceBitmapPainterCache = ConcurrentHashMap<Int, BitmapPainter>()

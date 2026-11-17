@@ -2,6 +2,8 @@ package eu.kanade.presentation.browse.components
 
 import android.util.DisplayMetrics
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -25,8 +27,6 @@ import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.domain.source.model.Source
 import tachiyomi.presentation.core.util.LocalIsFastScrolling
 import tachiyomi.source.local.isLocal
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 
 private val defaultModifier = Modifier
     .height(40.dp)

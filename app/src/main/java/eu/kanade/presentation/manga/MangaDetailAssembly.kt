@@ -4,6 +4,7 @@ import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -19,8 +20,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-import androidx.compose.animation.core.LinearEasing
 
 val DETAIL_ASSEMBLY_EASING: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 const val DETAIL_ASSEMBLY_DURATION: Int = 800

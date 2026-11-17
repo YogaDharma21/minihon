@@ -1,6 +1,8 @@
 package eu.kanade.presentation.manga.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -14,9 +16,6 @@ import androidx.compose.ui.semantics.Role
 import coil3.compose.AsyncImage
 import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
-
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import tachiyomi.presentation.core.util.LocalIsFastScrolling
 
 enum class MangaCover(val ratio: Float) {

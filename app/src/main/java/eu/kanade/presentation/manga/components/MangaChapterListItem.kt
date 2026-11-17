@@ -548,4 +548,3 @@ object SubChapterNode {
 
     fun properties(read: Boolean): SubChapterNodeProperties = getSubChapterNodeProperties(read)
 }
-
