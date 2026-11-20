@@ -71,8 +71,8 @@ object AboutScreen : Screen() {
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
         val uriHandler = LocalUriHandler.current
-        val handleBack = LocalBackPress.current
         val navigator = LocalNavigator.currentOrThrow
+        val handleBack = LocalBackPress.current ?: { if (navigator.canPop) navigator.pop() }
         var isCheckingUpdates by remember { mutableStateOf(false) }
         val crashLogUtil = remember { context.appGraph.crashLogUtil }
         val is24HourSystem = rememberIs24HourSystem()
@@ -81,7 +81,7 @@ object AboutScreen : Screen() {
             topBar = { scrollBehavior ->
                 AppBar(
                     title = stringResource(MR.strings.pref_category_about),
-                    navigateUp = if (handleBack != null) handleBack::invoke else null,
+                    navigateUp = handleBack,
                     scrollBehavior = scrollBehavior,
                 )
             },

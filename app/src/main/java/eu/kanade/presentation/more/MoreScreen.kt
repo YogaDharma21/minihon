@@ -53,13 +53,11 @@ fun MoreScreen(
 
     Scaffold(
         topBar = { scrollBehavior ->
-            if (onNavigateUp != null) {
-                AppBar(
-                    title = stringResource(MR.strings.label_settings),
-                    navigateUp = onNavigateUp,
-                    scrollBehavior = scrollBehavior,
-                )
-            }
+            AppBar(
+                title = stringResource(MR.strings.label_settings),
+                navigateUp = onNavigateUp,
+                scrollBehavior = scrollBehavior,
+            )
         },
     ) { contentPadding ->
         ScrollbarLazyColumn(contentPadding = contentPadding) {
