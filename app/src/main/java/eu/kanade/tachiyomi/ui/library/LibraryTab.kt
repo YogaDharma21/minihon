@@ -3,8 +3,6 @@ package eu.kanade.tachiyomi.ui.library
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -54,6 +52,8 @@ import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.topAppBarEnterTransition
+import eu.kanade.presentation.theme.topAppBarExitTransition
 import eu.kanade.presentation.util.CascadeSurface
 import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Tab
@@ -287,8 +287,8 @@ data object LibraryTab : Tab {
                     ) {
                         AnimatedVisibility(
                             visible = showTopBar || isSearching || state.selectionMode,
-                            enter = EnterTransition.None,
-                            exit = ExitTransition.None,
+                            enter = topAppBarEnterTransition,
+                            exit = topAppBarExitTransition,
                         ) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),

@@ -1,15 +1,9 @@
 package eu.kanade.presentation.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,6 +70,8 @@ import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.theme.ScrollChromeConnection
 import eu.kanade.presentation.theme.springLowStiffness
+import eu.kanade.presentation.theme.topAppBarEnterTransition
+import eu.kanade.presentation.theme.topAppBarExitTransition
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -161,8 +157,8 @@ fun TabbedScreen(
             ) {
                 AnimatedVisibility(
                     visible = showTopBar || isSearching || tab.isActionMode,
-                    enter = EnterTransition.None,
-                    exit = ExitTransition.None,
+                    enter = topAppBarEnterTransition,
+                    exit = topAppBarExitTransition,
                 ) {
                     Surface(
                         shape = RoundedCornerShape(24.dp),
