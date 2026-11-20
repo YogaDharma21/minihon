@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import eu.kanade.presentation.category.visualName
@@ -94,7 +95,10 @@ private fun ColumnScope.FilterSheet(
         onClick = { viewModel.toggleFilter(UpdatesPreferences::filterBookmarked) },
     )
 
-    HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.small))
+    HorizontalDivider(
+        modifier = Modifier.padding(MaterialTheme.padding.small),
+        color = Color(0x12FFFFFF),
+    )
 
     val filterExcludedScanlators by viewModel.updatesPreferences.filterExcludedScanlators.collectAsState()
 
@@ -135,7 +139,10 @@ private fun ColumnScope.CategoryFilterSheet(
             ),
     )
 
-    HorizontalDivider(modifier = Modifier.padding(MaterialTheme.padding.extraSmall))
+    HorizontalDivider(
+        modifier = Modifier.padding(MaterialTheme.padding.extraSmall),
+        color = Color(0x12FFFFFF),
+    )
 
     val allCategories by viewModel.getCategories.subscribe().collectAsState(initial = emptyList())
 

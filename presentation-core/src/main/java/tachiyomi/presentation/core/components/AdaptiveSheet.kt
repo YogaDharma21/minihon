@@ -168,6 +168,8 @@ fun AdaptiveSheet(
                         },
                     )
                     .then(modifier)
+                    .systemBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
                     .offset {
                         IntOffset(
                             0,
@@ -182,10 +184,8 @@ fun AdaptiveSheet(
                         orientation = Orientation.Vertical,
                         enabled = enableImplicitDismiss,
                         flingBehavior = flingBehavior,
-                    )
-                    .navigationBarsPadding()
-                    .statusBarsPadding(),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    ),
+                shape = RoundedCornerShape(24.dp),
                 color = Color(0xFF121316),
                 border = BorderStroke(1.dp, Color(0x12FFFFFF)),
                 shadowElevation = 8.dp,

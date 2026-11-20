@@ -13,7 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
 import eu.kanade.tachiyomi.source.model.Filter
@@ -28,6 +30,7 @@ import tachiyomi.presentation.core.components.SortItem
 import tachiyomi.presentation.core.components.TextItem
 import tachiyomi.presentation.core.components.TriStateItem
 import tachiyomi.presentation.core.components.material.Button
+import tachiyomi.presentation.core.components.material.ButtonDefaults
 import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
@@ -45,28 +48,35 @@ fun SourceFilterDialog(
             stickyHeader {
                 Row(
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(8.dp),
+                        .background(Color(0xFF121316))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(onClick = onReset) {
                         Text(
                             text = stringResource(MR.strings.action_reset),
                             style = LocalTextStyle.current.copy(
-                                color = MaterialTheme.colorScheme.primary,
+                                color = Color(0xFF8A8C92),
                             ),
                         )
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    Button(onClick = {
-                        onFilter()
-                        onDismissRequest()
-                    }) {
+                    Button(
+                        onClick = {
+                            onFilter()
+                            onDismissRequest()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF2F1EC),
+                            contentColor = Color(0xFF0A0A0B),
+                        ),
+                    ) {
                         Text(stringResource(MR.strings.action_filter))
                     }
                 }
-                HorizontalDivider()
+                HorizontalDivider(color = Color(0x12FFFFFF))
             }
 
             items(filters) {
@@ -83,7 +93,7 @@ private fun FilterItem(filter: Filter<*>, onUpdate: () -> Unit) {
             HeadingItem(filter.name)
         }
         is Filter.Separator -> {
-            HorizontalDivider()
+            HorizontalDivider(color = Color(0x12FFFFFF))
         }
         is Filter.CheckBox -> {
             CheckboxItem(
