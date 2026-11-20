@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AdaptiveSheet
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -92,9 +93,7 @@ private fun SetCoverDialog(
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
-        text = {
-            Text(stringResource(MR.strings.confirm_set_image_as_cover))
-        },
+        onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringResource(MR.strings.action_ok))
@@ -105,6 +104,10 @@ private fun SetCoverDialog(
                 Text(stringResource(MR.strings.action_cancel))
             }
         },
-        onDismissRequest = onDismiss,
+        text = {
+            Text(stringResource(MR.strings.confirm_set_image_as_cover))
+        },
+        containerColor = Color(0xFF121316),
+        textContentColor = Color(0xFFF4F4F2),
     )
 }

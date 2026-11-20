@@ -2,6 +2,7 @@ package tachiyomi.presentation.core.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -9,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import tachiyomi.presentation.core.components.material.padding
@@ -23,6 +25,7 @@ fun ActionButton(
     TextButton(
         modifier = modifier,
         onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFF4F4F2)),
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.extraSmall),
@@ -31,10 +34,12 @@ fun ActionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
+                tint = Color(0xFFF4F4F2),
             )
             Text(
                 text = title,
                 textAlign = TextAlign.Center,
+                color = Color(0xFF8A8C92),
             )
         }
     }

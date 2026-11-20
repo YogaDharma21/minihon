@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalSlider
@@ -221,6 +222,11 @@ fun HorizontalChapterNavigator(
                             onValueChange = { onPageChange(it.roundToInt()) },
                             onValueChangeFinished = onPageChangeFinished,
                             interactionSource = interactionSource,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Color(0xFFF2F1EC),
+                                activeTrackColor = Color(0xFFF2F1EC),
+                                inactiveTrackColor = Color(0x20FFFFFF),
+                            ),
                         )
 
                         Text(
@@ -313,6 +319,11 @@ fun VerticalChapterNavigator(
                     onValueChange = { onPageChange(it.roundToInt()) },
                     onValueChangeFinished = onPageChangeFinished,
                     interactionSource = interactionSource,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFFF2F1EC),
+                        activeTrackColor = Color(0xFFF2F1EC),
+                        inactiveTrackColor = Color(0x20FFFFFF),
+                    ),
                 )
 
                 Text(
