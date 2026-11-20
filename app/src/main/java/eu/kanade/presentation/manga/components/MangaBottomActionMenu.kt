@@ -46,6 +46,8 @@ import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.DropdownMenuItem
 import eu.kanade.presentation.manga.DownloadAction
+import eu.kanade.presentation.theme.bottomAppBarEnterTransition
+import eu.kanade.presentation.theme.bottomAppBarExitTransition
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -80,8 +82,8 @@ fun MangaBottomActionMenu(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = expandVertically(expandFrom = Alignment.Bottom),
-        exit = shrinkVertically(shrinkTowards = Alignment.Bottom),
+        enter = bottomAppBarEnterTransition,
+        exit = bottomAppBarExitTransition,
     ) {
         val scope = rememberCoroutineScope()
         Box(
@@ -246,8 +248,8 @@ fun LibraryBottomActionMenu(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = expandVertically(animationSpec = tween(delayMillis = 300)),
-        exit = shrinkVertically(animationSpec = tween()),
+        enter = bottomAppBarEnterTransition,
+        exit = bottomAppBarExitTransition,
     ) {
         val scope = rememberCoroutineScope()
         Box(

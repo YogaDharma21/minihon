@@ -70,6 +70,8 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.bottomAppBarEnterTransition
+import eu.kanade.presentation.theme.bottomAppBarExitTransition
 import eu.kanade.presentation.theme.springLowStiffness
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberAnimatedVectorPainter
@@ -215,8 +217,8 @@ object HomeScreen : Screen() {
 
                     AnimatedVisibility(
                         visible = showBottomNav,
-                        enter = EnterTransition.None,
-                        exit = ExitTransition.None,
+                        enter = bottomAppBarEnterTransition,
+                        exit = bottomAppBarExitTransition,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
