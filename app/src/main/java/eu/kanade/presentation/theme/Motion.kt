@@ -1,10 +1,17 @@
 package eu.kanade.presentation.theme
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -29,6 +36,19 @@ val itemPlacementSpec: FiniteAnimationSpec<IntOffset> = spring(
     stiffness = Spring.StiffnessMediumLow,
     dampingRatio = Spring.DampingRatioNoBouncy,
 )
+
+val appBarSlideAnimationSpec: FiniteAnimationSpec<IntOffset> = tween(200)
+val appBarFadeAnimationSpec: FiniteAnimationSpec<Float> = tween(150)
+
+val topAppBarEnterTransition: EnterTransition =
+    slideInVertically(appBarSlideAnimationSpec) { -it } + fadeIn(appBarFadeAnimationSpec)
+val topAppBarExitTransition: ExitTransition =
+    slideOutVertically(appBarSlideAnimationSpec) { -it } + fadeOut(appBarFadeAnimationSpec)
+
+val bottomAppBarEnterTransition: EnterTransition =
+    slideInVertically(appBarSlideAnimationSpec) { it } + fadeIn(appBarFadeAnimationSpec)
+val bottomAppBarExitTransition: ExitTransition =
+    slideOutVertically(appBarSlideAnimationSpec) { it } + fadeOut(appBarFadeAnimationSpec)
 
 fun Modifier.bouncyClickable(
     enabled: Boolean = true,

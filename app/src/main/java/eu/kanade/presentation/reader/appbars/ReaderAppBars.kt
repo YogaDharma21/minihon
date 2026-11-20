@@ -1,13 +1,10 @@
 package eu.kanade.presentation.reader.appbars
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -35,12 +32,15 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.reader.components.ChapterNavigator
 import eu.kanade.presentation.reader.components.ChapterNavigatorType
+import eu.kanade.presentation.theme.appBarFadeAnimationSpec
+import eu.kanade.presentation.theme.appBarSlideAnimationSpec
+import eu.kanade.presentation.theme.bottomAppBarEnterTransition
+import eu.kanade.presentation.theme.bottomAppBarExitTransition
+import eu.kanade.presentation.theme.topAppBarEnterTransition
+import eu.kanade.presentation.theme.topAppBarExitTransition
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import tachiyomi.presentation.core.components.material.padding
-
-private val readerBarsSlideAnimationSpec = tween<IntOffset>(200)
-private val readerBarsFadeAnimationSpec = tween<Float>(150)
 
 @Composable
 fun ReaderAppBars(
@@ -77,8 +77,8 @@ fun ReaderAppBars(
     Column(modifier = Modifier.fillMaxHeight()) {
         AnimatedVisibility(
             visible = visible,
-            enter = slideInVertically(readerBarsSlideAnimationSpec) { -it } + fadeIn(readerBarsFadeAnimationSpec),
-            exit = slideOutVertically(readerBarsSlideAnimationSpec) { -it } + fadeOut(readerBarsFadeAnimationSpec),
+            enter = topAppBarEnterTransition,
+            exit = topAppBarExitTransition,
         ) {
             ReaderTopBar(
                 modifier = Modifier
@@ -103,10 +103,10 @@ fun ReaderAppBars(
                 Row(modifier = Modifier.weight(1f)) {
                     AnimatedVisibility(
                         visible = visible,
-                        enter = slideInHorizontally(readerBarsSlideAnimationSpec) { if (sliderOnLeft) -it else it } +
-                            fadeIn(readerBarsFadeAnimationSpec),
-                        exit = slideOutHorizontally(readerBarsSlideAnimationSpec) { if (sliderOnLeft) -it else it } +
-                            fadeOut(readerBarsFadeAnimationSpec),
+                        enter = slideInHorizontally(appBarSlideAnimationSpec) { if (sliderOnLeft) -it else it } +
+                            fadeIn(appBarFadeAnimationSpec),
+                        exit = slideOutHorizontally(appBarSlideAnimationSpec) { if (sliderOnLeft) -it else it } +
+                            fadeOut(appBarFadeAnimationSpec),
                     ) {
                         Row {
                             Spacer(modifier = Modifier.width(MaterialTheme.padding.small))
@@ -138,8 +138,8 @@ fun ReaderAppBars(
 
         AnimatedVisibility(
             visible = visible,
-            enter = slideInVertically(readerBarsSlideAnimationSpec) { it } + fadeIn(readerBarsFadeAnimationSpec),
-            exit = slideOutVertically(readerBarsSlideAnimationSpec) { it } + fadeOut(readerBarsFadeAnimationSpec),
+            enter = bottomAppBarEnterTransition,
+            exit = bottomAppBarExitTransition,
         ) {
             ReaderBottomBar(
                 modifier = Modifier.fillMaxWidth(),
