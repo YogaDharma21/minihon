@@ -2,6 +2,7 @@ package tachiyomi.presentation.core.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import tachiyomi.presentation.core.components.material.padding
 
 @Composable
@@ -25,6 +28,7 @@ fun ActionButton(
     TextButton(
         modifier = modifier,
         onClick = onClick,
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp),
         colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFF4F4F2)),
     ) {
         Column(
@@ -40,6 +44,10 @@ fun ActionButton(
                 text = title,
                 textAlign = TextAlign.Center,
                 color = Color(0xFF8A8C92),
+                style = MaterialTheme.typography.labelSmall,
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
