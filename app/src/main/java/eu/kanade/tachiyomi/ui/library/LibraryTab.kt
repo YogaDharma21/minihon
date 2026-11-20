@@ -2,6 +2,9 @@ package eu.kanade.tachiyomi.ui.library
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ReportDrawnWhen
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -19,12 +22,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -48,6 +53,7 @@ import eu.kanade.presentation.library.components.LibraryTabs
 import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
+import eu.kanade.presentation.theme.ScrollChromeConnection
 import eu.kanade.presentation.util.CascadeSurface
 import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Tab
@@ -159,14 +165,40 @@ data object LibraryTab : Tab {
                 },
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             ) { contentPadding ->
-                var headerHeightPx by remember { mutableIntStateOf(0) }
-                val headerHeight = if (headerHeightPx > 0) {
-                    LocalDensity.current.run { headerHeightPx.toDp() }
+                var baseHeaderHeightPx by remember { mutableIntStateOf(0) }
+                val headerHeight = if (baseHeaderHeightPx > 0) {
+                    LocalDensity.current.run { baseHeaderHeightPx.toDp() }
                 } else {
                     80.dp
                 }
+                var showTopBar by remember { mutableStateOf(true) }
+                val isSearching = !state.searchQuery.isNullOrEmpty()
+                val topBarScrollConnection = remember(state.selectionMode) {
+                    ScrollChromeConnection(
+                        onVisibilityChanged = { show ->
+                            if (!state.selectionMode && showTopBar != show) {
+                                showTopBar = show
+                            }
+                            if (!state.selectionMode) {
+                                scope.launch {
+                                    HomeScreen.showBottomNav(show)
+                                }
+                            }
+                        },
+                    )
+                }
 
-                Box(modifier = Modifier.fillMaxSize()) {
+                LaunchedEffect(pagerState.currentPage) {
+                    showTopBar = true
+                    topBarScrollConnection.reset()
+                    HomeScreen.showBottomNav(!state.selectionMode)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(topBarScrollConnection),
+                ) {
                     when {
                         state.isLoading -> {
                             LoadingScreen(
@@ -245,49 +277,60 @@ data object LibraryTab : Tab {
                         }
                     }
 
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.TopCenter)
                             .zIndex(10f)
-                            .onSizeChanged { headerHeightPx = it.height },
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                            .onSizeChanged { if (it.height > baseHeaderHeightPx) baseHeaderHeightPx = it.height },
+                        contentAlignment = Alignment.TopCenter,
                     ) {
-                        LibraryToolbar(
-                            hasActiveFilters = state.hasActiveFilters,
-                            selectedCount = state.selection.size,
-                            title = title,
-                            onClickUnselectAll = viewModel::clearSelection,
-                            onClickSelectAll = viewModel::selectAll,
-                            onClickInvertSelection = viewModel::invertSelection,
-                            onClickFilter = viewModel::showSettingsDialog,
-                            onClickRefresh = { scope.launch { onClickRefresh(state.activeCategory) } },
-                            onClickGlobalUpdate = { scope.launch { onClickRefresh(null) } },
-                            onClickOpenRandomManga = {
-                                scope.launch {
-                                    val randomItem = viewModel.getRandomLibraryItemForCurrentCategory()
-                                    if (randomItem != null) {
-                                        navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
-                                    } else {
-                                        snackbarHostState.showSnackbar(
-                                            context.stringResource(MR.strings.information_no_entries_found),
-                                        )
-                                    }
-                                }
-                            },
-                            searchQuery = state.searchQuery,
-                            onSearchQueryChange = viewModel::search,
-                            onClickSettings = null,
-                            scrollBehavior = null,
-                        )
+                        AnimatedVisibility(
+                            visible = showTopBar || isSearching || state.selectionMode,
+                            enter = EnterTransition.None,
+                            exit = ExitTransition.None,
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                LibraryToolbar(
+                                    hasActiveFilters = state.hasActiveFilters,
+                                    selectedCount = state.selection.size,
+                                    title = title,
+                                    onClickUnselectAll = viewModel::clearSelection,
+                                    onClickSelectAll = viewModel::selectAll,
+                                    onClickInvertSelection = viewModel::invertSelection,
+                                    onClickFilter = viewModel::showSettingsDialog,
+                                    onClickRefresh = { scope.launch { onClickRefresh(state.activeCategory) } },
+                                    onClickGlobalUpdate = { scope.launch { onClickRefresh(null) } },
+                                    onClickOpenRandomManga = {
+                                        scope.launch {
+                                            val randomItem = viewModel.getRandomLibraryItemForCurrentCategory()
+                                            if (randomItem != null) {
+                                                navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                            } else {
+                                                snackbarHostState.showSnackbar(
+                                                    context.stringResource(MR.strings.information_no_entries_found),
+                                                )
+                                            }
+                                        }
+                                    },
+                                    searchQuery = state.searchQuery,
+                                    onSearchQueryChange = viewModel::search,
+                                    onClickSettings = null,
+                                    scrollBehavior = null,
+                                )
 
-                        if (showCategoryTabs) {
-                            LibraryTabs(
-                                categories = state.displayedCategories,
-                                pagerState = pagerState,
-                                getItemCountForCategory = { state.getItemCountForCategory(it) },
-                                onTabItemClick = { scope.launch { pagerState.animateScrollToPage(it) } },
-                            )
+                                if (showCategoryTabs) {
+                                    LibraryTabs(
+                                        categories = state.displayedCategories,
+                                        pagerState = pagerState,
+                                        getItemCountForCategory = { state.getItemCountForCategory(it) },
+                                        onTabItemClick = { scope.launch { pagerState.animateScrollToPage(it) } },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
