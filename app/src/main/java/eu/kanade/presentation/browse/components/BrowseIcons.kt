@@ -2,8 +2,6 @@ package eu.kanade.presentation.browse.components
 
 import android.util.DisplayMetrics
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +27,6 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.Dangerous
 import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.domain.source.model.Source
-import tachiyomi.presentation.core.util.LocalIsFastScrolling
 import tachiyomi.source.local.isLocal
 
 private val defaultModifier = Modifier
@@ -78,15 +75,6 @@ fun ExtensionIcon(
     modifier: Modifier = Modifier,
     density: Int = DisplayMetrics.DENSITY_DEFAULT,
 ) {
-    if (LocalIsFastScrolling.current) {
-        Box(
-            modifier = modifier
-                .clip(MaterialTheme.shapes.extraSmall)
-                .background(ExtensionPlaceholderColor),
-        )
-        return
-    }
-
     val context = LocalContext.current
     when (extension) {
         is Extension.Available -> {
