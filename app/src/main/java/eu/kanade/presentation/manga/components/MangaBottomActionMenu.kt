@@ -7,6 +7,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,14 +15,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.ZeroCornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -84,32 +84,34 @@ fun MangaBottomActionMenu(
         exit = shrinkVertically(shrinkTowards = Alignment.Bottom),
     ) {
         val scope = rememberCoroutineScope()
-        Surface(
-            modifier = modifier,
-            shape = MaterialTheme.shapes.large.copy(bottomEnd = ZeroCornerSize, bottomStart = ZeroCornerSize),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false) }
-            var resetJob by remember { mutableStateOf<Job?>(null) }
-            val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
-                resetJob?.cancel()
-                resetJob = scope.launch {
-                    delay(1.seconds)
-                    if (isActive) confirm[toConfirmIndex] = false
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .padding(
-                        WindowInsets.navigationBars
-                            .only(WindowInsetsSides.Bottom)
-                            .asPaddingValues(),
-                    )
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color(0xFF121316),
+                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                shadowElevation = 8.dp,
             ) {
+                val haptic = LocalHapticFeedback.current
+                val confirm = remember { mutableStateListOf(false, false, false, false, false, false, false) }
+                var resetJob by remember { mutableStateOf<Job?>(null) }
+                val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
+                    resetJob?.cancel()
+                    resetJob = scope.launch {
+                        delay(1.seconds)
+                        if (isActive) confirm[toConfirmIndex] = false
+                    }
+                }
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
                 if (onBookmarkClicked != null) {
                     Button(
                         title = stringResource(MR.strings.action_bookmark),
@@ -177,6 +179,7 @@ fun MangaBottomActionMenu(
         }
     }
 }
+}
 
 @Composable
 private fun RowScope.Button(
@@ -197,7 +200,7 @@ private fun RowScope.Button(
             .weight(animatedWeight)
             .combinedClickable(
                 interactionSource = null,
-                indication = ripple(bounded = false),
+                indication = ripple(bounded = false, color = Color(0x20FFFFFF)),
                 onLongClick = onLongClick,
                 onClick = onClick,
             ),
@@ -210,6 +213,7 @@ private fun RowScope.Button(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
+                tint = if (toConfirm) Color(0xFFD2BD93) else Color(0xFFF4F4F2),
             )
             AnimatedVisibility(
                 visible = toConfirm,
@@ -218,6 +222,7 @@ private fun RowScope.Button(
             ) {
                 Text(
                     text = title,
+                    color = Color(0xFFD2BD93),
                     overflow = TextOverflow.Visible,
                     maxLines = 1,
                     style = MaterialTheme.typography.labelSmall,
@@ -245,32 +250,35 @@ fun LibraryBottomActionMenu(
         exit = shrinkVertically(animationSpec = tween()),
     ) {
         val scope = rememberCoroutineScope()
-        Surface(
-            modifier = modifier,
-            shape = MaterialTheme.shapes.large.copy(bottomEnd = ZeroCornerSize, bottomStart = ZeroCornerSize),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            val haptic = LocalHapticFeedback.current
-            val confirm = remember { mutableStateListOf(false, false, false, false, false, false) }
-            var resetJob by remember { mutableStateOf<Job?>(null) }
-            val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
-                resetJob?.cancel()
-                resetJob = scope.launch {
-                    delay(1.seconds)
-                    if (isActive) confirm[toConfirmIndex] = false
-                }
-            }
-            val itemOverflow = onDownloadClicked != null
-            Row(
-                modifier = Modifier
-                    .windowInsetsPadding(
-                        WindowInsets.navigationBars
-                            .only(WindowInsetsSides.Bottom),
-                    )
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color(0xFF121316),
+                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                shadowElevation = 8.dp,
             ) {
+                val haptic = LocalHapticFeedback.current
+                val confirm = remember { mutableStateListOf(false, false, false, false, false, false) }
+                var resetJob by remember { mutableStateOf<Job?>(null) }
+                val onLongClickItem: (Int) -> Unit = { toConfirmIndex ->
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    confirm.indices.forEach { i -> confirm[i] = i == toConfirmIndex }
+                    resetJob?.cancel()
+                    resetJob = scope.launch {
+                        delay(1.seconds)
+                        if (isActive) confirm[toConfirmIndex] = false
+                    }
+                }
+                val itemOverflow = onDownloadClicked != null
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                ) {
                 Button(
                     title = stringResource(MR.strings.action_move_category),
                     icon = MaterialSymbols.AutoMirroredRounded.Label,
@@ -352,6 +360,7 @@ fun LibraryBottomActionMenu(
             }
         }
     }
+}
 }
 
 private val BottomBarMenuDpOffset = DpOffset(0.dp, 0.dp)
