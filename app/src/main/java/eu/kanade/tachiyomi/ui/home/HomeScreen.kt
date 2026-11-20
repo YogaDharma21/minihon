@@ -416,6 +416,8 @@ object HomeScreen : Screen() {
                             is Tab.Browse -> {
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()
+                                } else {
+                                    BrowseTab.showSources()
                                 }
                                 tabNavigator.current = BrowseTab
                             }

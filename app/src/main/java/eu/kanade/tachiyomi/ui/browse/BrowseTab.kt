@@ -6,6 +6,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.Navigator
@@ -20,11 +21,13 @@ import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.sourcesTab
+import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -47,15 +50,20 @@ data object BrowseTab : Tab {
         navigator.push(GlobalSearchScreen())
     }
 
-    private val switchToExtensionTabChannel = Channel<Unit>(1, BufferOverflow.DROP_OLDEST)
+    private val switchTabChannel = Channel<Int>(1, BufferOverflow.DROP_OLDEST)
+
+    fun showSources() {
+        switchTabChannel.trySend(0)
+    }
 
     fun showExtension() {
-        switchToExtensionTabChannel.trySend(Unit)
+        switchTabChannel.trySend(1)
     }
 
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
 
         // Hoisted for extensions tab's search bar
         val extensionsViewModel = metroViewModel<ExtensionsViewModel>()
@@ -74,10 +82,16 @@ data object BrowseTab : Tab {
             state = state,
             searchQuery = extensionsSearchQuery,
             onChangeSearchQuery = extensionsViewModel::search,
+            onSwipePastStart = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.History) }
+            },
+            onSwipePastEnd = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library()) }
+            },
         )
         LaunchedEffect(Unit) {
-            switchToExtensionTabChannel.receiveAsFlow()
-                .collectLatest { state.scrollToPage(1) }
+            switchTabChannel.receiveAsFlow()
+                .collectLatest { state.scrollToPage(it) }
         }
 
         LaunchedEffect(Unit) {

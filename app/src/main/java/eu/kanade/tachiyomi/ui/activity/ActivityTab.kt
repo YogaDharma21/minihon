@@ -7,6 +7,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.Navigator
@@ -19,6 +20,7 @@ import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel
 import eu.kanade.tachiyomi.ui.history.historyTab
+import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
 import eu.kanade.tachiyomi.ui.updates.updatesTab
@@ -26,6 +28,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -60,6 +63,7 @@ data object ActivityTab : Tab {
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
         val updatesViewModel = metroViewModel<UpdatesViewModel>()
         val historyViewModel = metroViewModel<HistoryViewModel>()
         val historyState by historyViewModel.state.collectAsStateWithLifecycle()
@@ -77,6 +81,12 @@ data object ActivityTab : Tab {
             state = state,
             searchQuery = historyState.searchQuery,
             onChangeSearchQuery = historyViewModel::updateSearchQuery,
+            onSwipePastStart = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library()) }
+            },
+            onSwipePastEnd = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Browse(toExtensions = false)) }
+            },
         )
 
         LaunchedEffect(Unit) {
