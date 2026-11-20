@@ -5,7 +5,9 @@ import androidx.compose.animation.core.SpringSpec
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 class MotionTest {
@@ -104,5 +106,113 @@ class MotionTest {
 
         connection.onPreScroll(Offset(0f, -25f), NestedScrollSource.UserInput)
         visibleState shouldBe false
+    }
+
+    @Test
+    fun `HorizontalSwipeConnection triggers onSwipeLeft when scrolling left past threshold`() {
+        var leftTriggered = false
+        var rightTriggered = false
+        val connection = HorizontalSwipeConnection(
+            onSwipeLeft = { leftTriggered = true },
+            onSwipeRight = { rightTriggered = true },
+            thresholdPx = 120f,
+            timeProvider = { 1000L },
+        )
+
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(-130f, 0f),
+            source = NestedScrollSource.UserInput,
+        )
+
+        leftTriggered shouldBe true
+        rightTriggered shouldBe false
+    }
+
+    @Test
+    fun `HorizontalSwipeConnection triggers onSwipeRight when scrolling right past threshold`() {
+        var leftTriggered = false
+        var rightTriggered = false
+        val connection = HorizontalSwipeConnection(
+            onSwipeLeft = { leftTriggered = true },
+            onSwipeRight = { rightTriggered = true },
+            thresholdPx = 120f,
+            timeProvider = { 1000L },
+        )
+
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(130f, 0f),
+            source = NestedScrollSource.UserInput,
+        )
+
+        leftTriggered shouldBe false
+        rightTriggered shouldBe true
+    }
+
+    @Test
+    fun `HorizontalSwipeConnection triggers swipe on fling when velocity exceeds threshold`() = runTest {
+        var leftTriggered = false
+        var rightTriggered = false
+        var currentTime = 1000L
+        val connection = HorizontalSwipeConnection(
+            onSwipeLeft = { leftTriggered = true },
+            onSwipeRight = { rightTriggered = true },
+            velocityThreshold = 800f,
+            timeProvider = { currentTime },
+        )
+
+        connection.onPostFling(
+            consumed = Velocity.Zero,
+            available = Velocity(-1000f, 100f),
+        )
+
+        leftTriggered shouldBe true
+        rightTriggered shouldBe false
+
+        currentTime = 1500L
+        connection.onPostFling(
+            consumed = Velocity.Zero,
+            available = Velocity(1000f, 100f),
+        )
+
+        rightTriggered shouldBe true
+    }
+
+    @Test
+    fun `HorizontalSwipeConnection debounces triggers within cooldown window`() {
+        var leftCount = 0
+        var currentTime = 1000L
+        val connection = HorizontalSwipeConnection(
+            onSwipeLeft = { leftCount++ },
+            onSwipeRight = {},
+            thresholdPx = 100f,
+            timeProvider = { currentTime },
+        )
+
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(-120f, 0f),
+            source = NestedScrollSource.UserInput,
+        )
+        leftCount shouldBe 1
+
+        // Within cooldown window of 400ms
+        currentTime = 1200L
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(-120f, 0f),
+            source = NestedScrollSource.UserInput,
+        )
+        leftCount shouldBe 1
+
+        // After cooldown window
+        currentTime = 1500L
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(-120f, 0f),
+            source = NestedScrollSource.UserInput,
+        )
+        leftCount shouldBe 2
     }
 }

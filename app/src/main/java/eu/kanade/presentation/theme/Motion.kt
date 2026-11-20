@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 
 fun <T> springLowStiffness(): SpringSpec<T> = spring(
     stiffness = Spring.StiffnessMediumLow,
@@ -101,5 +102,70 @@ class ScrollChromeConnection(
 
     fun reset() {
         accumulatedDelta = 0f
+    }
+}
+
+class HorizontalSwipeConnection(
+    private val onSwipeLeft: () -> Unit,
+    private val onSwipeRight: () -> Unit,
+    private val thresholdPx: Float = 120f,
+    private val velocityThreshold: Float = 800f,
+    private val timeProvider: () -> Long = System::currentTimeMillis,
+) : NestedScrollConnection {
+
+    private var accumulatedDeltaX = 0f
+    private var lastTriggerTime = 0L
+    private val cooldownMs = 400L
+
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset {
+        if (source == NestedScrollSource.UserInput) {
+            val now = timeProvider()
+            if (now - lastTriggerTime < cooldownMs) {
+                return Offset.Zero
+            }
+
+            if ((available.x > 0f && accumulatedDeltaX < 0f) || (available.x < 0f && accumulatedDeltaX > 0f)) {
+                accumulatedDeltaX = 0f
+            }
+            accumulatedDeltaX += available.x
+
+            if (accumulatedDeltaX <= -thresholdPx) {
+                accumulatedDeltaX = 0f
+                lastTriggerTime = now
+                onSwipeLeft()
+            } else if (accumulatedDeltaX >= thresholdPx) {
+                accumulatedDeltaX = 0f
+                lastTriggerTime = now
+                onSwipeRight()
+            }
+        }
+        return Offset.Zero
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+        val now = timeProvider()
+        accumulatedDeltaX = 0f
+        if (now - lastTriggerTime >= cooldownMs) {
+            val absX = kotlin.math.abs(available.x)
+            val absY = kotlin.math.abs(available.y)
+            if (absX > absY * 1.25f && absX >= velocityThreshold) {
+                lastTriggerTime = now
+                if (available.x < 0f) {
+                    onSwipeLeft()
+                } else {
+                    onSwipeRight()
+                }
+            }
+        }
+        return Velocity.Zero
+    }
+
+    fun reset() {
+        accumulatedDeltaX = 0f
+        lastTriggerTime = 0L
     }
 }
