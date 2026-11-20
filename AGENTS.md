@@ -3,6 +3,7 @@
 - Always apply humanize style: minimal words, zero fluff, zero emojis, zero em dashes.
 - On every prompt, call skill tool with ID `humanize` before answering.
 - Lead with the action: line 1 gives command, file path, code diff, or concrete answer.
+- Never make notification promises ("I will notify you", "I will wait", "I'll report back"). When backgrounding a task, output only the concrete task status or nothing.
 - Every subagent prompt must call or enforce `humanize` from the start.
 - Always use my git and github account for git and github operations.
 - Give important links in response when necessary.

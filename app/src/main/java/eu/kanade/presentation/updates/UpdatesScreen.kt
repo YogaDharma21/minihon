@@ -89,7 +89,7 @@ fun UpdatesScreen(
 
     Scaffold(
         topBar = { scrollBehavior ->
-            if (showTopBar || state.selectionMode) {
+            if (showTopBar) {
                 UpdatesAppBar(
                     onUpdateLibrary = { scope.launch { onUpdateLibrary() } },
                     onFilterClicked = { onFilterClicked() },

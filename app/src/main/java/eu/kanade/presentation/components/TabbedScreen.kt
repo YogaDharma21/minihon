@@ -111,10 +111,11 @@ fun TabbedScreen(
             136.dp
         }
         var showTopBar by remember { mutableStateOf(true) }
-        val topBarScrollConnection = remember {
+        val tab = tabs[state.currentPage]
+        val topBarScrollConnection = remember(tab.isActionMode) {
             ScrollChromeConnection(
                 onVisibilityChanged = { show ->
-                    if (showTopBar != show) {
+                    if (!tab.isActionMode && showTopBar != show) {
                         showTopBar = show
                     }
                 },
@@ -135,6 +136,7 @@ fun TabbedScreen(
             HorizontalPager(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
+                userScrollEnabled = !tab.isActionMode,
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 tabs[page].content(
@@ -146,7 +148,6 @@ fun TabbedScreen(
                 )
             }
 
-            val tab = tabs[state.currentPage]
             val searchEnabled = tab.searchEnabled
             val isSearching = searchEnabled && searchQuery != null
 
@@ -159,7 +160,7 @@ fun TabbedScreen(
                 contentAlignment = Alignment.TopCenter,
             ) {
                 AnimatedVisibility(
-                    visible = showTopBar || isSearching,
+                    visible = showTopBar || isSearching || tab.isActionMode,
                     enter = EnterTransition.None,
                     exit = ExitTransition.None,
                 ) {
@@ -184,7 +185,35 @@ fun TabbedScreen(
                                     .height(48.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                if (isSearching) {
+                                if (tab.isActionMode) {
+                                    IconButton(onClick = { tab.onCancelActionMode?.invoke() }) {
+                                        Icon(
+                                            imageVector = MaterialSymbols.Rounded.Close,
+                                            contentDescription = stringResource(MR.strings.action_cancel),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Text(
+                                        text = "${tab.actionModeCounter}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 19.sp,
+                                            letterSpacing = (-0.02).sp,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(start = 8.dp),
+                                    )
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        AppBarActions(tab.actionModeActions)
+                                    }
+                                } else if (isSearching) {
                                     SearchRow(
                                         searchQuery = searchQuery.orEmpty(),
                                         onChangeSearchQuery = onChangeSearchQuery,
@@ -240,7 +269,12 @@ fun TabbedScreen(
                                     tabs.forEachIndexed { index, tabItem ->
                                         SegmentedTabButton(
                                             selected = state.currentPage == index,
-                                            onClick = { scope.launch { state.animateScrollToPage(index) } },
+                                            onClick = {
+                                                if (tab.isActionMode) {
+                                                    tab.onCancelActionMode?.invoke()
+                                                }
+                                                scope.launch { state.animateScrollToPage(index) }
+                                            },
                                             title = stringResource(tabItem.titleRes),
                                             badgeCount = tabItem.badgeNumber,
                                             modifier = Modifier.weight(1f),
@@ -405,5 +439,9 @@ data class TabContent(
     val badgeNumber: Int? = null,
     val searchEnabled: Boolean = false,
     val actions: List<AppBar.AppBarAction> = listOf(),
+    val isActionMode: Boolean = false,
+    val actionModeCounter: Int = 0,
+    val onCancelActionMode: (() -> Unit)? = null,
+    val actionModeActions: List<AppBar.AppBarAction> = listOf(),
     val content: @Composable (contentPadding: PaddingValues, snackbarHostState: SnackbarHostState) -> Unit,
 )

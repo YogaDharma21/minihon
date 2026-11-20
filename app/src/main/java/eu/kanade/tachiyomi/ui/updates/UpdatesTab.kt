@@ -42,7 +42,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.SelectAll
 import mihon.icons.materialsymbols.rounded.Settings
 import mihon.icons.materialsymbols.rounded.UnfoldLess
 import mihon.icons.materialsymbols.rounded.UnfoldMore
@@ -97,6 +99,21 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
                 title = stringResource(MR.strings.action_filter),
                 icon = MaterialSymbols.Rounded.FilterList,
                 onClick = viewModel::showFilterDialog,
+            ),
+        ),
+        isActionMode = state.selectionMode,
+        actionModeCounter = state.selected.size,
+        onCancelActionMode = { viewModel.toggleAllSelection(false) },
+        actionModeActions = listOf(
+            AppBar.Action(
+                title = stringResource(MR.strings.action_select_all),
+                icon = MaterialSymbols.Rounded.SelectAll,
+                onClick = { viewModel.toggleAllSelection(true) },
+            ),
+            AppBar.Action(
+                title = stringResource(MR.strings.action_select_inverse),
+                icon = MaterialSymbols.Rounded.FlipToBack,
+                onClick = viewModel::invertSelection,
             ),
         ),
         content = { contentPadding, snackbarHostState ->
