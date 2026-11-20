@@ -12,7 +12,6 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -60,17 +59,12 @@ fun LibraryPager(
         val items = getItemsForCategory(category)
 
         val gridState = rememberSaveable(
-            inputs = arrayOf<Any>(category.id, category.flags, filterToken),
+            category.id,
+            category.flags,
+            filterToken,
             saver = LazyGridState.Saver,
-            key = "library_grid_${category.id}",
         ) {
             LazyGridState()
-        }
-
-        LaunchedEffect(category.flags, filterToken) {
-            if (gridState.firstVisibleItemIndex != 0 || gridState.firstVisibleItemScrollOffset != 0) {
-                gridState.scrollToItem(0)
-            }
         }
 
         if (items.isEmpty()) {
