@@ -185,11 +185,33 @@ class LibraryViewModel(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope + subscriberGate, SharingStarted.Eagerly, null)
 
+    private val filterToken: Flow<String> = combine(
+        getLibraryItemPreferencesFlow(),
+        getTrackingFiltersFlow(),
+        libraryPreferences.randomSortSeed.changes(),
+        searchQuery,
+    ) { itemPreferences, trackingFilter, randomSeed, query ->
+        listOf(
+            itemPreferences.globalFilterDownloaded,
+            itemPreferences.filterDownloaded,
+            itemPreferences.filterUnread,
+            itemPreferences.filterStarted,
+            itemPreferences.filterBookmarked,
+            itemPreferences.filterCompleted,
+            itemPreferences.filterIntervalCustom,
+            trackingFilter.entries.sortedBy { it.key }.joinToString(",") { "${it.key}:${it.value}" },
+            randomSeed,
+            query.orEmpty(),
+        ).joinToString(";")
+    }
+        .distinctUntilChanged()
+
     val state: StateFlow<State> = combine(
         library,
         combine(searchQuery, selection, dialog, ::Triple),
         combine(activeCategoryIndex, displayPreferences, hasActiveFilters, ::Triple),
-    ) { library, (searchQuery, selection, dialog), (activeCategoryIndex, display, hasActiveFilters) ->
+        filterToken,
+    ) { library, (searchQuery, selection, dialog), (activeCategoryIndex, display, hasActiveFilters), filterToken ->
         State(
             isLoading = library == null,
             searchQuery = searchQuery,
@@ -200,6 +222,7 @@ class LibraryViewModel(
             showMangaContinueButton = display.showMangaContinueButton,
             dialog = dialog,
             libraryData = library?.data ?: LibraryData(),
+            filterToken = filterToken,
             activeCategoryIndex = activeCategoryIndex,
             groupedFavorites = library?.groupedFavorites.orEmpty(),
         )
@@ -793,6 +816,7 @@ class LibraryViewModel(
         val showMangaContinueButton: Boolean = false,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
+        val filterToken: String = "",
         private val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
     ) {
