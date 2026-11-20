@@ -46,6 +46,7 @@ fun LibraryContent(
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getItemsForCategory: (Category) -> List<LibraryItem>,
     pagerState: PagerState = rememberPagerState(currentPage) { categories.size },
+    filterToken: String = "",
 ) {
     val scope = rememberCoroutineScope()
     var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
@@ -93,6 +94,7 @@ fun LibraryContent(
             },
             onLongClickManga = onToggleRangeSelection,
             onClickContinueReading = onContinueReadingClicked,
+            filterToken = filterToken,
         )
     }
 

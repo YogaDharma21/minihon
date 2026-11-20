@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -42,6 +45,7 @@ fun LibraryPager(
     onClickManga: (Category, LibraryManga) -> Unit,
     onLongClickManga: (Category, LibraryManga) -> Unit,
     onClickContinueReading: ((LibraryManga) -> Unit)?,
+    filterToken: String = "",
 ) {
     HorizontalPager(
         modifier = Modifier.fillMaxSize(),
@@ -54,6 +58,20 @@ fun LibraryPager(
         }
         val category = getCategoryForPage(page)
         val items = getItemsForCategory(category)
+
+        val gridState = rememberSaveable(
+            inputs = arrayOf<Any>(category.id, category.flags, filterToken),
+            saver = LazyGridState.Saver,
+            key = "library_grid_${category.id}",
+        ) {
+            LazyGridState()
+        }
+
+        LaunchedEffect(category.flags, filterToken) {
+            if (gridState.firstVisibleItemIndex != 0 || gridState.firstVisibleItemScrollOffset != 0) {
+                gridState.scrollToItem(0)
+            }
+        }
 
         if (items.isEmpty()) {
             LibraryPagerEmptyScreen(
@@ -88,6 +106,7 @@ fun LibraryPager(
             onClickContinueReading = onClickContinueReading,
             searchQuery = searchQuery,
             onGlobalSearchClicked = onGlobalSearchClicked,
+            state = gridState,
         )
     }
 }

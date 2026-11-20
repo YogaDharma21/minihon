@@ -240,6 +240,7 @@ data object LibraryTab : Tab {
                                 getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
                                 getItemsForCategory = { state.getItemsForCategory(it) },
                                 pagerState = pagerState,
+                                filterToken = state.filterToken,
                             )
                         }
                     }
