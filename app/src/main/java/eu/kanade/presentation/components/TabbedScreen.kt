@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.presentation.theme.HorizontalSwipeConnection
 import eu.kanade.presentation.theme.ScrollChromeConnection
 import eu.kanade.presentation.theme.springLowStiffness
 import eu.kanade.presentation.theme.topAppBarEnterTransition
@@ -93,6 +94,8 @@ fun TabbedScreen(
     state: PagerState = rememberPagerState { tabs.size },
     searchQuery: String? = null,
     onChangeSearchQuery: (String?) -> Unit = {},
+    onSwipePastStart: (() -> Unit)? = null,
+    onSwipePastEnd: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -124,10 +127,38 @@ fun TabbedScreen(
             topBarScrollConnection.reset()
         }
 
+        val searchEnabled = tab.searchEnabled
+        val isSearching = searchEnabled && searchQuery != null
+        val swipeConnection = remember(onSwipePastStart, onSwipePastEnd, state, tab.isActionMode, isSearching) {
+            if (tab.isActionMode || isSearching || (onSwipePastStart == null && onSwipePastEnd == null)) {
+                null
+            } else {
+                HorizontalSwipeConnection(
+                    onSwipeLeft = {
+                        if (state.currentPage == tabs.size - 1) {
+                            onSwipePastEnd?.invoke()
+                        }
+                    },
+                    onSwipeRight = {
+                        if (state.currentPage == 0) {
+                            onSwipePastStart?.invoke()
+                        }
+                    },
+                )
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .nestedScroll(topBarScrollConnection),
+                .nestedScroll(topBarScrollConnection)
+                .then(
+                    if (swipeConnection != null) {
+                        Modifier.nestedScroll(swipeConnection)
+                    } else {
+                        Modifier
+                    },
+                ),
         ) {
             HorizontalPager(
                 modifier = Modifier.fillMaxSize(),
@@ -143,9 +174,6 @@ fun TabbedScreen(
                     snackbarHostState,
                 )
             }
-
-            val searchEnabled = tab.searchEnabled
-            val isSearching = searchEnabled && searchQuery != null
 
             Box(
                 modifier = Modifier
