@@ -181,6 +181,9 @@ fun AppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
                 windowInsets = WindowInsets(0),
                 scrollBehavior = scrollBehavior,
@@ -408,6 +411,7 @@ fun SearchToolbar(
                             Icon(
                                 MaterialSymbols.Rounded.Search,
                                 contentDescription = stringResource(MR.strings.action_search),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
@@ -432,6 +436,7 @@ fun SearchToolbar(
                             Icon(
                                 MaterialSymbols.Rounded.Close,
                                 contentDescription = stringResource(MR.strings.action_reset),
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
