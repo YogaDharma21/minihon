@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
-import tachiyomi.presentation.core.util.ProvideScrollVelocityGate
 
 /**
  * LazyColumn with scrollbar.
@@ -67,7 +66,7 @@ fun ScrollbarLazyColumn(
 }
 
 /**
- * LazyColumn with fast scroller and high-velocity fling gating.
+ * LazyColumn with fast scroller.
  */
 @Composable
 fun FastScrollLazyColumn(
@@ -81,22 +80,20 @@ fun FastScrollLazyColumn(
     userScrollEnabled: Boolean = true,
     content: LazyListScope.() -> Unit,
 ) {
-    ProvideScrollVelocityGate { gateModifier ->
-        VerticalFastScroller(
-            listState = state,
-            modifier = modifier.then(gateModifier),
-            topContentPadding = contentPadding.calculateTopPadding(),
-            endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
-        ) {
-            LazyColumn(
-                state = state,
-                contentPadding = contentPadding,
-                reverseLayout = reverseLayout,
-                verticalArrangement = verticalArrangement,
-                horizontalAlignment = horizontalAlignment,
-                userScrollEnabled = userScrollEnabled,
-                content = content,
-            )
-        }
+    VerticalFastScroller(
+        listState = state,
+        modifier = modifier,
+        topContentPadding = contentPadding.calculateTopPadding(),
+        endContentPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
+    ) {
+        LazyColumn(
+            state = state,
+            contentPadding = contentPadding,
+            reverseLayout = reverseLayout,
+            verticalArrangement = verticalArrangement,
+            horizontalAlignment = horizontalAlignment,
+            userScrollEnabled = userScrollEnabled,
+            content = content,
+        )
     }
 }

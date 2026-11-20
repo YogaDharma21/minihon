@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import tachiyomi.presentation.core.util.ProvideScrollVelocityGate
 
 @Composable
 fun FastScrollLazyVerticalGrid(
@@ -33,26 +32,24 @@ fun FastScrollLazyVerticalGrid(
     userScrollEnabled: Boolean = true,
     content: LazyGridScope.() -> Unit,
 ) {
-    ProvideScrollVelocityGate { gateModifier ->
-        VerticalGridFastScroller(
+    VerticalGridFastScroller(
+        state = state,
+        modifier = modifier,
+        thumbAllowed = thumbAllowed,
+        thumbColor = thumbColor,
+        topContentPadding = topContentPadding,
+        bottomContentPadding = bottomContentPadding,
+        endContentPadding = endContentPadding,
+    ) {
+        LazyVerticalGrid(
+            columns = columns,
             state = state,
-            modifier = modifier.then(gateModifier),
-            thumbAllowed = thumbAllowed,
-            thumbColor = thumbColor,
-            topContentPadding = topContentPadding,
-            bottomContentPadding = bottomContentPadding,
-            endContentPadding = endContentPadding,
-        ) {
-            LazyVerticalGrid(
-                columns = columns,
-                state = state,
-                contentPadding = contentPadding,
-                reverseLayout = reverseLayout,
-                verticalArrangement = verticalArrangement,
-                horizontalArrangement = horizontalArrangement,
-                userScrollEnabled = userScrollEnabled,
-                content = content,
-            )
-        }
+            contentPadding = contentPadding,
+            reverseLayout = reverseLayout,
+            verticalArrangement = verticalArrangement,
+            horizontalArrangement = horizontalArrangement,
+            userScrollEnabled = userScrollEnabled,
+            content = content,
+        )
     }
 }
