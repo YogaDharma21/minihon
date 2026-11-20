@@ -51,6 +51,7 @@ import eu.kanade.presentation.library.components.LibraryTabs
 import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
+import eu.kanade.presentation.theme.HorizontalSwipeConnection
 import eu.kanade.presentation.theme.ScrollChromeConnection
 import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
@@ -172,7 +173,7 @@ data object LibraryTab : Tab {
                     80.dp
                 }
                 var showTopBar by remember { mutableStateOf(true) }
-                val isSearching = !state.searchQuery.isNullOrEmpty()
+                val isSearching = state.searchQuery != null
                 val topBarScrollConnection = remember(state.selectionMode) {
                     ScrollChromeConnection(
                         onVisibilityChanged = { show ->
@@ -187,6 +188,26 @@ data object LibraryTab : Tab {
                         },
                     )
                 }
+                val swipeNavigationConnection =
+                    remember(state.selectionMode, isSearching, pagerState, state.displayedCategories.size) {
+                        if (state.selectionMode || isSearching) {
+                            null
+                        } else {
+                            HorizontalSwipeConnection(
+                                onSwipeLeft = {
+                                    val lastPageIndex = (state.displayedCategories.size - 1).coerceAtLeast(0)
+                                    if (pagerState.currentPage >= lastPageIndex) {
+                                        scope.launch { HomeScreen.openTab(HomeScreen.Tab.Updates) }
+                                    }
+                                },
+                                onSwipeRight = {
+                                    if (pagerState.currentPage <= 0) {
+                                        scope.launch { HomeScreen.openTab(HomeScreen.Tab.Browse(toExtensions = true)) }
+                                    }
+                                },
+                            )
+                        }
+                    }
 
                 LaunchedEffect(pagerState.currentPage) {
                     showTopBar = true
@@ -197,7 +218,14 @@ data object LibraryTab : Tab {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(topBarScrollConnection),
+                        .nestedScroll(topBarScrollConnection)
+                        .then(
+                            if (swipeNavigationConnection != null) {
+                                Modifier.nestedScroll(swipeNavigationConnection)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 ) {
                     when {
                         state.isLoading -> {
