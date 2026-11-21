@@ -22,6 +22,7 @@ import androidx.core.os.LocaleListCompat
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -30,7 +31,6 @@ import org.xmlpull.v1.XmlPullParser
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.R
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
 class AppLanguageScreen : Screen() {
@@ -54,17 +54,16 @@ class AppLanguageScreen : Screen() {
             AppCompatDelegate.setApplicationLocales(locale)
         }
 
-        Scaffold(
-            topBar = { scrollBehavior ->
+        ScrollChromeScaffold(
+            topBar = {
                 AppBar(
                     title = stringResource(MR.strings.pref_app_language),
                     navigateUp = navigator::pop,
-                    scrollBehavior = scrollBehavior,
                 )
             },
         ) { contentPadding ->
             LazyColumn(
-                modifier = Modifier.padding(contentPadding),
+                contentPadding = contentPadding,
             ) {
                 items(langs) {
                     ListItem(
