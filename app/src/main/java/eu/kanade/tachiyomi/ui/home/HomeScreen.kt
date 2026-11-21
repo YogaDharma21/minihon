@@ -203,9 +203,11 @@ object HomeScreen : Screen() {
                                 dampingRatio = Spring.DampingRatioNoBouncy,
                             )
                             if (transitionDirection == TabTransitionDirection.Forward) {
-                                slideInHorizontally(slideSpec) { it } togetherWith slideOutHorizontally(slideSpec) { -it }
+                                slideInHorizontally(slideSpec) { it } togetherWith
+                                    slideOutHorizontally(slideSpec) { -it }
                             } else {
-                                slideInHorizontally(slideSpec) { -it } togetherWith slideOutHorizontally(slideSpec) { it }
+                                slideInHorizontally(slideSpec) { -it } togetherWith
+                                    slideOutHorizontally(slideSpec) { it }
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -312,9 +314,17 @@ object HomeScreen : Screen() {
                                                 onClick = {
                                                     showQuickSettings = false
                                                     if (!selected) {
-                                                        val currentIndex = TABS.indexOfFirst { it::class == tabNavigator.current::class }
-                                                        val targetIndex = TABS.indexOfFirst { it::class == tab::class }
-                                                        transitionDirection = if (targetIndex >= currentIndex) TabTransitionDirection.Forward else TabTransitionDirection.Backward
+                                                        val currentIdx = TABS.indexOfFirst {
+                                                            it::class == tabNavigator.current::class
+                                                        }
+                                                        val targetIdx = TABS.indexOfFirst {
+                                                            it::class == tab::class
+                                                        }
+                                                        transitionDirection = if (targetIdx >= currentIdx) {
+                                                            TabTransitionDirection.Forward
+                                                        } else {
+                                                            TabTransitionDirection.Backward
+                                                        }
                                                         tabNavigator.current = tab
                                                     } else {
                                                         scope.launch { tab.onReselect(navigator) }
@@ -418,7 +428,11 @@ object HomeScreen : Screen() {
                     openTabEvent.receiveAsFlow().collectLatest {
                         when (it) {
                             is Tab.Library -> {
-                                transitionDirection = if (it.fromBrowse) TabTransitionDirection.Forward else TabTransitionDirection.Backward
+                                transitionDirection = if (it.fromBrowse) {
+                                    TabTransitionDirection.Forward
+                                } else {
+                                    TabTransitionDirection.Backward
+                                }
                                 tabNavigator.current = LibraryTab
                                 if (it.mangaIdToOpen != null) {
                                     navigator.push(MangaScreen(it.mangaIdToOpen))
@@ -435,7 +449,11 @@ object HomeScreen : Screen() {
                                 ActivityTab.showHistory()
                             }
                             is Tab.Browse -> {
-                                transitionDirection = if (it.toExtensions && tabNavigator.current == LibraryTab) TabTransitionDirection.Backward else TabTransitionDirection.Forward
+                                transitionDirection = if (it.toExtensions && tabNavigator.current == LibraryTab) {
+                                    TabTransitionDirection.Backward
+                                } else {
+                                    TabTransitionDirection.Forward
+                                }
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()
                                 } else {

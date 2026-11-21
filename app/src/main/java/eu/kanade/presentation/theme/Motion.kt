@@ -148,14 +148,13 @@ class HorizontalSwipeConnection(
 
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
         val now = timeProvider()
-        val priorDelta = accumulatedDeltaX
         accumulatedDeltaX = 0f
         if (now - lastTriggerTime >= cooldownMs) {
             val absX = kotlin.math.abs(available.x)
             val absY = kotlin.math.abs(available.y)
-            if ((absX > absY * 1.25f && absX >= velocityThreshold) || kotlin.math.abs(priorDelta) >= thresholdPx) {
+            if (absX > absY * 1.25f && absX >= velocityThreshold) {
                 lastTriggerTime = now
-                if (available.x < 0f || (available.x == 0f && priorDelta < 0f)) {
+                if (available.x < 0f) {
                     onSwipeLeft()
                 } else {
                     onSwipeRight()
