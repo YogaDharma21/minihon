@@ -16,8 +16,10 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.components.SearchToolbar
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Explore
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
+import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.SelectAll
 import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.i18n.MR
@@ -120,18 +122,21 @@ private fun LibraryRegularToolbar(
                     add(
                         AppBar.OverflowAction(
                             title = stringResource(MR.strings.action_update_library),
+                            icon = MaterialSymbols.Rounded.Refresh,
                             onClick = onClickGlobalUpdate,
                         ),
                     )
                     add(
                         AppBar.OverflowAction(
                             title = stringResource(MR.strings.action_update_category),
+                            icon = MaterialSymbols.Rounded.Refresh,
                             onClick = onClickRefresh,
                         ),
                     )
                     add(
                         AppBar.OverflowAction(
                             title = stringResource(MR.strings.action_open_random_manga),
+                            icon = MaterialSymbols.Rounded.Explore,
                             onClick = onClickOpenRandomManga,
                         ),
                     )

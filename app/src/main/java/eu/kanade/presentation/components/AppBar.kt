@@ -478,5 +478,6 @@ sealed interface AppBar {
     data class OverflowAction(
         val title: String,
         val onClick: () -> Unit,
+        val icon: ImageVector? = null,
     ) : AppBarAction
 }
