@@ -3,11 +3,11 @@ package eu.kanade.tachiyomi.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -16,7 +16,9 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
@@ -64,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -105,6 +108,8 @@ import tachiyomi.presentation.core.util.collectAsState
 
 object HomeScreen : Screen() {
 
+    enum class TabTransitionDirection { Forward, Backward }
+
     private val librarySearchEvent = Channel<String>()
     private val openTabEvent = Channel<Tab>()
     private val showBottomNavEvent = Channel<Boolean>()
@@ -129,6 +134,7 @@ object HomeScreen : Screen() {
             tab = LibraryTab,
             key = TabNavigatorKey,
         ) { tabNavigator ->
+            var transitionDirection by remember { mutableStateOf(TabTransitionDirection.Forward) }
             var showBottomNav by remember { mutableStateOf(true) }
             val scrollChromeConnection = remember {
                 ScrollChromeConnection(
@@ -192,7 +198,15 @@ object HomeScreen : Screen() {
                     AnimatedContent(
                         targetState = tabNavigator.current,
                         transitionSpec = {
-                            EnterTransition.None togetherWith ExitTransition.None
+                            val slideSpec = spring<IntOffset>(
+                                stiffness = Spring.StiffnessMediumLow,
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                            )
+                            if (transitionDirection == TabTransitionDirection.Forward) {
+                                slideInHorizontally(slideSpec) { it } togetherWith slideOutHorizontally(slideSpec) { -it }
+                            } else {
+                                slideInHorizontally(slideSpec) { -it } togetherWith slideOutHorizontally(slideSpec) { it }
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
@@ -298,6 +312,9 @@ object HomeScreen : Screen() {
                                                 onClick = {
                                                     showQuickSettings = false
                                                     if (!selected) {
+                                                        val currentIndex = TABS.indexOfFirst { it::class == tabNavigator.current::class }
+                                                        val targetIndex = TABS.indexOfFirst { it::class == tab::class }
+                                                        transitionDirection = if (targetIndex >= currentIndex) TabTransitionDirection.Forward else TabTransitionDirection.Backward
                                                         tabNavigator.current = tab
                                                     } else {
                                                         scope.launch { tab.onReselect(navigator) }
@@ -377,6 +394,7 @@ object HomeScreen : Screen() {
 
             val goToLibraryTab = {
                 showQuickSettings = false
+                transitionDirection = TabTransitionDirection.Backward
                 tabNavigator.current = LibraryTab
             }
 
@@ -400,20 +418,24 @@ object HomeScreen : Screen() {
                     openTabEvent.receiveAsFlow().collectLatest {
                         when (it) {
                             is Tab.Library -> {
+                                transitionDirection = if (it.fromBrowse) TabTransitionDirection.Forward else TabTransitionDirection.Backward
                                 tabNavigator.current = LibraryTab
                                 if (it.mangaIdToOpen != null) {
                                     navigator.push(MangaScreen(it.mangaIdToOpen))
                                 }
                             }
                             Tab.Updates -> {
+                                transitionDirection = TabTransitionDirection.Forward
                                 tabNavigator.current = ActivityTab
                                 ActivityTab.showUpdates()
                             }
                             Tab.History -> {
+                                transitionDirection = TabTransitionDirection.Backward
                                 tabNavigator.current = ActivityTab
                                 ActivityTab.showHistory()
                             }
                             is Tab.Browse -> {
+                                transitionDirection = if (it.toExtensions && tabNavigator.current == LibraryTab) TabTransitionDirection.Backward else TabTransitionDirection.Forward
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()
                                 } else {
@@ -698,7 +720,7 @@ object HomeScreen : Screen() {
     }
 
     sealed interface Tab {
-        data class Library(val mangaIdToOpen: Long? = null) : Tab
+        data class Library(val mangaIdToOpen: Long? = null, val fromBrowse: Boolean = false) : Tab
         data object Updates : Tab
         data object History : Tab
         data class Browse(val toExtensions: Boolean = false) : Tab

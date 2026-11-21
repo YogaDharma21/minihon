@@ -86,7 +86,7 @@ data object BrowseTab : Tab {
                 scope.launch { HomeScreen.openTab(HomeScreen.Tab.History) }
             },
             onSwipePastEnd = {
-                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library()) }
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library(fromBrowse = true)) }
             },
         )
         LaunchedEffect(Unit) {
