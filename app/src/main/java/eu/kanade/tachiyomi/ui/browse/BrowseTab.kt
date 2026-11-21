@@ -6,7 +6,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.Navigator
@@ -51,12 +53,15 @@ data object BrowseTab : Tab {
     }
 
     private val switchTabChannel = Channel<Int>(1, BufferOverflow.DROP_OLDEST)
+    private var requestedPage by mutableIntStateOf(0)
 
     fun showSources() {
+        requestedPage = 0
         switchTabChannel.trySend(0)
     }
 
     fun showExtension() {
+        requestedPage = 1
         switchTabChannel.trySend(1)
     }
 
@@ -74,7 +79,7 @@ data object BrowseTab : Tab {
             extensionsTab(extensionsViewModel),
         )
 
-        val state = rememberPagerState { tabs.size }
+        val state = rememberPagerState(initialPage = requestedPage) { tabs.size }
 
         TabbedScreen(
             titleRes = MR.strings.browse,
@@ -89,9 +94,15 @@ data object BrowseTab : Tab {
                 scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library(fromBrowse = true)) }
             },
         )
-        LaunchedEffect(Unit) {
-            switchTabChannel.receiveAsFlow()
-                .collectLatest { state.scrollToPage(it) }
+        LaunchedEffect(state) {
+            switchTabChannel.receiveAsFlow().collectLatest { targetPage ->
+                if (state.currentPage != targetPage) {
+                    state.animateScrollToPage(targetPage)
+                }
+            }
+        }
+        LaunchedEffect(state.currentPage) {
+            requestedPage = state.currentPage
         }
 
         LaunchedEffect(Unit) {
