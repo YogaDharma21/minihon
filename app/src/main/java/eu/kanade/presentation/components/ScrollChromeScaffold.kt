@@ -85,7 +85,7 @@ fun ScrollChromeScaffold(
         val layoutDirection = LocalLayoutDirection.current
         val effectivePadding = PaddingValues(
             start = contentPadding.calculateStartPadding(layoutDirection),
-            top = contentPadding.calculateTopPadding() + headerHeight,
+            top = headerHeight,
             end = contentPadding.calculateEndPadding(layoutDirection),
             bottom = contentPadding.calculateBottomPadding(),
         )
