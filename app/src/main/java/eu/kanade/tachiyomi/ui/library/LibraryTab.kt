@@ -92,7 +92,8 @@ import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.isLocal
 
-private var cachedLibraryHeaderHeightPx: Int = 0
+private var cachedLibraryWithTabsHeaderHeightPx: Int = 0
+private var cachedLibraryNoTabsHeaderHeightPx: Int = 0
 
 data object LibraryTab : Tab {
 
@@ -172,14 +173,15 @@ data object LibraryTab : Tab {
                 },
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             ) { contentPadding ->
-                var baseHeaderHeightPx by rememberSaveable(showCategoryTabs) {
-                    mutableIntStateOf(cachedLibraryHeaderHeightPx)
+                val cachedHeight = if (showCategoryTabs) {
+                    cachedLibraryWithTabsHeaderHeightPx
+                } else {
+                    cachedLibraryNoTabsHeaderHeightPx
                 }
+                var baseHeaderHeightPx by rememberSaveable(showCategoryTabs) { mutableIntStateOf(cachedHeight) }
                 val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
                 val fallbackHeight = statusBarTop + 76.dp + (if (showCategoryTabs) 48.dp else 0.dp)
-                val headerHeight = if (baseHeaderHeightPx >
-                    0
-                ) {
+                val headerHeight = if (baseHeaderHeightPx > 0) {
                     with(LocalDensity.current) { baseHeaderHeightPx.toDp() }
                 } else {
                     fallbackHeight
@@ -335,7 +337,11 @@ data object LibraryTab : Tab {
                                     .onSizeChanged {
                                         if (it.height > 0) {
                                             baseHeaderHeightPx = it.height
-                                            cachedLibraryHeaderHeightPx = it.height
+                                            if (showCategoryTabs) {
+                                                cachedLibraryWithTabsHeaderHeightPx = it.height
+                                            } else {
+                                                cachedLibraryNoTabsHeaderHeightPx = it.height
+                                            }
                                         }
                                     },
                                 horizontalAlignment = Alignment.CenterHorizontally,
