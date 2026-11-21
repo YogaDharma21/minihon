@@ -180,6 +180,24 @@ class MotionTest {
     }
 
     @Test
+    fun `HorizontalSwipeConnection triggers swipe on moderate flick with default thresholds`() = runTest {
+        var leftTriggered = false
+        var rightTriggered = false
+        val connection = HorizontalSwipeConnection(
+            onSwipeLeft = { leftTriggered = true },
+            onSwipeRight = { rightTriggered = true },
+        )
+
+        connection.onPostFling(
+            consumed = Velocity.Zero,
+            available = Velocity(-500f, 0f),
+        )
+
+        leftTriggered shouldBe true
+        rightTriggered shouldBe false
+    }
+
+    @Test
     fun `HorizontalSwipeConnection debounces triggers within cooldown window`() {
         var leftCount = 0
         var currentTime = 1000L
@@ -197,7 +215,7 @@ class MotionTest {
         )
         leftCount shouldBe 1
 
-        // Within cooldown window of 400ms
+        // Within cooldown window of 350ms
         currentTime = 1200L
         connection.onPostScroll(
             consumed = Offset.Zero,

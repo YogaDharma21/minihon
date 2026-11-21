@@ -108,14 +108,14 @@ class ScrollChromeConnection(
 class HorizontalSwipeConnection(
     private val onSwipeLeft: () -> Unit,
     private val onSwipeRight: () -> Unit,
-    private val thresholdPx: Float = 120f,
-    private val velocityThreshold: Float = 800f,
+    private val thresholdPx: Float = 100f,
+    private val velocityThreshold: Float = 400f,
+    private val cooldownMs: Long = 350L,
     private val timeProvider: () -> Long = System::currentTimeMillis,
 ) : NestedScrollConnection {
 
     private var accumulatedDeltaX = 0f
     private var lastTriggerTime = 0L
-    private val cooldownMs = 400L
 
     override fun onPostScroll(
         consumed: Offset,
@@ -148,13 +148,14 @@ class HorizontalSwipeConnection(
 
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
         val now = timeProvider()
+        val priorDelta = accumulatedDeltaX
         accumulatedDeltaX = 0f
         if (now - lastTriggerTime >= cooldownMs) {
             val absX = kotlin.math.abs(available.x)
             val absY = kotlin.math.abs(available.y)
-            if (absX > absY * 1.25f && absX >= velocityThreshold) {
+            if ((absX > absY * 1.25f && absX >= velocityThreshold) || kotlin.math.abs(priorDelta) >= thresholdPx) {
                 lastTriggerTime = now
-                if (available.x < 0f) {
+                if (available.x < 0f || (available.x == 0f && priorDelta < 0f)) {
                     onSwipeLeft()
                 } else {
                     onSwipeRight()
