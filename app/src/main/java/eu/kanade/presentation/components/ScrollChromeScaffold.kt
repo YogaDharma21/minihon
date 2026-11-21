@@ -4,10 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScaffoldDefaults
@@ -18,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +36,8 @@ import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
 import tachiyomi.presentation.core.components.material.Scaffold
 
+private var cachedScrollChromeHeaderHeightPx: Int = 0
+
 @Composable
 fun ScrollChromeScaffold(
     topBar: @Composable () -> Unit,
@@ -47,11 +52,13 @@ fun ScrollChromeScaffold(
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     content: @Composable (contentPadding: PaddingValues) -> Unit,
 ) {
-    var baseHeaderHeightPx by remember { mutableIntStateOf(0) }
+    var baseHeaderHeightPx by rememberSaveable { mutableIntStateOf(cachedScrollChromeHeaderHeightPx) }
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val fallbackHeight = statusBarTop + 76.dp
     val headerHeight = if (baseHeaderHeightPx > 0) {
         with(LocalDensity.current) { baseHeaderHeightPx.toDp() }
     } else {
-        72.dp
+        fallbackHeight
     }
 
     var showTopBar by remember { mutableStateOf(true) }
@@ -101,8 +108,7 @@ fun ScrollChromeScaffold(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .zIndex(10f)
-                    .onSizeChanged { if (it.height > baseHeaderHeightPx) baseHeaderHeightPx = it.height },
+                    .zIndex(10f),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 AnimatedVisibility(
@@ -110,7 +116,18 @@ fun ScrollChromeScaffold(
                     enter = topAppBarEnterTransition,
                     exit = topAppBarExitTransition,
                 ) {
-                    topBar()
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged {
+                                if (it.height > 0) {
+                                    baseHeaderHeightPx = it.height
+                                    cachedScrollChromeHeaderHeightPx = it.height
+                                }
+                            },
+                    ) {
+                        topBar()
+                    }
                 }
             }
         }

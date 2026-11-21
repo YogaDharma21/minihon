@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -87,6 +89,8 @@ import tachiyomi.presentation.core.util.clearFocusOnSoftKeyboardHide
 import tachiyomi.presentation.core.util.runOnEnterKeyPressed
 import tachiyomi.presentation.core.util.showSoftKeyboard
 
+private var cachedTabbedHeaderHeightPx: Int = 0
+
 @Composable
 fun TabbedScreen(
     titleRes: StringResource,
@@ -103,11 +107,13 @@ fun TabbedScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
-        var baseHeaderHeightPx by remember { mutableIntStateOf(0) }
+        var baseHeaderHeightPx by rememberSaveable { mutableIntStateOf(cachedTabbedHeaderHeightPx) }
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val fallbackHeight = statusBarTop + 114.dp
         val headerHeight = if (baseHeaderHeightPx > 0) {
-            LocalDensity.current.run { baseHeaderHeightPx.toDp() }
+            with(LocalDensity.current) { baseHeaderHeightPx.toDp() }
         } else {
-            136.dp
+            fallbackHeight
         }
         var showTopBar by remember { mutableStateOf(true) }
         val tab = tabs[state.currentPage]
@@ -179,8 +185,7 @@ fun TabbedScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .zIndex(10f)
-                    .onSizeChanged { if (it.height > baseHeaderHeightPx) baseHeaderHeightPx = it.height },
+                    .zIndex(10f),
                 contentAlignment = Alignment.TopCenter,
             ) {
                 AnimatedVisibility(
@@ -196,7 +201,13 @@ fun TabbedScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.statusBars)
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .onSizeChanged {
+                                if (it.height > 0) {
+                                    baseHeaderHeightPx = it.height
+                                    cachedTabbedHeaderHeightPx = it.height
+                                }
+                            },
                     ) {
                         Column(
                             modifier = Modifier

@@ -9,9 +9,12 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -23,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +91,8 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.source.local.isLocal
+
+private var cachedLibraryHeaderHeightPx: Int = 0
 
 data object LibraryTab : Tab {
 
@@ -166,11 +172,17 @@ data object LibraryTab : Tab {
                 },
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             ) { contentPadding ->
-                var baseHeaderHeightPx by remember { mutableIntStateOf(0) }
-                val headerHeight = if (baseHeaderHeightPx > 0) {
-                    LocalDensity.current.run { baseHeaderHeightPx.toDp() }
+                var baseHeaderHeightPx by rememberSaveable(showCategoryTabs) {
+                    mutableIntStateOf(cachedLibraryHeaderHeightPx)
+                }
+                val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                val fallbackHeight = statusBarTop + 76.dp + (if (showCategoryTabs) 48.dp else 0.dp)
+                val headerHeight = if (baseHeaderHeightPx >
+                    0
+                ) {
+                    with(LocalDensity.current) { baseHeaderHeightPx.toDp() }
                 } else {
-                    80.dp
+                    fallbackHeight
                 }
                 var showTopBar by remember { mutableStateOf(true) }
                 val isSearching = state.searchQuery != null
@@ -309,8 +321,7 @@ data object LibraryTab : Tab {
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.TopCenter)
-                            .zIndex(10f)
-                            .onSizeChanged { if (it.height > baseHeaderHeightPx) baseHeaderHeightPx = it.height },
+                            .zIndex(10f),
                         contentAlignment = Alignment.TopCenter,
                     ) {
                         AnimatedVisibility(
@@ -319,7 +330,14 @@ data object LibraryTab : Tab {
                             exit = topAppBarExitTransition,
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onSizeChanged {
+                                        if (it.height > 0) {
+                                            baseHeaderHeightPx = it.height
+                                            cachedLibraryHeaderHeightPx = it.height
+                                        }
+                                    },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 LibraryToolbar(
