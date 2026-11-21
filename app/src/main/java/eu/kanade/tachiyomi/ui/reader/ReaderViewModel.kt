@@ -702,23 +702,27 @@ class ReaderViewModel(
         updateTrackChapterRead(readerChapter)
         deleteChapterIfNeeded(readerChapter)
 
-        val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead.get()
-            .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_EXISTING)
-        if (!markDuplicateAsRead) return
-
-        val duplicateUnreadChapters = getUnfilteredChapterList()
-            .mapNotNull { chapter ->
-                if (
-                    !chapter.read &&
-                    chapter.isRecognizedNumber &&
-                    chapter.chapterNumber == readerChapter.chapter.chapterNumber
-                ) {
-                    ChapterUpdate(chapter.id) { read = true }
-                } else {
-                    null
+        val chapterNumber = readerChapter.chapter.chapterNumber
+        if (chapterNumber > 0.0) {
+            val duplicateUnreadChapters = getUnfilteredChapterList()
+                .mapNotNull { chapter ->
+                    if (
+                        !chapter.read &&
+                        chapter.id != readerChapter.chapter.id &&
+                        chapter.chapterNumber == chapterNumber
+                    ) {
+                        ChapterUpdate(chapter.id) { read = true }
+                    } else {
+                        null
+                    }
+                }
+            if (duplicateUnreadChapters.isNotEmpty()) {
+                updateChapter.awaitAll(duplicateUnreadChapters)
+                unfilteredChapterList = unfilteredChapterList?.map { chapter ->
+                    if (duplicateUnreadChapters.any { it.id == chapter.id }) chapter.copy(read = true) else chapter
                 }
             }
-        updateChapter.awaitAll(duplicateUnreadChapters)
+        }
     }
 
     fun restartReadTimer() {
@@ -790,8 +794,8 @@ class ReaderViewModel(
     /**
      * Bookmarks the currently active chapter.
      */
-    fun toggleChapterBookmark() {
-        val readerChapter = getCurrentChapter() ?: return
+    fun toggleChapterBookmark(targetChapter: ReaderChapter? = null) {
+        val readerChapter = targetChapter ?: getCurrentChapter() ?: return
         val bookmarked = !readerChapter.chapter.bookmark
         readerChapter.update { it.copy(bookmark = bookmarked) }
 
@@ -804,10 +808,12 @@ class ReaderViewModel(
             )
         }
 
-        mutableState.update {
-            it.copy(
-                bookmarked = bookmarked,
-            )
+        if (readerChapter.chapter.id == getCurrentChapter()?.chapter?.id) {
+            mutableState.update {
+                it.copy(
+                    bookmarked = bookmarked,
+                )
+            }
         }
     }
 
@@ -912,6 +918,10 @@ class ReaderViewModel(
         mutableState.update { it.copy(menuVisible = visible) }
     }
 
+    fun openDisplayLayoutDialog() {
+        mutableState.update { it.copy(dialog = Dialog.DisplayLayout) }
+    }
+
     fun openReadingModeSelectDialog() {
         mutableState.update { it.copy(dialog = Dialog.ReadingModeSelect) }
     }
@@ -926,6 +936,18 @@ class ReaderViewModel(
 
     fun openSettingsDialog() {
         mutableState.update { it.copy(dialog = Dialog.Settings) }
+    }
+
+    fun openChapterListDialog() {
+        mutableState.update { it.copy(dialog = Dialog.ChapterList) }
+    }
+
+    fun getChapters(): List<ReaderChapter> {
+        return if (::chapterList.isInitialized) chapterList else emptyList()
+    }
+
+    suspend fun loadChapter(chapter: ReaderChapter) {
+        loadAdjacent(chapter)
     }
 
     fun closeDialog() {
@@ -1106,9 +1128,11 @@ class ReaderViewModel(
 
     sealed interface Dialog {
         data object Settings : Dialog
+        data object DisplayLayout : Dialog
         data object ReadingModeSelect : Dialog
         data object OrientationModeSelect : Dialog
         data class PageActions(val page: ReaderPage) : Dialog
+        data object ChapterList : Dialog
     }
 
     sealed interface Event {

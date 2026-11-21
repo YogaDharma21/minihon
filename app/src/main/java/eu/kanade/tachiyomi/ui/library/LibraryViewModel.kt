@@ -185,11 +185,33 @@ class LibraryViewModel(
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope + subscriberGate, SharingStarted.Eagerly, null)
 
+    private val filterToken: Flow<String> = combine(
+        getLibraryItemPreferencesFlow(),
+        getTrackingFiltersFlow(),
+        libraryPreferences.randomSortSeed.changes(),
+        searchQuery,
+    ) { itemPreferences, trackingFilter, randomSeed, query ->
+        listOf(
+            itemPreferences.globalFilterDownloaded,
+            itemPreferences.filterDownloaded,
+            itemPreferences.filterUnread,
+            itemPreferences.filterStarted,
+            itemPreferences.filterBookmarked,
+            itemPreferences.filterCompleted,
+            itemPreferences.filterIntervalCustom,
+            trackingFilter.entries.sortedBy { it.key }.joinToString(",") { "${it.key}:${it.value}" },
+            randomSeed,
+            query.orEmpty(),
+        ).joinToString(";")
+    }
+        .distinctUntilChanged()
+
     val state: StateFlow<State> = combine(
         library,
         combine(searchQuery, selection, dialog, ::Triple),
         combine(activeCategoryIndex, displayPreferences, hasActiveFilters, ::Triple),
-    ) { library, (searchQuery, selection, dialog), (activeCategoryIndex, display, hasActiveFilters) ->
+        filterToken,
+    ) { library, (searchQuery, selection, dialog), (activeCategoryIndex, display, hasActiveFilters), filterToken ->
         State(
             isLoading = library == null,
             searchQuery = searchQuery,
@@ -200,6 +222,7 @@ class LibraryViewModel(
             showMangaContinueButton = display.showMangaContinueButton,
             dialog = dialog,
             libraryData = library?.data ?: LibraryData(),
+            filterToken = filterToken,
             activeCategoryIndex = activeCategoryIndex,
             groupedFavorites = library?.groupedFavorites.orEmpty(),
         )
@@ -223,7 +246,6 @@ class LibraryViewModel(
         preferences: ItemPreferences,
     ): List<LibraryItem> {
         val downloadedOnly = preferences.globalFilterDownloaded
-        val skipOutsideReleasePeriod = preferences.skipOutsideReleasePeriod
         val filterDownloaded = if (downloadedOnly) TriState.ENABLED_IS else preferences.filterDownloaded
         val filterUnread = preferences.filterUnread
         val filterStarted = preferences.filterStarted
@@ -258,11 +280,7 @@ class LibraryViewModel(
         }
 
         val filterFnIntervalCustom: (LibraryItem) -> Boolean = {
-            if (skipOutsideReleasePeriod) {
-                applyFilter(filterIntervalCustom) { it.libraryManga.manga.fetchInterval < 0 }
-            } else {
-                true
-            }
+            applyFilter(filterIntervalCustom) { it.libraryManga.manga.fetchInterval < 0 }
         }
 
         val filterFnTracking: (LibraryItem) -> Boolean = tracking@{ item ->
@@ -382,12 +400,11 @@ class LibraryViewModel(
     }
 
     private fun getLibraryItemPreferencesFlow(): Flow<ItemPreferences> {
-        return combine(
+        return combine<Any, ItemPreferences>(
             libraryPreferences.downloadBadge.changes(),
             libraryPreferences.unreadBadge.changes(),
             libraryPreferences.localBadge.changes(),
             libraryPreferences.languageBadge.changes(),
-            libraryPreferences.autoUpdateMangaRestrictions.changes(),
 
             preferences.downloadedOnly.changes(),
             libraryPreferences.filterDownloaded.changes(),
@@ -402,14 +419,13 @@ class LibraryViewModel(
                 unreadBadge = it[1] as Boolean,
                 localBadge = it[2] as Boolean,
                 languageBadge = it[3] as Boolean,
-                skipOutsideReleasePeriod = LibraryPreferences.MANGA_OUTSIDE_RELEASE_PERIOD in (it[4] as Set<*>),
-                globalFilterDownloaded = it[5] as Boolean,
-                filterDownloaded = it[6] as TriState,
-                filterUnread = it[7] as TriState,
-                filterStarted = it[8] as TriState,
-                filterBookmarked = it[9] as TriState,
-                filterCompleted = it[10] as TriState,
-                filterIntervalCustom = it[11] as TriState,
+                globalFilterDownloaded = it[4] as Boolean,
+                filterDownloaded = it[5] as TriState,
+                filterUnread = it[6] as TriState,
+                filterStarted = it[7] as TriState,
+                filterBookmarked = it[8] as TriState,
+                filterCompleted = it[9] as TriState,
+                filterIntervalCustom = it[10] as TriState,
             )
         }
     }
@@ -766,7 +782,6 @@ class LibraryViewModel(
         val unreadBadge: Boolean,
         val localBadge: Boolean,
         val languageBadge: Boolean,
-        val skipOutsideReleasePeriod: Boolean,
 
         val globalFilterDownloaded: Boolean,
         val filterDownloaded: TriState,
@@ -801,6 +816,7 @@ class LibraryViewModel(
         val showMangaContinueButton: Boolean = false,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
+        val filterToken: String = "",
         private val activeCategoryIndex: Int = 0,
         private val groupedFavorites: Map<Category, List</* LibraryItem */ Long>> = emptyMap(),
     ) {

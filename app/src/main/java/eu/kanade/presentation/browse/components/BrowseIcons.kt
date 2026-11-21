@@ -6,14 +6,18 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import eu.kanade.presentation.util.rememberResourceBitmapPainter
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.coil.InstalledExtensionIcon
@@ -63,18 +67,27 @@ fun SourceIcon(
     }
 }
 
+private val ExtensionPlaceholderColor = Color(0x1F888888)
+
 @Composable
 fun ExtensionIcon(
     extension: Extension,
     modifier: Modifier = Modifier,
     density: Int = DisplayMetrics.DENSITY_DEFAULT,
 ) {
+    val context = LocalContext.current
     when (extension) {
         is Extension.Available -> {
+            val iconRequest = remember(extension.iconUrl) {
+                ImageRequest.Builder(context)
+                    .data(extension.iconUrl)
+                    .crossfade(false)
+                    .build()
+            }
             AsyncImage(
-                model = extension.iconUrl,
+                model = iconRequest,
                 contentDescription = null,
-                placeholder = ColorPainter(Color(0x1F888888)),
+                placeholder = ColorPainter(ExtensionPlaceholderColor),
                 error = rememberResourceBitmapPainter(id = R.drawable.cover_error),
                 modifier = modifier
                     .clip(MaterialTheme.shapes.extraSmall),
@@ -82,8 +95,14 @@ fun ExtensionIcon(
         }
         is Extension.Loaded -> {
             val defaultIcon = painterResource(R.mipmap.ic_default_source)
+            val iconRequest = remember(extension.pkgName, extension.versionCode, density) {
+                ImageRequest.Builder(context)
+                    .data(InstalledExtensionIcon(extension.pkgName, extension.versionCode, density))
+                    .crossfade(false)
+                    .build()
+            }
             AsyncImage(
-                model = InstalledExtensionIcon(extension.pkgName, extension.versionCode, density),
+                model = iconRequest,
                 contentDescription = null,
                 placeholder = defaultIcon,
                 error = defaultIcon,

@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -41,6 +42,7 @@ import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.interactor.GetCategories
 import tachiyomi.domain.category.interactor.SetMangaCategories
 import tachiyomi.domain.category.model.Category
+import tachiyomi.domain.chapter.interactor.GetChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.history.interactor.GetHistory
 import tachiyomi.domain.history.interactor.GetNextChapters
@@ -61,6 +63,7 @@ class HistoryViewModel(
     @AppCoroutineScope private val appScope: CoroutineScope,
     private val addTracks: AddTracks,
     private val getCategories: GetCategories,
+    private val getChapter: GetChapter,
     private val getDuplicateLibraryManga: GetDuplicateLibraryManga,
     private val getHistory: GetHistory,
     private val getManga: GetManga,
@@ -119,12 +122,17 @@ class HistoryViewModel(
     }
 
     suspend fun getNextChapter(): Chapter? {
-        return getNextChapters.await(onlyUnread = false).firstOrNull()
+        val next = getNextChapters.await(onlyUnread = false).firstOrNull()
+        if (next != null) return next
+        val latestHistory = getHistory.subscribe("").firstOrNull()?.firstOrNull() ?: return null
+        return getChapter.await(latestHistory.chapterId)
     }
 
     fun getNextChapterForManga(mangaId: Long, chapterId: Long) {
         viewModelScope.launch {
-            sendNextChapterEvent(getNextChapters.await(mangaId, chapterId, onlyUnread = false))
+            val chapters = getNextChapters.await(mangaId, chapterId, onlyUnread = false)
+            val chapter = chapters.firstOrNull() ?: getChapter.await(chapterId)
+            _events.send(Event.OpenChapter(chapter))
         }
     }
 

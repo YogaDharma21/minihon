@@ -5,22 +5,28 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.category.visualName
 import tachiyomi.domain.category.model.Category
 import tachiyomi.presentation.core.components.material.TabText
 
 @Composable
-internal fun LibraryTabs(
+fun LibraryTabs(
     categories: List<Category>,
     pagerState: PagerState,
     getItemCountForCategory: (Category) -> Int?,
     onTabItemClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val currentPageIndex = pagerState.currentPage.coerceAtMost(categories.lastIndex)
     PrimaryScrollableTabRow(
         selectedTabIndex = currentPageIndex,
         edgePadding = 0.dp,
+        containerColor = Color.Transparent,
+        divider = {},
+        modifier = modifier,
     ) {
         categories.forEachIndexed { index, category ->
             Tab(

@@ -22,6 +22,7 @@ import androidx.core.os.LocaleListCompat
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import mihon.icons.materialsymbols.MaterialSymbols
@@ -30,7 +31,6 @@ import org.xmlpull.v1.XmlPullParser
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.R
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
 class AppLanguageScreen : Screen() {
@@ -54,17 +54,16 @@ class AppLanguageScreen : Screen() {
             AppCompatDelegate.setApplicationLocales(locale)
         }
 
-        Scaffold(
-            topBar = { scrollBehavior ->
+        ScrollChromeScaffold(
+            topBar = {
                 AppBar(
                     title = stringResource(MR.strings.pref_app_language),
                     navigateUp = navigator::pop,
-                    scrollBehavior = scrollBehavior,
                 )
             },
         ) { contentPadding ->
             LazyColumn(
-                modifier = Modifier.padding(contentPadding),
+                contentPadding = contentPadding,
             ) {
                 items(langs) {
                     ListItem(
@@ -92,27 +91,9 @@ class AppLanguageScreen : Screen() {
         }
     }
 
-    private fun getLangs(context: Context): List<Language> = buildList {
-        val parser = context.resources.getXml(R.xml.locales_config)
-        var eventType = parser.eventType
-        while (eventType != XmlPullParser.END_DOCUMENT) {
-            if (eventType == XmlPullParser.START_TAG && parser.name == "locale") {
-                for (i in 0..<parser.attributeCount) {
-                    if (parser.getAttributeName(i) == "name") {
-                        val langTag = parser.getAttributeValue(i)
-                        val displayName = LocaleHelper.getLocalizedDisplayName(langTag)
-                        if (displayName.isNotEmpty()) {
-                            add(Language(langTag, displayName, LocaleHelper.getDisplayName(langTag)))
-                        }
-                    }
-                }
-            }
-            eventType = parser.next()
-        }
-
-        sortBy { it.displayName }
-        add(0, Language("", context.stringResource(MR.strings.label_default), null))
-    }
+    private fun getLangs(context: Context): List<Language> = listOf(
+        Language("en", LocaleHelper.getLocalizedDisplayName("en"), LocaleHelper.getDisplayName("en")),
+    )
 
     private data class Language(
         val langTag: String,

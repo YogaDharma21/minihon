@@ -14,12 +14,20 @@ fun List<Chapter>.getNextUnread(
     downloadedOnly: Boolean,
     downloadManager: DownloadManager,
 ): Chapter? {
-    return applyFilters(manga, downloadedOnly, downloadManager).let { chapters ->
+    val unread = applyFilters(manga, downloadedOnly, downloadManager).let { chapters ->
         if (manga.sortDescending()) {
             chapters.findLast { !it.read }
         } else {
             chapters.find { !it.read }
         }
+    }
+    if (unread != null) return unread
+
+    val chapters = applyFilters(manga, downloadedOnly, downloadManager).toList()
+    return if (manga.sortDescending()) {
+        chapters.firstOrNull()
+    } else {
+        chapters.lastOrNull()
     }
 }
 
@@ -27,11 +35,19 @@ fun List<Chapter>.getNextUnread(
  * Gets next unread chapter with filters and sorting applied
  */
 fun List<ChapterList.Item>.getNextUnread(manga: Manga, downloadedOnly: Boolean): Chapter? {
-    return applyFilters(manga, downloadedOnly).let { chapters ->
+    val unread = applyFilters(manga, downloadedOnly).let { chapters ->
         if (manga.sortDescending()) {
             chapters.findLast { !it.chapter.read }
         } else {
             chapters.find { !it.chapter.read }
         }
     }?.chapter
+    if (unread != null) return unread
+
+    val chapters = applyFilters(manga, downloadedOnly).toList()
+    return if (manga.sortDescending()) {
+        chapters.firstOrNull()?.chapter
+    } else {
+        chapters.lastOrNull()?.chapter
+    }
 }

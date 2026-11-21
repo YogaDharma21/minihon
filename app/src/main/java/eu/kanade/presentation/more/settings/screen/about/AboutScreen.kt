@@ -24,6 +24,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.more.LogoHeader
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
@@ -59,7 +60,6 @@ import tachiyomi.domain.release.interactor.GetApplicationRelease
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LinkIcon
 import tachiyomi.presentation.core.components.ScrollbarLazyColumn
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import java.util.Locale
 import kotlin.time.Instant
@@ -71,18 +71,17 @@ object AboutScreen : Screen() {
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
         val uriHandler = LocalUriHandler.current
-        val handleBack = LocalBackPress.current
         val navigator = LocalNavigator.currentOrThrow
+        val handleBack = LocalBackPress.current ?: { if (navigator.canPop) navigator.pop() }
         var isCheckingUpdates by remember { mutableStateOf(false) }
         val crashLogUtil = remember { context.appGraph.crashLogUtil }
         val is24HourSystem = rememberIs24HourSystem()
 
-        Scaffold(
-            topBar = { scrollBehavior ->
+        ScrollChromeScaffold(
+            topBar = {
                 AppBar(
                     title = stringResource(MR.strings.pref_category_about),
-                    navigateUp = if (handleBack != null) handleBack::invoke else null,
-                    scrollBehavior = scrollBehavior,
+                    navigateUp = handleBack,
                 )
             },
         ) { contentPadding ->

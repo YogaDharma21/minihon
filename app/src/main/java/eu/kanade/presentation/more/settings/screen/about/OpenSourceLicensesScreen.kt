@@ -10,10 +10,10 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.R
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
 class OpenSourceLicensesScreen : Screen() {
@@ -21,12 +21,11 @@ class OpenSourceLicensesScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        Scaffold(
-            topBar = { scrollBehavior ->
+        ScrollChromeScaffold(
+            topBar = {
                 AppBar(
                     title = stringResource(MR.strings.licenses),
                     navigateUp = navigator::pop,
-                    scrollBehavior = scrollBehavior,
                 )
             },
         ) { contentPadding ->

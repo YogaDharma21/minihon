@@ -16,6 +16,7 @@ import eu.kanade.presentation.browse.components.BrowseSourceComfortableGrid
 import eu.kanade.presentation.browse.components.BrowseSourceCompactGrid
 import eu.kanade.presentation.browse.components.BrowseSourceList
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.source.Source
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,7 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.rounded.Public
 import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.Settings
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.manga.model.Manga
@@ -116,46 +118,39 @@ fun BrowseSourceContent(
         return
     }
 
-    when (displayMode) {
-        LibraryDisplayMode.ComfortableGrid -> {
-            BrowseSourceComfortableGrid(
-                mangaList = mangaList,
-                columns = columns,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-        LibraryDisplayMode.List -> {
-            BrowseSourceList(
-                mangaList = mangaList,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-        LibraryDisplayMode.CompactGrid, LibraryDisplayMode.CoverOnlyGrid -> {
-            BrowseSourceCompactGrid(
-                mangaList = mangaList,
-                columns = columns,
-                contentPadding = contentPadding,
-                onMangaClick = onMangaClick,
-                onMangaLongClick = onMangaLongClick,
-            )
-        }
-    }
+    BrowseSourceComfortableGrid(
+        mangaList = mangaList,
+        columns = columns,
+        contentPadding = contentPadding,
+        onMangaClick = onMangaClick,
+        onMangaLongClick = onMangaLongClick,
+    )
 }
 
 @Composable
 internal fun MissingSourceScreen(
     source: StubSource,
     navigateUp: () -> Unit,
+    onClickSettings: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
             AppBar(
                 title = source.name,
                 navigateUp = navigateUp,
+                actions = {
+                    if (onClickSettings != null) {
+                        AppBarActions(
+                            listOf(
+                                AppBar.Action(
+                                    title = stringResource(MR.strings.label_settings),
+                                    icon = MaterialSymbols.Rounded.Settings,
+                                    onClick = onClickSettings,
+                                ),
+                            ),
+                        )
+                    }
+                },
                 scrollBehavior = scrollBehavior,
             )
         },

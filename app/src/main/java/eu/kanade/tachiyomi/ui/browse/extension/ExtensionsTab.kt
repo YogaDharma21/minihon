@@ -19,8 +19,12 @@ import eu.kanade.presentation.components.TabContent
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.ui.browse.extension.details.ExtensionDetailsScreen
+import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.isPackageInstalled
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.FilterList
+import mihon.icons.materialsymbols.rounded.Storage
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -39,13 +43,15 @@ fun extensionsTab(
         badgeNumber = updatesCount.takeIf { it > 0 },
         searchEnabled = true,
         actions = listOf(
-            AppBar.OverflowAction(
-                title = stringResource(MR.strings.action_filter),
-                onClick = { navigator.push(ExtensionFilterScreen()) },
-            ),
-            AppBar.OverflowAction(
+            AppBar.Action(
                 title = stringResource(MR.strings.extensionStores),
+                icon = MaterialSymbols.Rounded.Storage,
                 onClick = { navigator.push(ExtensionStoresScreen()) },
+            ),
+            AppBar.Action(
+                title = stringResource(MR.strings.action_filter),
+                icon = MaterialSymbols.Rounded.FilterList,
+                onClick = { navigator.push(ExtensionFilterScreen()) },
             ),
         ),
         content = { contentPadding, _ ->
@@ -90,6 +96,7 @@ fun extensionsTab(
                 onUninstallExtension = { extensionsViewModel.uninstallExtension(it) },
                 onUpdateExtension = extensionsViewModel::updateExtension,
                 onRefresh = extensionsViewModel::findAvailableExtensions,
+                onOpenStores = { navigator.push(ExtensionStoresScreen()) },
             )
 
             privateExtensionToUninstall?.let { extension ->

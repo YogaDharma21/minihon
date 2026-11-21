@@ -30,6 +30,7 @@ fun ReaderPageIndicator(
         fontSize = MaterialTheme.typography.bodySmall.fontSize,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
+        fontFeatureSettings = "tnum",
     )
     val strokeStyle = style.copy(
         color = Color(45, 45, 45),
