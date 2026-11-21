@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.ChapterGroupHeader
@@ -77,7 +78,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.VerticalFastScroller
 import tachiyomi.presentation.core.components.material.PullRefresh
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.shouldExpandFAB
 import tachiyomi.source.local.isLocal
@@ -313,7 +313,8 @@ private fun MangaScreenSmallImpl(
 
     var isSearchActive by remember { mutableStateOf(false) }
 
-    Scaffold(
+    ScrollChromeScaffold(
+        isTopBarPinned = state.selectedChapters.isNotEmpty() || isSearchActive || state.searchQuery.isNotEmpty(),
         topBar = {
             val titleAlpha by remember {
                 derivedStateOf { toolbarTitleAlpha(chapterListState.firstVisibleItemIndex) }
@@ -584,7 +585,8 @@ fun MangaScreenLargeImpl(
 
     var isSearchActive by remember { mutableStateOf(false) }
 
-    Scaffold(
+    ScrollChromeScaffold(
+        isTopBarPinned = isAnySelected || isSearchActive || state.searchQuery.isNotEmpty(),
         topBar = {
             MangaToolbar(
                 modifier = Modifier
