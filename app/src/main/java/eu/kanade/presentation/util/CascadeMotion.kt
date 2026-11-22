@@ -41,6 +41,7 @@ enum class CascadeSurface {
     Updates,
     History,
     Sources,
+    Extensions,
 }
 
 object CascadeMotionSession {
@@ -97,6 +98,7 @@ class CascadeScrollConnection(
 fun rememberCascadeMotionTrigger(
     surface: CascadeSurface,
     direction: CascadeDirection = CascadeDirection.FromBottom,
+    key: Any? = Unit,
 ): CascadeMotionTrigger {
     val context = LocalContext.current
     val isInspection = LocalInspectionMode.current
@@ -112,12 +114,16 @@ fun rememberCascadeMotionTrigger(
             false
         }
     }
-    return remember(surface, isReducedMotion, direction) {
+    return remember(surface, isReducedMotion, direction, key) {
         if (isReducedMotion) {
             CascadeMotionTrigger.Disabled
         } else {
             CascadeMotionSession.markPlayed(surface)
-            CascadeMotionTrigger(direction = direction)
+            CascadeMotionTrigger(
+                id = if (key != Unit && key != null) key.hashCode().toLong() else 0L,
+                startUptimeMillis = defaultUptimeMillis(),
+                direction = direction,
+            )
         }
     }
 }

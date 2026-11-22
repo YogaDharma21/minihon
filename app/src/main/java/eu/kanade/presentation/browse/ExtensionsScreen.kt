@@ -57,6 +57,7 @@ import eu.kanade.presentation.browse.components.BrowseSkeletonScreen
 import eu.kanade.presentation.browse.components.CatalogRowContainer
 import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.ExtensionIcon
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
@@ -326,15 +327,16 @@ private fun ExtensionContent(
                 )
             }
 
-            items(
+            itemsIndexed(
                 items = installedRows,
-                contentType = { "bento-deck-row" },
-                key = { row -> "bento-row-" + row.first().extension.pkgName },
-            ) { row ->
+                contentType = { _, _ -> "bento-deck-row" },
+                key = { _, row -> "bento-row-" + row.first().extension.pkgName },
+            ) { rowIndex, row ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .cascadeItemMotion(index = rowIndex),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     for (item in row) {
@@ -402,6 +404,7 @@ private fun ExtensionContent(
             ) { index, item ->
                 CatalogRowContainer(
                     position = CatalogRowPosition.from(index, items.size),
+                    modifier = Modifier.cascadeItemMotion(index = index),
                 ) {
                     CatalogExtensionRow(
                         item = item,

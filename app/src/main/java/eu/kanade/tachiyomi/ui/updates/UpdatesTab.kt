@@ -118,7 +118,10 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
         ),
         content = { contentPadding, snackbarHostState ->
             CompositionLocalProvider(
-                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.Updates),
+                LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(
+                    surface = CascadeSurface.Updates,
+                    key = state.isLoading,
+                ),
             ) {
                 UpdatesScreen(
                     state = state,

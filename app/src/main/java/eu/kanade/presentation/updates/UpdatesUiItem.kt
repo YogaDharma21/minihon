@@ -87,7 +87,9 @@ internal fun LazyListScope.updatesLastUpdatedItem(
     item(key = "updates-lastUpdated") {
         UpdatesLastUpdatedHeader(
             lastUpdated = lastUpdated,
-            modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
+            modifier = Modifier
+                .cascadeItemMotion(index = 0)
+                .animateItem(fadeInSpec = null, fadeOutSpec = null),
         )
     }
 }
@@ -141,7 +143,7 @@ internal fun LazyListScope.updatesUiItems(
         }
     }
 
-    var itemIndex = 0
+    var itemIndex = 1
     groups.forEach { (date, items) ->
         if (date != null) {
             item(
@@ -227,6 +229,7 @@ internal fun LazyListScope.updatesUiItems(
                                     Column {
                                         mangaGroup.forEachIndexed { index, updatesItem ->
                                             UpdatesChapterUiItem(
+                                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
                                                 update = updatesItem.update,
                                                 isLast = index == mangaGroup.lastIndex,
                                                 selected = updatesItem.selected,

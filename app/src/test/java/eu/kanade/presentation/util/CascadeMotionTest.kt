@@ -158,6 +158,7 @@ class CascadeMotionTest {
         CascadeMotionSession.hasPlayed(CascadeSurface.Updates) shouldBe false
         CascadeMotionSession.hasPlayed(CascadeSurface.History) shouldBe false
         CascadeMotionSession.hasPlayed(CascadeSurface.Sources) shouldBe false
+        CascadeMotionSession.hasPlayed(CascadeSurface.Extensions) shouldBe false
 
         CascadeMotionSession.markPlayed(CascadeSurface.Library)
         CascadeMotionSession.hasPlayed(CascadeSurface.Library) shouldBe true
