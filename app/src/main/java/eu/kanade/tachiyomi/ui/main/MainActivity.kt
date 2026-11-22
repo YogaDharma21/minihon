@@ -14,9 +14,6 @@ import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -205,114 +202,115 @@ class MainActivity : BaseActivity() {
                 }
             }
 
-            val showMigrating = migrating || migratingSince != null
-            Crossfade(
-                targetState = showMigrating,
-                animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-                label = "SplashReadinessHandoff",
-            ) { isMigrating ->
-                if (isMigrating) {
-                    AppMigratingScreen(
-                        isDatabaseMigrating = databaseMigrating,
-                        isAppMigrating = appMigrating,
-                    )
-                    // Release the splash screen so the reason for the wait shows
-                    LaunchedEffect(Unit) { ready = true }
+            if (migrating || migratingSince != null) {
+                AppMigratingScreen(
+                    isDatabaseMigrating = databaseMigrating,
+                    isAppMigrating = appMigrating,
+                )
+                LaunchedEffect(Unit) { ready = true }
+                return@setComposeContent
+            }
+
+            val context = LocalContext.current
+
+            var incognito by remember { mutableStateOf(false) }
+            val downloadOnly by preferences.downloadedOnly.collectAsState()
+            val indexing by downloadCache.isInitializing.collectAsState()
+
+            val isSystemInDarkTheme = isSystemInDarkTheme()
+            val statusBarBackgroundColor = when {
+                indexing -> IndexingBannerBackgroundColor
+                downloadOnly -> DownloadedOnlyBannerBackgroundColor
+                incognito -> IncognitoModeBannerBackgroundColor
+                else -> MaterialTheme.colorScheme.surface
+            }
+            LaunchedEffect(isSystemInDarkTheme, statusBarBackgroundColor) {
+                // Draw edge-to-edge and set system bars color to transparent
+                val lightStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK)
+                val darkStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+                enableEdgeToEdge(
+                    statusBarStyle = if (statusBarBackgroundColor.luminance() > 0.5) lightStyle else darkStyle,
+                    navigationBarStyle = if (isSystemInDarkTheme) darkStyle else lightStyle,
+                )
+            }
+
+            val initialScreens = remember {
+                if (!preferences.shownOnboardingFlow.get()) {
+                    listOf(HomeScreen, OnboardingScreen())
                 } else {
-                    val context = LocalContext.current
+                    listOf(HomeScreen)
+                }
+            }
+            Navigator(
+                screens = initialScreens,
+                disposeBehavior = NavigatorDisposeBehavior(disposeNestedNavigators = false, disposeSteps = true),
+            ) { navigator ->
+                LaunchedEffect(navigator) {
+                    this@MainActivity.navigator = navigator
 
-                    var incognito by remember { mutableStateOf(false) }
-                    val downloadOnly by preferences.downloadedOnly.collectAsState()
-                    val indexing by downloadCache.isInitializing.collectAsState()
+                    if (isLaunch) {
+                        // Set start screen
+                        handleIntentAction(intent, navigator)
 
-                    val isSystemInDarkTheme = isSystemInDarkTheme()
-                    val statusBarBackgroundColor = when {
-                        indexing -> IndexingBannerBackgroundColor
-                        downloadOnly -> DownloadedOnlyBannerBackgroundColor
-                        incognito -> IncognitoModeBannerBackgroundColor
-                        else -> MaterialTheme.colorScheme.surface
+                        // Reset Incognito Mode on relaunch
+                        preferences.incognitoMode.set(false)
                     }
-                    LaunchedEffect(isSystemInDarkTheme, statusBarBackgroundColor) {
-                        // Draw edge-to-edge and set system bars color to transparent
-                        val lightStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.BLACK)
-                        val darkStyle = SystemBarStyle.dark(Color.TRANSPARENT)
-                        enableEdgeToEdge(
-                            statusBarStyle = if (statusBarBackgroundColor.luminance() > 0.5) lightStyle else darkStyle,
-                            navigationBarStyle = if (isSystemInDarkTheme) darkStyle else lightStyle,
+                }
+                LaunchedEffect(Unit) {
+                    ready = true
+                }
+                LaunchedEffect(navigator.lastItem) {
+                    (navigator.lastItem as? BrowseSourceScreen)?.sourceId
+                        .let(getIncognitoState::subscribe)
+                        .collectLatest { incognito = it }
+                }
+
+                val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+                Scaffold(
+                    topBar = {
+                        AppStateBanners(
+                            downloadedOnlyMode = downloadOnly,
+                            incognitoMode = incognito,
+                            indexing = indexing,
+                            modifier = Modifier.windowInsetsPadding(scaffoldInsets),
+                        )
+                    },
+                    contentWindowInsets = scaffoldInsets,
+                ) { contentPadding ->
+                    // Consume insets already used by app state banners
+                    Box {
+                        // Shows current screen
+                        DefaultNavigatorScreenTransition(
+                            navigator = navigator,
+                            modifier = Modifier
+                                .padding(contentPadding)
+                                .consumeWindowInsets(contentPadding),
                         )
                     }
+                }
 
-                    Navigator(
-                        screen = HomeScreen,
-                        disposeBehavior = NavigatorDisposeBehavior(disposeNestedNavigators = false, disposeSteps = true),
-                    ) { navigator ->
-                        LaunchedEffect(navigator) {
-                            this@MainActivity.navigator = navigator
-
-                            if (isLaunch) {
-                                // Set start screen
-                                handleIntentAction(intent, navigator)
-
-                                // Reset Incognito Mode on relaunch
-                                preferences.incognitoMode.set(false)
-
-                                ready = true
+                // Pop source-related screens when incognito mode is turned off
+                LaunchedEffect(Unit) {
+                    preferences.incognitoMode.changes()
+                        .drop(1)
+                        .filter { !it }
+                        .onEach {
+                            val currentScreen = navigator.lastItem
+                            if (currentScreen is BrowseSourceScreen ||
+                                (currentScreen is MangaScreen && currentScreen.fromSource)
+                            ) {
+                                navigator.popUntilRoot()
                             }
                         }
-                        LaunchedEffect(navigator.lastItem) {
-                            (navigator.lastItem as? BrowseSourceScreen)?.sourceId
-                                .let(getIncognitoState::subscribe)
-                                .collectLatest { incognito = it }
-                        }
+                        .launchIn(this)
+                }
 
-                        val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
-                        Scaffold(
-                            topBar = {
-                                AppStateBanners(
-                                    downloadedOnlyMode = downloadOnly,
-                                    incognitoMode = incognito,
-                                    indexing = indexing,
-                                    modifier = Modifier.windowInsetsPadding(scaffoldInsets),
-                                )
-                            },
-                            contentWindowInsets = scaffoldInsets,
-                        ) { contentPadding ->
-                            // Consume insets already used by app state banners
-                            Box {
-                                // Shows current screen
-                                DefaultNavigatorScreenTransition(
-                                    navigator = navigator,
-                                    modifier = Modifier
-                                        .padding(contentPadding)
-                                        .consumeWindowInsets(contentPadding),
-                                )
-                            }
-                        }
+                HandleOnNewIntent(context = context, navigator = navigator)
 
-                        // Pop source-related screens when incognito mode is turned off
-                        LaunchedEffect(Unit) {
-                            preferences.incognitoMode.changes()
-                                .drop(1)
-                                .filter { !it }
-                                .onEach {
-                                    val currentScreen = navigator.lastItem
-                                    if (currentScreen is BrowseSourceScreen ||
-                                        (currentScreen is MangaScreen && currentScreen.fromSource)
-                                    ) {
-                                        navigator.popUntilRoot()
-                                    }
-                                }
-                                .launchIn(this)
-                        }
-
-                        HandleOnNewIntent(context = context, navigator = navigator)
-
-                        if (!isBenchmarkBuildType) {
-                            if (isLaunch) CheckForUpdates()
-                            ShowOnboarding()
-                            ShowDonationCampaign()
-                        }
-                    }
+                if (!isBenchmarkBuildType) {
+                    if (isLaunch) CheckForUpdates()
+                    ShowOnboarding()
+                    ShowDonationCampaign()
                 }
             }
         }
@@ -417,7 +415,7 @@ class MainActivity : BaseActivity() {
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
-            if (!preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
+            if (!preferences.shownOnboardingFlow.get() && navigator.items.none { it is OnboardingScreen }) {
                 navigator.push(OnboardingScreen())
             }
         }
@@ -544,7 +542,7 @@ class MainActivity : BaseActivity() {
     }
 
     /**
-     * Sets custom splash screen exit animation across all supported API versions.
+     * Sets custom splash screen exit animation on devices prior to Android 12.
      *
      * Features playful icon scale anticipation, pop-out, and alpha fade,
      * with a smooth translation and alpha handoff into activity content.
@@ -557,75 +555,75 @@ class MainActivity : BaseActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             window.statusBarColor = Color.TRANSPARENT
             window.navigationBarColor = Color.TRANSPARENT
-        }
 
-        splashScreen.setOnExitAnimationListener { splashProvider ->
-            // SplashScreen compat can apply incorrect Y translation to iconView
-            splashProvider.iconView.translationY = 0F
+            splashScreen.setOnExitAnimationListener { splashProvider ->
+                // SplashScreen compat can apply incorrect Y translation to iconView
+                splashProvider.iconView.translationY = 0F
 
-            val activityAnim = ValueAnimator.ofFloat(0F, 1F).apply {
-                interpolator = LinearOutSlowInInterpolator()
-                duration = SPLASH_EXIT_ANIM_DURATION
-                addUpdateListener { va ->
-                    val fraction = va.animatedFraction
-                    root.translationY = (1f - fraction) * 16.dpToPx
-                    root.alpha = 0.85f + (0.15f * fraction)
+                val activityAnim = ValueAnimator.ofFloat(0F, 1F).apply {
+                    interpolator = LinearOutSlowInInterpolator()
+                    duration = SPLASH_EXIT_ANIM_DURATION
+                    addUpdateListener { va ->
+                        val fraction = va.animatedFraction
+                        root.translationY = (1f - fraction) * 16.dpToPx
+                        root.alpha = 0.85f + (0.15f * fraction)
+                    }
                 }
+
+                val splashAnim = ValueAnimator.ofFloat(0F, 1F).apply {
+                    interpolator = FastOutSlowInInterpolator()
+                    duration = SPLASH_EXIT_ANIM_DURATION
+                    addUpdateListener { va ->
+                        val fraction = va.animatedFraction
+
+                        // Playful scale anticipation and pop-out
+                        val scale = when {
+                            fraction < 0.25f -> {
+                                val t = fraction / 0.25f
+                                1.0f - (0.12f * t)
+                            }
+                            fraction < 0.70f -> {
+                                val t = (fraction - 0.25f) / 0.45f
+                                0.88f + (0.37f * t)
+                            }
+                            else -> {
+                                val t = (fraction - 0.70f) / 0.30f
+                                1.25f + (0.10f * t)
+                            }
+                        }
+                        splashProvider.iconView.scaleX = scale
+                        splashProvider.iconView.scaleY = scale
+
+                        // Alpha fade: hold during anticipation, fade during pop-out
+                        val iconAlpha = when {
+                            fraction < 0.35f -> 1.0f
+                            else -> {
+                                val t = (fraction - 0.35f) / 0.65f
+                                (1.0f - t).coerceIn(0f, 1f)
+                            }
+                        }
+                        splashProvider.iconView.alpha = iconAlpha
+
+                        // Background fade out
+                        val bgAlpha = when {
+                            fraction < 0.30f -> 1.0f
+                            else -> {
+                                val t = (fraction - 0.30f) / 0.70f
+                                (1.0f - t).coerceIn(0f, 1f)
+                            }
+                        }
+                        splashProvider.view.alpha = bgAlpha
+                    }
+                    doOnEnd {
+                        splashProvider.remove()
+                        root.translationY = 0F
+                        root.alpha = 1F
+                    }
+                }
+
+                activityAnim.start()
+                splashAnim.start()
             }
-
-            val splashAnim = ValueAnimator.ofFloat(0F, 1F).apply {
-                interpolator = FastOutSlowInInterpolator()
-                duration = SPLASH_EXIT_ANIM_DURATION
-                addUpdateListener { va ->
-                    val fraction = va.animatedFraction
-
-                    // Playful scale anticipation and pop-out
-                    val scale = when {
-                        fraction < 0.25f -> {
-                            val t = fraction / 0.25f
-                            1.0f - (0.12f * t)
-                        }
-                        fraction < 0.70f -> {
-                            val t = (fraction - 0.25f) / 0.45f
-                            0.88f + (0.37f * t)
-                        }
-                        else -> {
-                            val t = (fraction - 0.70f) / 0.30f
-                            1.25f + (0.10f * t)
-                        }
-                    }
-                    splashProvider.iconView.scaleX = scale
-                    splashProvider.iconView.scaleY = scale
-
-                    // Alpha fade: hold during anticipation, fade during pop-out
-                    val iconAlpha = when {
-                        fraction < 0.35f -> 1.0f
-                        else -> {
-                            val t = (fraction - 0.35f) / 0.65f
-                            (1.0f - t).coerceIn(0f, 1f)
-                        }
-                    }
-                    splashProvider.iconView.alpha = iconAlpha
-
-                    // Background fade out
-                    val bgAlpha = when {
-                        fraction < 0.30f -> 1.0f
-                        else -> {
-                            val t = (fraction - 0.30f) / 0.70f
-                            (1.0f - t).coerceIn(0f, 1f)
-                        }
-                    }
-                    splashProvider.view.alpha = bgAlpha
-                }
-                doOnEnd {
-                    splashProvider.remove()
-                    root.translationY = 0F
-                    root.alpha = 1F
-                }
-            }
-
-            activityAnim.start()
-            splashAnim.start()
         }
     }
 
