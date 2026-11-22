@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +60,7 @@ import eu.kanade.presentation.manga.components.ExpandableMangaDescription
 import eu.kanade.presentation.manga.components.MangaActionRow
 import eu.kanade.presentation.manga.components.MangaBottomActionMenu
 import eu.kanade.presentation.manga.components.MangaChapterListItem
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.manga.components.MangaInfoBox
 import eu.kanade.presentation.manga.components.MangaToolbar
 import eu.kanade.presentation.manga.components.MissingChapterCountListItem
@@ -817,35 +819,36 @@ private fun LazyListScope.sharedChapterItems(
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
     itemModifier: Modifier = Modifier,
 ) {
-    items(
+    itemsIndexed(
         items = chapters,
-        key = { item ->
+        key = { _, item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
                 is ChapterList.GroupHeader -> item.id
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
-        contentType = { item ->
+        contentType = { _, item ->
             when (item) {
                 is ChapterList.GroupHeader -> MangaScreenItem.CHAPTER_GROUP_HEADER
                 else -> MangaScreenItem.CHAPTER
             }
         },
-    ) { item ->
+    ) { index, item ->
         val haptic = LocalHapticFeedback.current
+        val motionModifier = itemModifier.cascadeItemMotion(index = index)
 
         when (item) {
             is ChapterList.MissingCount -> {
                 MissingChapterCountListItem(
                     count = item.count,
-                    modifier = itemModifier,
+                    modifier = motionModifier,
                 )
             }
             is ChapterList.GroupHeader -> {
                 ChapterGroupHeader(
                     title = item.label,
-                    modifier = itemModifier,
+                    modifier = motionModifier,
                 )
             }
             is ChapterList.Item -> {
@@ -919,7 +922,7 @@ private fun LazyListScope.sharedChapterItems(
                     },
                     versionDownloadProgressProvider = downloadProgressProvider,
                     isSubChapter = item.isSubChapter,
-                    modifier = itemModifier,
+                    modifier = motionModifier,
                 )
             }
         }

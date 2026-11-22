@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -198,16 +199,16 @@ object HomeScreen : Screen() {
                     AnimatedContent(
                         targetState = tabNavigator.current,
                         transitionSpec = {
-                            val slideSpec = spring<IntOffset>(
-                                stiffness = Spring.StiffnessMediumLow,
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                            )
+                            val duration = 700
+                            val tabEasing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+                            val slideSpec = tween<IntOffset>(durationMillis = duration, easing = tabEasing)
+                            val fadeSpec = tween<Float>(durationMillis = 450, easing = tabEasing)
                             if (transitionDirection == TabTransitionDirection.Forward) {
-                                slideInHorizontally(slideSpec) { it } togetherWith
-                                    slideOutHorizontally(slideSpec) { -it }
+                                (slideInHorizontally(slideSpec) { it } + fadeIn(fadeSpec)) togetherWith
+                                    (slideOutHorizontally(slideSpec) { -it } + fadeOut(fadeSpec))
                             } else {
-                                slideInHorizontally(slideSpec) { -it } togetherWith
-                                    slideOutHorizontally(slideSpec) { it }
+                                (slideInHorizontally(slideSpec) { -it } + fadeIn(fadeSpec)) togetherWith
+                                    (slideOutHorizontally(slideSpec) { it } + fadeOut(fadeSpec))
                             }
                         },
                         modifier = Modifier.fillMaxSize(),

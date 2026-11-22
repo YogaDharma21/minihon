@@ -40,6 +40,7 @@ import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.browse.components.SourceLatestButton
 import eu.kanade.presentation.browse.components.SourcePinButton
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.tachiyomi.ui.browse.source.SourcesViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
 import eu.kanade.tachiyomi.util.system.LocaleHelper
@@ -193,15 +194,16 @@ fun SourcesScreen(
                     }
 
                     val chunkedPinned = pinnedSources.chunked(2)
-                    items(
+                    itemsIndexed(
                         items = chunkedPinned,
-                        contentType = { "bento-deck-row" },
-                        key = { row -> "bento-row-" + row.joinToString("-") { it.key() } },
-                    ) { row ->
+                        contentType = { _, _ -> "bento-deck-row" },
+                        key = { _, row -> "bento-row-" + row.joinToString("-") { it.key() } },
+                    ) { rowIndex, row ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .cascadeItemMotion(index = rowIndex),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             for (source in row) {
@@ -238,6 +240,7 @@ fun SourcesScreen(
                     ) { index, source ->
                         CatalogRowContainer(
                             position = CatalogRowPosition.from(index, sources.size),
+                            modifier = Modifier.cascadeItemMotion(index = index),
                         ) {
                             CatalogSourceRow(
                                 source = source,

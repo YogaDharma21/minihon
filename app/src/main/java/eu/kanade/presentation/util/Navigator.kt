@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -14,7 +15,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +55,8 @@ interface AssistContentScreen {
     fun onProvideAssistUrl(): String?
 }
 
+private val NAV_EASING = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+
 @Composable
 fun DefaultNavigatorScreenTransition(
     navigator: Navigator,
@@ -60,7 +65,28 @@ fun DefaultNavigatorScreenTransition(
     ScreenTransition(
         navigator = navigator,
         transition = {
-            fadeIn(animationSpec = tween(120)) togetherWith fadeOut(animationSpec = tween(120))
+            val isPush = navigator.lastEvent == StackEvent.Push
+            if (isPush) {
+                (
+                    slideInVertically(
+                        animationSpec = tween(700, easing = NAV_EASING),
+                        initialOffsetY = { (it * 0.10f).toInt() },
+                    ) + fadeIn(animationSpec = tween(450, easing = NAV_EASING))
+                ) togetherWith (
+                    fadeOut(animationSpec = tween(350, easing = NAV_EASING)) +
+                        scaleOut(targetScale = 0.96f, animationSpec = tween(500, easing = NAV_EASING))
+                )
+            } else {
+                (
+                    scaleIn(initialScale = 0.96f, animationSpec = tween(500, easing = NAV_EASING)) +
+                        fadeIn(animationSpec = tween(450, easing = NAV_EASING))
+                ) togetherWith (
+                    slideOutVertically(
+                        animationSpec = tween(550, easing = NAV_EASING),
+                        targetOffsetY = { (it * 0.10f).toInt() },
+                    ) + fadeOut(animationSpec = tween(350, easing = NAV_EASING))
+                )
+            }
         },
         modifier = modifier,
     )

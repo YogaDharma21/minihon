@@ -11,12 +11,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.MangaComfortableGridItem
+import eu.kanade.presentation.util.cascadeItemMotion
 import kotlinx.coroutines.flow.StateFlow
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
@@ -45,6 +47,7 @@ fun BrowseSourceComfortableGrid(
         items(count = mangaList.itemCount) { index ->
             val manga by mangaList[index]?.collectAsState() ?: return@items
             BrowseSourceComfortableGridItem(
+                index = index,
                 manga = manga,
                 onClick = { onMangaClick(manga) },
                 onLongClick = { onMangaLongClick(manga) },
@@ -61,11 +64,13 @@ fun BrowseSourceComfortableGrid(
 
 @Composable
 private fun BrowseSourceComfortableGridItem(
+    index: Int,
     manga: Manga,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = onClick,
 ) {
     Surface(
+        modifier = Modifier.cascadeItemMotion(index = index),
         shape = RoundedCornerShape(16.dp),
         color = Color(0xFF121316),
         border = BorderStroke(1.dp, Color(0x12FFFFFF)),

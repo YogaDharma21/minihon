@@ -2,6 +2,7 @@ package eu.kanade.presentation.theme
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
@@ -38,8 +39,14 @@ val itemPlacementSpec: FiniteAnimationSpec<IntOffset> = spring(
     dampingRatio = Spring.DampingRatioNoBouncy,
 )
 
-val appBarSlideAnimationSpec: FiniteAnimationSpec<IntOffset> = tween(200)
-val appBarFadeAnimationSpec: FiniteAnimationSpec<Float> = tween(150)
+val appBarSlideAnimationSpec: FiniteAnimationSpec<IntOffset> = tween(
+    durationMillis = 700,
+    easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f),
+)
+val appBarFadeAnimationSpec: FiniteAnimationSpec<Float> = tween(
+    durationMillis = 450,
+    easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f),
+)
 
 val topAppBarEnterTransition: EnterTransition =
     slideInVertically(appBarSlideAnimationSpec) { -it } + fadeIn(appBarFadeAnimationSpec)

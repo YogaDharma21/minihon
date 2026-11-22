@@ -17,6 +17,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,7 +39,10 @@ import eu.kanade.presentation.browse.components.RemoveMangaDialog
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.manga.DuplicateMangaDialog
 import eu.kanade.presentation.util.AssistContentScreen
+import eu.kanade.presentation.util.CascadeSurface
+import eu.kanade.presentation.util.LocalCascadeMotionTrigger
 import eu.kanade.presentation.util.Screen
+import eu.kanade.presentation.util.rememberCascadeMotionTrigger
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.browse.extension.details.SourcePreferencesScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
@@ -127,7 +131,10 @@ data class BrowseSourceScreen(
             assistUrl = (source as? HttpSource)?.getHomeUrl()
         }
 
-        Scaffold(
+        CompositionLocalProvider(
+            LocalCascadeMotionTrigger provides rememberCascadeMotionTrigger(CascadeSurface.Sources),
+        ) {
+            Scaffold(
             topBar = {
                 Column(
                     modifier = Modifier
@@ -241,6 +248,7 @@ data class BrowseSourceScreen(
                 },
             )
         }
+    }
 
         val onDismissRequest = { viewModel.setDialog(null) }
         when (val dialog = state.dialog) {

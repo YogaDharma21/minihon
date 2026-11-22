@@ -5,11 +5,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import eu.kanade.presentation.library.components.CommonMangaItemDefaults
 import eu.kanade.presentation.library.components.MangaListItem
+import eu.kanade.presentation.util.cascadeItemMotion
 import kotlinx.coroutines.flow.StateFlow
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaCover
@@ -34,6 +36,7 @@ fun BrowseSourceList(
         items(count = mangaList.itemCount) { index ->
             val manga by mangaList[index]?.collectAsState() ?: return@items
             BrowseSourceListItem(
+                index = index,
                 manga = manga,
                 onClick = { onMangaClick(manga) },
                 onLongClick = { onMangaLongClick(manga) },
@@ -50,11 +53,13 @@ fun BrowseSourceList(
 
 @Composable
 private fun BrowseSourceListItem(
+    index: Int,
     manga: Manga,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = onClick,
 ) {
     MangaListItem(
+        modifier = Modifier.cascadeItemMotion(index = index),
         title = manga.title,
         coverData = MangaCover(
             mangaId = manga.id,
