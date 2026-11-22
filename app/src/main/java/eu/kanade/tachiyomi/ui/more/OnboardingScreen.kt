@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.more
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -11,6 +12,7 @@ import eu.kanade.presentation.more.onboarding.OnboardingScreen
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
 import eu.kanade.presentation.more.settings.screen.SettingsDataScreen
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import mihon.app.di.appGraph
 import tachiyomi.presentation.core.i18n.stringResource
@@ -35,6 +37,10 @@ class OnboardingScreen : Screen() {
 
         BackHandler(enabled = !shownOnboardingFlow) {
             // Prevent exiting if onboarding hasn't been completed
+        }
+
+        LaunchedEffect(Unit) {
+            (context as? MainActivity)?.ready = true
         }
 
         OnboardingScreen(
