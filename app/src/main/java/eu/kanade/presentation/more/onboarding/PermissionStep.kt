@@ -172,19 +172,6 @@ internal class PermissionStep : OnboardingStep {
             null
         }
 
-        val grantAllRecommended: () -> Unit = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationGranted && permissionRequester != null) {
-                permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
-            } else if (!installGranted) {
-                context.launchRequestPackageInstallsPermission()
-            } else if (!batteryGranted) {
-                @SuppressLint("BatteryLife")
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = "package:${context.packageName}".toUri()
-                }
-                context.startActivity(intent)
-            }
-        }
 
         Column(
             modifier = Modifier
@@ -234,25 +221,6 @@ internal class PermissionStep : OnboardingStep {
                             lineHeight = 18.sp,
                             color = TextMutedColor,
                         ),
-                    )
-                }
-            }
-
-            if (!allPermissionsGranted) {
-                Button(
-                    onClick = grantAllRecommended,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryCtaColor,
-                        contentColor = PrimaryCtaTextColor,
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                ) {
-                    Text(
-                        text = "Grant all recommended",
-                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -399,13 +367,8 @@ internal class PermissionStep : OnboardingStep {
         onActionClick: () -> Unit,
         modifier: Modifier = Modifier,
     ) {
-        val cardBorder by animateColorAsState(
-            targetValue = if (granted) EmeraldBorderColor else CardBorderColor,
-            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-            label = "cardBorder",
-        )
         val iconBubbleBg by animateColorAsState(
-            targetValue = if (granted) Color(0x2AA9BFA9) else Color(0xFF17181C),
+            targetValue = if (granted) EmeraldBgColor else Color(0xFF17181C),
             animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
             label = "iconBubbleBg",
         )
@@ -424,7 +387,7 @@ internal class PermissionStep : OnboardingStep {
             modifier = modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             color = CardSurfaceColor,
-            border = BorderStroke(1.dp, cardBorder),
+            border = BorderStroke(1.dp, CardBorderColor),
         ) {
             Row(
                 modifier = Modifier
@@ -439,17 +402,17 @@ internal class PermissionStep : OnboardingStep {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(iconBubbleBg)
-                        .border(BorderStroke(1.dp, iconBubbleBorder), RoundedCornerShape(10.dp)),
+                        .border(BorderStroke(1.dp, iconBubbleBorder), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = iconTint,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(22.dp),
                     )
                 }
 
