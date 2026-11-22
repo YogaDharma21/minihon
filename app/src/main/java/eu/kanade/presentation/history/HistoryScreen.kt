@@ -11,10 +11,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -28,6 +32,9 @@ import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.history.components.HistoryItem
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
+import eu.kanade.presentation.util.CascadeDirection
+import eu.kanade.presentation.util.CascadeScrollConnection
+import eu.kanade.presentation.util.LocalCascadeDirection
 import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.rememberIs24HourSystem
 import eu.kanade.tachiyomi.ui.history.HistoryViewModel
@@ -166,45 +173,57 @@ private fun HistoryScreenContent(
         }
     }
 
-    FastScrollLazyColumn(
-        contentPadding = contentPadding + PaddingValues(bottom = 96.dp),
-    ) {
-        var itemIndex = 0
-        groups.forEach { (date, items) ->
-            if (date != null) {
-                item(
-                    key = "history-header-$date",
-                    contentType = "header",
-                ) {
-                    ListGroupHeader(
-                        modifier = Modifier.animateItem(),
-                        text = relativeDateText(date),
-                    )
-                }
+    var cascadeDirection by remember { mutableStateOf(CascadeDirection.FromBottom) }
+    val cascadeScrollConnection = remember {
+        CascadeScrollConnection { dir ->
+            if (cascadeDirection != dir) {
+                cascadeDirection = dir
             }
-            item(
-                key = "history-card-${date ?: items.firstOrNull()?.id ?: 0}",
-                contentType = "card",
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .animateItem(),
+        }
+    }
+
+    CompositionLocalProvider(LocalCascadeDirection provides cascadeDirection) {
+        FastScrollLazyColumn(
+            modifier = Modifier.nestedScroll(cascadeScrollConnection),
+            contentPadding = contentPadding + PaddingValues(bottom = 96.dp),
+        ) {
+            var itemIndex = 0
+            groups.forEach { (date, items) ->
+                if (date != null) {
+                    item(
+                        key = "history-header-$date",
+                        contentType = "header",
+                    ) {
+                        ListGroupHeader(
+                            modifier = Modifier.animateItem(),
+                            text = relativeDateText(date),
+                        )
+                    }
+                }
+                item(
+                    key = "history-card-${date ?: items.firstOrNull()?.id ?: 0}",
+                    contentType = "card",
                 ) {
-                    Column {
-                        items.forEach { value ->
-                            HistoryItem(
-                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
-                                history = value,
-                                timeFormatter = timeFormatter,
-                                onClickCover = { onClickCover(value) },
-                                onClickResume = { onClickResume(value) },
-                                onClickDelete = { onClickDelete(value) },
-                                onClickFavorite = { onClickFavorite(value) },
-                            )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .animateItem(),
+                    ) {
+                        Column {
+                            items.forEach { value ->
+                                HistoryItem(
+                                    modifier = Modifier.cascadeItemMotion(index = itemIndex++),
+                                    history = value,
+                                    timeFormatter = timeFormatter,
+                                    onClickCover = { onClickCover(value) },
+                                    onClickResume = { onClickResume(value) },
+                                    onClickDelete = { onClickDelete(value) },
+                                    onClickFavorite = { onClickFavorite(value) },
+                                )
+                            }
                         }
                     }
                 }

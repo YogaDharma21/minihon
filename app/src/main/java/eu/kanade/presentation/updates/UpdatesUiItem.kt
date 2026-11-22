@@ -156,59 +156,59 @@ internal fun LazyListScope.updatesUiItems(
                 )
             }
         }
-        item(
-            key = "updates-card-${date ?: items.firstOrNull()?.update?.chapterId ?: 0}",
-            contentType = "card",
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .animateItem(),
+        val mangaGroups = groupUpdatesByManga(items)
+        mangaGroups.forEach { mangaGroup ->
+            val firstItem = mangaGroup.first()
+            val mangaId = firstItem.update.mangaId
+            val cardIndex = itemIndex++
+            item(
+                key = "updates-manga-${date ?: "nodate"}-$mangaId-${firstItem.update.chapterId}",
+                contentType = "card",
             ) {
-                Column {
-                    val mangaGroups = groupUpdatesByManga(items)
-                    mangaGroups.forEach { mangaGroup ->
-                        if (mangaGroup.size == 1) {
-                            val updatesItem = mangaGroup.first()
-                            UpdatesUiItem(
-                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
-                                update = updatesItem.update,
-                                selected = updatesItem.selected,
-                                readProgress = updatesItem.update.lastPageRead
-                                    .takeIf { !updatesItem.update.read && it > 0L }
-                                    ?.let {
-                                        stringResource(
-                                            MR.strings.chapter_progress,
-                                            it + 1,
-                                        )
-                                    },
-                                onLongClick = {
-                                    onUpdateSelected(updatesItem, !updatesItem.selected, true)
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .cascadeItemMotion(index = cardIndex)
+                        .animateItem(),
+                ) {
+                    if (mangaGroup.size == 1) {
+                        val updatesItem = mangaGroup.first()
+                        UpdatesUiItem(
+                            update = updatesItem.update,
+                            selected = updatesItem.selected,
+                            readProgress = updatesItem.update.lastPageRead
+                                .takeIf { !updatesItem.update.read && it > 0L }
+                                ?.let {
+                                    stringResource(
+                                        MR.strings.chapter_progress,
+                                        it + 1,
+                                    )
                                 },
-                                onClick = {
-                                    when {
-                                        selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
-                                        else -> onClickUpdate(updatesItem)
-                                    }
-                                },
-                                onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
-                                onDownloadChapter = { action: ChapterDownloadAction ->
-                                    onDownloadChapter(listOf(updatesItem), action)
-                                }.takeIf { !selectionMode },
-                                downloadStateProvider = updatesItem.downloadStateProvider,
-                                downloadProgressProvider = updatesItem.downloadProgressProvider,
-                            )
-                        } else {
-                            val firstItem = mangaGroup.first()
-                            val mangaId = firstItem.update.mangaId
+                            onLongClick = {
+                                onUpdateSelected(updatesItem, !updatesItem.selected, true)
+                            },
+                            onClick = {
+                                when {
+                                    selectionMode -> onUpdateSelected(updatesItem, !updatesItem.selected, false)
+                                    else -> onClickUpdate(updatesItem)
+                                }
+                            },
+                            onClickCover = { onClickCover(updatesItem) }.takeIf { !selectionMode },
+                            onDownloadChapter = { action: ChapterDownloadAction ->
+                                onDownloadChapter(listOf(updatesItem), action)
+                            }.takeIf { !selectionMode },
+                            downloadStateProvider = updatesItem.downloadStateProvider,
+                            downloadProgressProvider = updatesItem.downloadProgressProvider,
+                        )
+                    } else {
+                        Column {
                             val isCollapsed = mangaId in collapsedMangaIds
                             val hasUnread = mangaGroup.any { !it.update.read }
                             val allSelected = mangaGroup.all { it.selected }
                             UpdatesMangaGroupHeader(
-                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
                                 update = firstItem.update,
                                 chapterCount = mangaGroup.size,
                                 isCollapsed = isCollapsed,
@@ -229,7 +229,6 @@ internal fun LazyListScope.updatesUiItems(
                                     Column {
                                         mangaGroup.forEachIndexed { index, updatesItem ->
                                             UpdatesChapterUiItem(
-                                                modifier = Modifier.cascadeItemMotion(index = itemIndex++),
                                                 update = updatesItem.update,
                                                 isLast = index == mangaGroup.lastIndex,
                                                 selected = updatesItem.selected,

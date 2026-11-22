@@ -12,12 +12,14 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
@@ -25,6 +27,9 @@ import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
 import eu.kanade.presentation.manga.components.MangaBottomActionMenu
+import eu.kanade.presentation.util.CascadeDirection
+import eu.kanade.presentation.util.CascadeScrollConnection
+import eu.kanade.presentation.util.LocalCascadeDirection
 import eu.kanade.tachiyomi.data.download.model.Download
 import eu.kanade.tachiyomi.ui.updates.UpdatesItem
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel
@@ -153,21 +158,33 @@ fun UpdatesScreen(
                             )
                         }
                     } else {
-                        FastScrollLazyColumn(
-                            contentPadding = effectivePadding + PaddingValues(bottom = 96.dp),
-                        ) {
-                            updatesLastUpdatedItem(lastUpdated)
+                        var cascadeDirection by remember { mutableStateOf(CascadeDirection.FromBottom) }
+                        val cascadeScrollConnection = remember {
+                            CascadeScrollConnection { dir ->
+                                if (cascadeDirection != dir) {
+                                    cascadeDirection = dir
+                                }
+                            }
+                        }
 
-                            updatesUiItems(
-                                uiModels = state.getUiModel(),
-                                selectionMode = state.selectionMode,
-                                onUpdateSelected = onUpdateSelected,
-                                onClickCover = onClickCover,
-                                onClickUpdate = onOpenChapter,
-                                onDownloadChapter = onDownloadChapter,
-                                collapsedMangaIds = collapsedMangaIds,
-                                onToggleMangaCollapse = onToggleMangaCollapse,
-                            )
+                        CompositionLocalProvider(LocalCascadeDirection provides cascadeDirection) {
+                            FastScrollLazyColumn(
+                                modifier = Modifier.nestedScroll(cascadeScrollConnection),
+                                contentPadding = effectivePadding + PaddingValues(bottom = 96.dp),
+                            ) {
+                                updatesLastUpdatedItem(lastUpdated)
+
+                                updatesUiItems(
+                                    uiModels = state.getUiModel(),
+                                    selectionMode = state.selectionMode,
+                                    onUpdateSelected = onUpdateSelected,
+                                    onClickCover = onClickCover,
+                                    onClickUpdate = onOpenChapter,
+                                    onDownloadChapter = onDownloadChapter,
+                                    collapsedMangaIds = collapsedMangaIds,
+                                    onToggleMangaCollapse = onToggleMangaCollapse,
+                                )
+                            }
                         }
                     }
                 }
