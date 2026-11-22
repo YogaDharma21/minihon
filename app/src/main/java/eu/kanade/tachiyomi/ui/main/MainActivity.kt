@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -45,7 +44,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +74,6 @@ import eu.kanade.presentation.components.AppStateBanners
 import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
 import eu.kanade.presentation.components.IncognitoModeBannerBackgroundColor
 import eu.kanade.presentation.components.IndexingBannerBackgroundColor
-import eu.kanade.presentation.more.AnimatedSplashScreen
 import eu.kanade.presentation.more.AppMigratingScreen
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
@@ -158,7 +155,7 @@ class MainActivity : BaseActivity() {
     @Inject private lateinit var extensionManager: ExtensionManager
 
     // To be checked by splash screen. If true then splash screen will be removed.
-    var ready by mutableStateOf(false)
+    var ready = false
 
     private var navigator: Navigator? = null
 
@@ -244,91 +241,85 @@ class MainActivity : BaseActivity() {
                     listOf(HomeScreen)
                 }
             }
-            var showSplashOverlay by rememberSaveable { mutableStateOf(isLaunch) }
-            Box(modifier = Modifier.fillMaxSize()) {
-                Navigator(
-                    screens = initialScreens,
-                    disposeBehavior = NavigatorDisposeBehavior(disposeNestedNavigators = false, disposeSteps = true),
-                ) { navigator ->
-                    LaunchedEffect(navigator) {
-                        this@MainActivity.navigator = navigator
+            Navigator(
+                screens = initialScreens,
+                disposeBehavior = NavigatorDisposeBehavior(disposeNestedNavigators = false, disposeSteps = true),
+            ) { navigator ->
+                LaunchedEffect(navigator) {
+                    this@MainActivity.navigator = navigator
 
-                        if (isLaunch) {
-                            // Set start screen
-                            handleIntentAction(intent, navigator)
+                    if (isLaunch) {
+                        // Set start screen
+                        handleIntentAction(intent, navigator)
 
-                            // Reset Incognito Mode on relaunch
-                            preferences.incognitoMode.set(false)
-                        }
+                        // Reset Incognito Mode on relaunch
+                        preferences.incognitoMode.set(false)
                     }
-                    LaunchedEffect(Unit) {
-                        ready = true
-                    }
-                    LaunchedEffect(navigator.lastItem) {
-                        (navigator.lastItem as? BrowseSourceScreen)?.sourceId
-                            .let(getIncognitoState::subscribe)
-                            .collectLatest { incognito = it }
-                    }
+                }
+                LaunchedEffect(Unit) {
+                    ready = true
+                }
+                LaunchedEffect(navigator.lastItem) {
+                    (navigator.lastItem as? BrowseSourceScreen)?.sourceId
+                        .let(getIncognitoState::subscribe)
+                        .collectLatest { incognito = it }
+                }
 
-                    val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
-                    Scaffold(
-                        topBar = {
-                            AppStateBanners(
-                                downloadedOnlyMode = downloadOnly,
-                                incognitoMode = incognito,
-                                indexing = indexing,
-                                modifier = Modifier.windowInsetsPadding(scaffoldInsets),
-                            )
-                        },
-                        contentWindowInsets = scaffoldInsets,
-                    ) { contentPadding ->
-                        // Consume insets already used by app state banners
-                        Box {
-                            // Shows current screen
-                            DefaultNavigatorScreenTransition(
-                                navigator = navigator,
-                                modifier = Modifier
-                                    .padding(contentPadding)
-                                    .consumeWindowInsets(contentPadding),
-                            )
-                        }
-                    }
-
-                    // Pop source-related screens when incognito mode is turned off
-                    LaunchedEffect(Unit) {
-                        preferences.incognitoMode.changes()
-                            .drop(1)
-                            .filter { !it }
-                            .onEach {
-                                val currentScreen = navigator.lastItem
-                                if (currentScreen is BrowseSourceScreen ||
-                                    (currentScreen is MangaScreen && currentScreen.fromSource)
-                                ) {
-                                    navigator.popUntilRoot()
-                                }
-                            }
-                            .launchIn(this)
-                    }
-
-                    HandleOnNewIntent(context = context, navigator = navigator)
-
-                    if (!isBenchmarkBuildType) {
-                        if (isLaunch) CheckForUpdates()
-                        ShowOnboarding()
-                        ShowDonationCampaign()
+                val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+                Scaffold(
+                    topBar = {
+                        AppStateBanners(
+                            downloadedOnlyMode = downloadOnly,
+                            incognitoMode = incognito,
+                            indexing = indexing,
+                            modifier = Modifier.windowInsetsPadding(scaffoldInsets),
+                        )
+                    },
+                    contentWindowInsets = scaffoldInsets,
+                ) { contentPadding ->
+                    // Consume insets already used by app state banners
+                    Box {
+                        // Shows current screen
+                        DefaultNavigatorScreenTransition(
+                            navigator = navigator,
+                            modifier = Modifier
+                                .padding(contentPadding)
+                                .consumeWindowInsets(contentPadding),
+                        )
                     }
                 }
 
-                if (showSplashOverlay) {
-                    AnimatedSplashScreen(
-                        isReady = ready && !migrating,
-                        onDismiss = { showSplashOverlay = false },
-                    )
+                // Pop source-related screens when incognito mode is turned off
+                LaunchedEffect(Unit) {
+                    preferences.incognitoMode.changes()
+                        .drop(1)
+                        .filter { !it }
+                        .onEach {
+                            val currentScreen = navigator.lastItem
+                            if (currentScreen is BrowseSourceScreen ||
+                                (currentScreen is MangaScreen && currentScreen.fromSource)
+                            ) {
+                                navigator.popUntilRoot()
+                            }
+                        }
+                        .launchIn(this)
+                }
+
+                HandleOnNewIntent(context = context, navigator = navigator)
+
+                if (!isBenchmarkBuildType) {
+                    if (isLaunch) CheckForUpdates()
+                    ShowOnboarding()
+                    ShowDonationCampaign()
                 }
             }
         }
 
-        splashScreen?.setKeepOnScreenCondition { !ready }
+        val startTime = System.currentTimeMillis()
+        splashScreen?.setKeepOnScreenCondition {
+            val elapsed = System.currentTimeMillis() - startTime
+            elapsed <= SPLASH_MIN_DURATION || (!ready && elapsed <= SPLASH_MAX_DURATION)
+        }
         setSplashScreenExitAnimation(splashScreen)
 
         if (isLaunch && libraryPreferences.autoClearChapterCache.get()) {
@@ -726,6 +717,8 @@ class MainActivity : BaseActivity() {
 }
 
 // Splash screen
+private const val SPLASH_MIN_DURATION = 500 // ms
+private const val SPLASH_MAX_DURATION = 5000 // ms
 private const val SPLASH_EXIT_ANIM_DURATION = 400L // ms
 
 private val MIGRATING_SCREEN_MIN_DURATION = 1.seconds
