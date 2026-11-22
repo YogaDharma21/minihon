@@ -1,5 +1,10 @@
 package eu.kanade.presentation.more.onboarding
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -33,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -48,14 +55,21 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
+import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreWorker
+import eu.kanade.tachiyomi.util.system.DeviceUtil
+import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.workManager
+import logcat.LogPriority
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
 import mihon.icons.materialsymbols.rounded.Autorenew
 import mihon.icons.materialsymbols.rounded.Check
 import mihon.icons.materialsymbols.rounded.Explore
 import mihon.icons.materialsymbols.rounded.RocketLaunch
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
+import kotlinx.coroutines.launch
 
 private val CardSurfaceColor = Color(0xFF121316)
 private val SurfaceRaisedColor = Color(0xFF17181C)
@@ -71,16 +85,51 @@ private val EmeraldBgColor = Color(0x1FA9BFA9)
 private val EmeraldBorderColor = Color(0x59A9BFA9)
 
 internal class GuidesStep(
-    private val onRestoreBackup: () -> Unit,
+    private val onRestoreBackup: (Uri) -> Unit,
 ) : OnboardingStep {
 
     override val isComplete: Boolean = true
 
     @Composable
     override fun Content() {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
         val handler = LocalUriHandler.current
         val appName = stringResource(MR.strings.app_name)
         var selectedOption by rememberSaveable { mutableStateOf(GuideOption.START_FRESH) }
+
+        val chooseBackup = rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (e: SecurityException) {
+                logcat(LogPriority.ERROR, e)
+            }
+            onRestoreBackup(uri)
+        }
+
+        val onRestore: () -> Unit = {
+            selectedOption = GuideOption.RESTORE_BACKUP
+            scope.launch {
+                if (!BackupRestoreWorker.isRunning(context.workManager)) {
+                    if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
+                        context.toast(MR.strings.restore_miui_warning)
+                    }
+                    try {
+                        chooseBackup.launch(arrayOf("*/*"))
+                    } catch (e: ActivityNotFoundException) {
+                        context.toast(MR.strings.file_picker_error)
+                    }
+                } else {
+                    context.toast(MR.strings.restore_in_progress)
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -151,17 +200,14 @@ internal class GuidesStep(
 
             GuideChoiceCard(
                 isSelected = selectedOption == GuideOption.RESTORE_BACKUP,
-                onSelect = { selectedOption = GuideOption.RESTORE_BACKUP },
+                onSelect = onRestore,
                 badgeText = "RETURNING READER",
                 title = "Restore Backup",
                 description = "Reinstalling $appName? Restore your library, reading history, categories, and settings from a backup file.",
                 icon = MaterialSymbols.Rounded.Autorenew,
                 ctaText = stringResource(MR.strings.pref_restore_backup),
                 ctaIcon = MaterialSymbols.Rounded.Autorenew,
-                onCtaClick = {
-                    selectedOption = GuideOption.RESTORE_BACKUP
-                    onRestoreBackup()
-                },
+                onCtaClick = onRestore,
             )
 
             Box(

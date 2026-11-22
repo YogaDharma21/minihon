@@ -1,5 +1,6 @@
 package eu.kanade.presentation.more.onboarding
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -63,7 +64,7 @@ private val DisabledTextColor = Color(0xFF5F6065)
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
-    onRestoreBackup: () -> Unit,
+    onRestoreBackup: (Uri) -> Unit,
 ) {
     val slideDistance = rememberSlideDistance()
 
