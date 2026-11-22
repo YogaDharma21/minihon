@@ -28,7 +28,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -135,48 +134,52 @@ internal class GuidesStep(
                 }
             }
 
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = CardSurfaceColor,
-                border = BorderStroke(1.dp, CardBorderColor),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    GuideChoiceCard(
-                        isSelected = selectedOption == GuideOption.START_FRESH,
-                        onSelect = { selectedOption = GuideOption.START_FRESH },
-                        badgeText = "NEW READER",
-                        title = "Start Fresh",
-                        description = "New to $appName? Learn how to configure repositories, add extensions, and organize your reading library.",
-                        icon = MaterialSymbols.Rounded.Explore,
-                        ctaText = stringResource(MR.strings.getting_started_guide),
-                        ctaIcon = MaterialSymbols.AutoMirroredRounded.OpenInNew,
-                        onCtaClick = {
-                            selectedOption = GuideOption.START_FRESH
-                            handler.openUri(GETTING_STARTED_URL)
-                        },
-                    )
+            GuideChoiceCard(
+                isSelected = selectedOption == GuideOption.START_FRESH,
+                onSelect = { selectedOption = GuideOption.START_FRESH },
+                badgeText = "NEW READER",
+                title = "Start Fresh",
+                description = "New to $appName? Learn how to configure repositories, add extensions, and organize your reading library.",
+                icon = MaterialSymbols.Rounded.Explore,
+                ctaText = stringResource(MR.strings.getting_started_guide),
+                ctaIcon = MaterialSymbols.AutoMirroredRounded.OpenInNew,
+                onCtaClick = {
+                    selectedOption = GuideOption.START_FRESH
+                    handler.openUri(GETTING_STARTED_URL)
+                },
+            )
 
-                    GuideChoiceCard(
-                        isSelected = selectedOption == GuideOption.RESTORE_BACKUP,
-                        onSelect = { selectedOption = GuideOption.RESTORE_BACKUP },
-                        badgeText = "RETURNING READER",
-                        title = "Restore Backup",
-                        description = "Reinstalling $appName? Restore your library, reading history, categories, and settings from a backup file.",
-                        icon = MaterialSymbols.Rounded.Autorenew,
-                        ctaText = stringResource(MR.strings.pref_restore_backup),
-                        ctaIcon = MaterialSymbols.Rounded.Autorenew,
-                        onCtaClick = {
-                            selectedOption = GuideOption.RESTORE_BACKUP
-                            onRestoreBackup()
-                        },
-                    )
-                }
+            GuideChoiceCard(
+                isSelected = selectedOption == GuideOption.RESTORE_BACKUP,
+                onSelect = { selectedOption = GuideOption.RESTORE_BACKUP },
+                badgeText = "RETURNING READER",
+                title = "Restore Backup",
+                description = "Reinstalling $appName? Restore your library, reading history, categories, and settings from a backup file.",
+                icon = MaterialSymbols.Rounded.Autorenew,
+                ctaText = stringResource(MR.strings.pref_restore_backup),
+                ctaIcon = MaterialSymbols.Rounded.Autorenew,
+                onCtaClick = {
+                    selectedOption = GuideOption.RESTORE_BACKUP
+                    onRestoreBackup()
+                },
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceInsetColor)
+                    .border(BorderStroke(1.dp, CardBorderColor), RoundedCornerShape(14.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Text(
+                    text = "You can restore backups or change repository settings anytime later from Settings.",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                        color = TextSubtleColor,
+                    ),
+                )
             }
         }
     }
@@ -201,7 +204,7 @@ private fun GuideChoiceCard(
     modifier: Modifier = Modifier,
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.015f else 1f,
+        targetValue = if (isSelected) 1.01f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium,
@@ -214,7 +217,7 @@ private fun GuideChoiceCard(
         label = "choice_border",
     )
     val containerColor by animateColorAsState(
-        targetValue = if (isSelected) SurfaceRaisedColor else SurfaceInsetColor,
+        targetValue = if (isSelected) SurfaceRaisedColor else CardSurfaceColor,
         animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
         label = "choice_bg",
     )
@@ -244,7 +247,7 @@ private fun GuideChoiceCard(
                 indication = null,
                 onClick = onSelect,
             )
-            .padding(16.dp),
+            .padding(18.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

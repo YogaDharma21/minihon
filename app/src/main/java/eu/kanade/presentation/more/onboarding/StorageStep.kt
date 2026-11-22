@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
@@ -61,11 +62,15 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.rounded.Check
+import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Folder
+import mihon.icons.materialsymbols.rounded.Save
+import mihon.icons.materialsymbols.roundedfilled.Extension
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 
+private val CardSurfaceColor = Color(0xFF121316)
 private val SurfaceRaisedColor = Color(0xFF17181C)
 private val SurfaceInsetColor = Color(0x09FFFFFF)
 private val CardBorderColor = Color(0x12FFFFFF)
@@ -77,6 +82,9 @@ private val PrimaryCtaTextColor = Color(0xFF0A0A0B)
 private val EmeraldAccentColor = Color(0xFFA9BFA9)
 private val EmeraldBgColor = Color(0x1FA9BFA9)
 private val EmeraldBorderColor = Color(0x59A9BFA9)
+private val AmberAccentColor = Color(0xFFD2BD93)
+private val AmberBgColor = Color(0x1AD2BD93)
+private val AmberBorderColor = Color(0x40D2BD93)
 
 internal class StorageStep : OnboardingStep {
 
@@ -178,17 +186,17 @@ internal class StorageStep : OnboardingStep {
         )
 
         val statusBadgeBg by animateColorAsState(
-            targetValue = if (isLinked) EmeraldBgColor else SurfaceInsetColor,
+            targetValue = if (isLinked) EmeraldBgColor else AmberBgColor,
             animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
             label = "statusBadgeBg",
         )
         val statusBadgeBorder by animateColorAsState(
-            targetValue = if (isLinked) EmeraldBorderColor else CardBorderColor,
+            targetValue = if (isLinked) EmeraldBorderColor else AmberBorderColor,
             animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
             label = "statusBadgeBorder",
         )
         val statusBadgeIconTint by animateColorAsState(
-            targetValue = if (isLinked) EmeraldAccentColor else TextMutedColor,
+            targetValue = if (isLinked) EmeraldAccentColor else AmberAccentColor,
             animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
             label = "statusBadgeIconTint",
         )
@@ -253,7 +261,7 @@ internal class StorageStep : OnboardingStep {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                color = SurfaceRaisedColor,
+                color = CardSurfaceColor,
                 border = BorderStroke(
                     width = 1.dp,
                     color = if (isLinked) Color(0x33A9BFA9) else CardBorderColor,
@@ -370,7 +378,7 @@ internal class StorageStep : OnboardingStep {
                             text = if (isLinked) {
                                 SettingsDataScreen.storageLocationText(storagePref)
                             } else {
-                                "No folder linked yet"
+                                "No storage folder selected"
                             },
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace,
@@ -452,6 +460,49 @@ internal class StorageStep : OnboardingStep {
                     )
                 }
             }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CardSurfaceColor,
+                border = BorderStroke(1.dp, CardBorderColor),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = "WHAT IS STORED HERE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.2.sp,
+                            color = TextSubtleColor,
+                        ),
+                    )
+
+                    StorageFeatureRow(
+                        icon = MaterialSymbols.Rounded.Download,
+                        title = "Chapter downloads",
+                        description = "Offline manga chapters and cached reading pages",
+                    )
+
+                    StorageFeatureRow(
+                        icon = MaterialSymbols.Rounded.Save,
+                        title = "Backups",
+                        description = "Automatic and manual exports of library and settings",
+                    )
+
+                    StorageFeatureRow(
+                        icon = MaterialSymbols.RoundedFilled.Extension,
+                        title = "Extension data",
+                        description = "Installed repositories, custom sources, and site state",
+                    )
+                }
+            }
         }
 
         LaunchedEffect(storagePref) {
@@ -460,6 +511,58 @@ internal class StorageStep : OnboardingStep {
                 .collectLatest {
                     _isComplete = storagePref.isSet()
                 }
+        }
+    }
+}
+
+@Composable
+private fun StorageFeatureRow(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(SurfaceInsetColor)
+                .border(BorderStroke(1.dp, CardBorderColor), RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = EmeraldAccentColor,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextForegroundColor,
+                ),
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                    color = TextMutedColor,
+                ),
+            )
         }
     }
 }

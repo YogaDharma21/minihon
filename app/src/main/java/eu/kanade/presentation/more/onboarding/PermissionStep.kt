@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -160,12 +161,37 @@ internal class PermissionStep : OnboardingStep {
             label = "avatarTint",
         )
 
+        val permissionRequester = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = {
+                    // Handled on resume
+                },
+            )
+        } else {
+            null
+        }
+
+        val grantAllRecommended: () -> Unit = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationGranted && permissionRequester != null) {
+                permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else if (!installGranted) {
+                context.launchRequestPackageInstallsPermission()
+            } else if (!batteryGranted) {
+                @SuppressLint("BatteryLife")
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = "package:${context.packageName}".toUri()
+                }
+                context.startActivity(intent)
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -212,9 +238,60 @@ internal class PermissionStep : OnboardingStep {
                 }
             }
 
+            if (!allPermissionsGranted) {
+                Button(
+                    onClick = grantAllRecommended,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryCtaColor,
+                        contentColor = PrimaryCtaTextColor,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Text(
+                        text = "Grant all recommended",
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            PrivilegeCard(
+                title = stringResource(MR.strings.onboarding_permission_install_apps),
+                description = stringResource(MR.strings.onboarding_permission_install_apps_description),
+                icon = MaterialSymbols.RoundedFilled.Extension,
+                granted = installGranted,
+                onActionClick = { context.launchRequestPackageInstallsPermission() },
+            )
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                PrivilegeCard(
+                    title = stringResource(MR.strings.onboarding_permission_notifications),
+                    description = stringResource(MR.strings.onboarding_permission_notifications_description),
+                    icon = MaterialSymbols.Rounded.Info,
+                    granted = notificationGranted,
+                    onActionClick = { permissionRequester?.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                )
+            }
+
+            PrivilegeCard(
+                title = stringResource(MR.strings.onboarding_permission_ignore_battery_opts),
+                description = stringResource(MR.strings.onboarding_permission_ignore_battery_opts_description),
+                icon = MaterialSymbols.Rounded.MobileGear,
+                granted = batteryGranted,
+                onActionClick = {
+                    @SuppressLint("BatteryLife")
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = "package:${context.packageName}".toUri()
+                    }
+                    context.startActivity(intent)
+                },
+            )
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = CardSurfaceColor,
                 border = BorderStroke(1.dp, CardBorderColor),
             ) {
@@ -222,99 +299,91 @@ internal class PermissionStep : OnboardingStep {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    PrivilegeRow(
-                        title = stringResource(MR.strings.onboarding_permission_install_apps),
-                        description = stringResource(MR.strings.onboarding_permission_install_apps_description),
-                        icon = MaterialSymbols.RoundedFilled.Extension,
-                        granted = installGranted,
-                        onActionClick = { context.launchRequestPackageInstallsPermission() },
-                    )
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val permissionRequester = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.RequestPermission(),
-                            onResult = {
-                                // Handled on resume
-                            },
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = MaterialSymbols.Rounded.Security,
+                            contentDescription = null,
+                            tint = EmeraldAccentColor,
+                            modifier = Modifier.size(16.dp),
                         )
-                        PrivilegeRow(
-                            title = stringResource(MR.strings.onboarding_permission_notifications),
-                            description = stringResource(MR.strings.onboarding_permission_notifications_description),
-                            icon = MaterialSymbols.Rounded.Info,
-                            granted = notificationGranted,
-                            onActionClick = { permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                        Text(
+                            text = "OFFLINE-FIRST PRIVACY",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.2.sp,
+                                color = EmeraldAccentColor,
+                            ),
                         )
                     }
 
-                    PrivilegeRow(
-                        title = stringResource(MR.strings.onboarding_permission_ignore_battery_opts),
-                        description = stringResource(MR.strings.onboarding_permission_ignore_battery_opts_description),
-                        icon = MaterialSymbols.Rounded.MobileGear,
-                        granted = batteryGranted,
-                        onActionClick = {
-                            @SuppressLint("BatteryLife")
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = "package:${context.packageName}".toUri()
-                            }
-                            context.startActivity(intent)
-                        },
+                    Text(
+                        text = "Your library, reading history, and downloaded files stay stored directly on your device. Mihon connects to sources without middleman servers and collects zero personal data.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            color = TextMutedColor,
+                        ),
                     )
+                }
+            }
 
-                    if (telemetryIncluded) {
+            if (telemetryIncluded) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = CardSurfaceColor,
+                    border = BorderStroke(1.dp, CardBorderColor),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(
+                            text = "TELEMETRY & CRASH REPORTS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.2.sp,
+                                color = TextSubtleColor,
+                            ),
+                        )
+
+                        val crashlyticsPref = privacyPreferences.crashlytics
+                        val crashlytics by crashlyticsPref.collectAsState()
+
+                        val analyticsPref = privacyPreferences.analytics
+                        val analytics by analyticsPref.collectAsState()
+
+                        TelemetrySwitchRow(
+                            title = stringResource(MR.strings.onboarding_permission_crashlytics),
+                            description = stringResource(MR.strings.onboarding_permission_crashlytics_description),
+                            icon = MaterialSymbols.Rounded.BugReport,
+                            checked = crashlytics,
+                            onCheckedChange = crashlyticsPref::set,
+                        )
+
                         HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
                             color = CardBorderColor,
                             thickness = 1.dp,
                         )
 
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(SurfaceInsetColor)
-                                .border(BorderStroke(1.dp, Color(0x0AFFFFFF)), RoundedCornerShape(14.dp))
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Text(
-                                text = "TELEMETRY & CRASH REPORTS",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.2.sp,
-                                    color = TextSubtleColor,
-                                ),
-                            )
-
-                            val crashlyticsPref = privacyPreferences.crashlytics
-                            val crashlytics by crashlyticsPref.collectAsState()
-
-                            val analyticsPref = privacyPreferences.analytics
-                            val analytics by analyticsPref.collectAsState()
-
-                            TelemetrySwitchRow(
-                                title = stringResource(MR.strings.onboarding_permission_crashlytics),
-                                description = stringResource(MR.strings.onboarding_permission_crashlytics_description),
-                                icon = MaterialSymbols.Rounded.BugReport,
-                                checked = crashlytics,
-                                onCheckedChange = crashlyticsPref::set,
-                            )
-
-                            HorizontalDivider(
-                                color = Color(0x0AFFFFFF),
-                                thickness = 1.dp,
-                            )
-
-                            TelemetrySwitchRow(
-                                title = stringResource(MR.strings.onboarding_permission_analytics),
-                                description = stringResource(MR.strings.onboarding_permission_analytics_description),
-                                icon = MaterialSymbols.Rounded.QueryStats,
-                                checked = analytics,
-                                onCheckedChange = analyticsPref::set,
-                            )
-                        }
+                        TelemetrySwitchRow(
+                            title = stringResource(MR.strings.onboarding_permission_analytics),
+                            description = stringResource(MR.strings.onboarding_permission_analytics_description),
+                            icon = MaterialSymbols.Rounded.QueryStats,
+                            checked = analytics,
+                            onCheckedChange = analyticsPref::set,
+                        )
                     }
                 }
             }
@@ -322,7 +391,7 @@ internal class PermissionStep : OnboardingStep {
     }
 
     @Composable
-    private fun PrivilegeRow(
+    private fun PrivilegeCard(
         title: String,
         description: String,
         icon: ImageVector,
@@ -330,15 +399,10 @@ internal class PermissionStep : OnboardingStep {
         onActionClick: () -> Unit,
         modifier: Modifier = Modifier,
     ) {
-        val rowBg by animateColorAsState(
-            targetValue = if (granted) EmeraldBgColor else SurfaceInsetColor,
-            animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-            label = "rowBg",
-        )
-        val rowBorder by animateColorAsState(
+        val cardBorder by animateColorAsState(
             targetValue = if (granted) EmeraldBorderColor else CardBorderColor,
             animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-            label = "rowBorder",
+            label = "cardBorder",
         )
         val iconBubbleBg by animateColorAsState(
             targetValue = if (granted) Color(0x2AA9BFA9) else Color(0xFF17181C),
@@ -356,110 +420,114 @@ internal class PermissionStep : OnboardingStep {
             label = "iconTint",
         )
 
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(rowBg)
-                .border(BorderStroke(1.dp, rowBorder), RoundedCornerShape(14.dp))
-                .clickable(
-                    enabled = !granted,
-                    onClick = onActionClick,
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = CardSurfaceColor,
+            border = BorderStroke(1.dp, cardBorder),
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconBubbleBg)
-                    .border(BorderStroke(1.dp, iconBubbleBorder), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextForegroundColor,
-                    ),
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 11.sp,
-                        lineHeight = 15.sp,
-                        color = TextMutedColor,
-                    ),
-                )
-            }
-
-            AnimatedContent(
-                targetState = granted,
-                transitionSpec = {
-                    (fadeIn(animationSpec = tween(220, delayMillis = 50)) +
-                        scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)))
-                        .togetherWith(fadeOut(animationSpec = tween(90)))
-                },
-                label = "privilegeActionState",
-            ) { isGranted ->
-                if (isGranted) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(EmeraldBgColor)
-                            .border(BorderStroke(1.dp, EmeraldBorderColor), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = MaterialSymbols.Rounded.Check,
-                            contentDescription = null,
-                            tint = EmeraldAccentColor,
-                            modifier = Modifier.size(14.dp),
-                        )
-                        Text(
-                            text = "Granted",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = EmeraldAccentColor,
-                            ),
-                        )
-                    }
-                } else {
-                    Button(
+                    .fillMaxWidth()
+                    .clickable(
+                        enabled = !granted,
                         onClick = onActionClick,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryCtaColor,
-                            contentColor = PrimaryCtaTextColor,
+                    )
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(iconBubbleBg)
+                        .border(BorderStroke(1.dp, iconBubbleBorder), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextForegroundColor,
                         ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                        modifier = Modifier.height(32.dp),
-                    ) {
-                        Text(
-                            text = stringResource(MR.strings.onboarding_permission_action_grant),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            color = TextMutedColor,
+                        ),
+                    )
+                }
+
+                AnimatedContent(
+                    targetState = granted,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(220, delayMillis = 50)) +
+                            scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)))
+                            .togetherWith(fadeOut(animationSpec = tween(90)))
+                    },
+                    label = "privilegeActionState",
+                ) { isGranted ->
+                    if (isGranted) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(EmeraldBgColor)
+                                .border(BorderStroke(1.dp, EmeraldBorderColor), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = MaterialSymbols.Rounded.Check,
+                                contentDescription = null,
+                                tint = EmeraldAccentColor,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = "Granted",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = EmeraldAccentColor,
+                                ),
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onActionClick,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryCtaColor,
+                                contentColor = PrimaryCtaTextColor,
                             ),
-                        )
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp),
+                        ) {
+                            Text(
+                                text = stringResource(MR.strings.onboarding_permission_action_grant),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                            )
+                        }
                     }
                 }
             }

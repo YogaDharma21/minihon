@@ -27,7 +27,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +51,6 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
 private val CanvasColor = Color(0xFF08090B)
-private val CardSurfaceColor = Color(0xFF121316)
 private val CardBorderColor = Color(0x12FFFFFF)
 private val TextForegroundColor = Color(0xFFF4F4F2)
 private val TextMutedColor = Color(0xFF8A8C92)
@@ -232,15 +230,10 @@ fun OnboardingScreen(
                 }
             }
 
-            Surface(
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = CardSurfaceColor,
-                contentColor = TextForegroundColor,
-                border = BorderStroke(1.dp, CardBorderColor),
+                    .fillMaxWidth(),
             ) {
                 AnimatedContent(
                     targetState = currentStep,
