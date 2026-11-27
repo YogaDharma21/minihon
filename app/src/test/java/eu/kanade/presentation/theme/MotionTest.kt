@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.Velocity
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import tachiyomi.presentation.core.components.ScrollChromeBoundaryEntry
 
 class MotionTest {
 
@@ -42,8 +43,9 @@ class MotionTest {
             thresholdPx = 48f,
         )
 
-        connection.onPreScroll(
-            available = Offset(0f, -50f),
+        connection.onPostScroll(
+            consumed = Offset(0f, -50f),
+            available = Offset.Zero,
             source = NestedScrollSource.UserInput,
         )
 
@@ -58,8 +60,9 @@ class MotionTest {
             thresholdPx = 48f,
         )
 
-        connection.onPreScroll(
-            available = Offset(0f, 50f),
+        connection.onPostScroll(
+            consumed = Offset(0f, 50f),
+            available = Offset.Zero,
             source = NestedScrollSource.UserInput,
         )
 
@@ -78,15 +81,17 @@ class MotionTest {
             thresholdPx = 48f,
         )
 
-        connection.onPreScroll(
-            available = Offset(0f, -20f),
+        connection.onPostScroll(
+            consumed = Offset(0f, -20f),
+            available = Offset.Zero,
             source = NestedScrollSource.UserInput,
         )
         callCount shouldBe 0
         visibleState shouldBe true
 
-        connection.onPreScroll(
-            available = Offset(0f, 15f),
+        connection.onPostScroll(
+            consumed = Offset(0f, 15f),
+            available = Offset.Zero,
             source = NestedScrollSource.UserInput,
         )
         callCount shouldBe 0
@@ -101,11 +106,216 @@ class MotionTest {
             thresholdPx = 48f,
         )
 
-        connection.onPreScroll(Offset(0f, -25f), NestedScrollSource.UserInput)
+        connection.onPostScroll(Offset(0f, -25f), Offset.Zero, NestedScrollSource.UserInput)
         visibleState shouldBe true
 
-        connection.onPreScroll(Offset(0f, -25f), NestedScrollSource.UserInput)
+        connection.onPostScroll(Offset(0f, -25f), Offset.Zero, NestedScrollSource.UserInput)
         visibleState shouldBe false
+    }
+
+    @Test
+    fun `ScrollChromeConnection ignores unconsumed scroll delta`() {
+        var callCount = 0
+        var visibleState = true
+        val connection = ScrollChromeConnection(
+            onVisibilityChanged = {
+                visibleState = it
+                callCount++
+            },
+            thresholdPx = 48f,
+        )
+
+        connection.onPostScroll(
+            consumed = Offset.Zero,
+            available = Offset(0f, -150f),
+            source = NestedScrollSource.UserInput,
+        )
+
+        callCount shouldBe 0
+        visibleState shouldBe true
+    }
+
+    @Test
+    fun `ScrollChromeConnection reveals immediately without hiding when swipe lands at boundary`() {
+        val events = mutableListOf<Boolean>()
+        var visibleState = false
+        val connection = ScrollChromeConnection(
+            onVisibilityChanged = {
+                visibleState = it
+                events += it
+            },
+            thresholdPx = 48f,
+            isAtBoundary = { true },
+        )
+
+        connection.onPostScroll(
+            consumed = Offset(0f, -150f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+
+        events shouldBe listOf(true)
+        visibleState shouldBe true
+    }
+
+    @Test
+    fun `ScrollChromeState hides mid-list and reveals when active entry hits boundary`() {
+        var atBoundary = false
+        val state = ScrollChromeState(thresholdPx = 48f)
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { atBoundary },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe false
+
+        atBoundary = true
+        state.notifyBoundaryChanged()
+        state.isVisible shouldBe true
+    }
+
+    @Test
+    fun `ScrollChromeState ignores inactive offscreen boundary entry while active entry is mid-list`() {
+        val state = ScrollChromeState(thresholdPx = 48f)
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { false },
+                isAtBoundary = { true },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe false
+
+        state.notifyBoundaryChanged()
+        state.isVisible shouldBe false
+    }
+
+    @Test
+    fun `ScrollChromeState reveals when last active entry is unregistered`() {
+        val state = ScrollChromeState(thresholdPx = 48f)
+        val unregister = state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe false
+
+        unregister()
+        state.notifyBoundaryChanged()
+        state.isVisible shouldBe true
+    }
+
+    @Test
+    fun `ScrollChromeState blocks hiding when pinned via constructor or registerPin`() {
+        var ctorPinned = true
+        val stateWithCtorPin = ScrollChromeState(
+            thresholdPx = 48f,
+            isPinned = { ctorPinned },
+        )
+        stateWithCtorPin.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+
+        stateWithCtorPin.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        stateWithCtorPin.isVisible shouldBe true
+
+        ctorPinned = false
+        stateWithCtorPin.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        stateWithCtorPin.isVisible shouldBe false
+
+        val stateWithRegisteredPin = ScrollChromeState(thresholdPx = 48f)
+        stateWithRegisteredPin.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+        val unpin = stateWithRegisteredPin.registerPin { true }
+
+        stateWithRegisteredPin.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        stateWithRegisteredPin.isVisible shouldBe true
+
+        unpin()
+        stateWithRegisteredPin.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        stateWithRegisteredPin.isVisible shouldBe false
+    }
+
+    @Test
+    fun `ScrollChromeState reveal restores visibility and resets accumulated delta`() {
+        val state = ScrollChromeState(thresholdPx = 48f)
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe false
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -40f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.reveal()
+        state.isVisible shouldBe true
+
+        // Accumulated delta was cleared by reveal(), so 20f does not cross the 48f threshold.
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -20f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe true
     }
 
     @Test
