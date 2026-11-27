@@ -44,6 +44,8 @@ android {
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        resourceConfigurations += listOf("en")
     }
 
     if (System.getenv("MIHON_GITHUB_RELEASE").toBoolean()) {

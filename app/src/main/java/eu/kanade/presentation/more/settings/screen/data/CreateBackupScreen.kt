@@ -22,6 +22,7 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.backup.create.BackupCreateWorker
@@ -37,7 +38,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LabeledCheckbox
 import tachiyomi.presentation.core.components.LazyColumnWithAction
 import tachiyomi.presentation.core.components.SectionCard
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 
 class CreateBackupScreen : Screen() {
@@ -64,12 +64,11 @@ class CreateBackupScreen : Screen() {
             }
         }
 
-        Scaffold(
+        ScrollChromeScaffold(
             topBar = {
                 AppBar(
                     title = stringResource(MR.strings.pref_create_backup),
                     navigateUp = navigator::pop,
-                    scrollBehavior = it,
                 )
             },
         ) { contentPadding ->

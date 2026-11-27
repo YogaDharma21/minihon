@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,6 +27,8 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryDisplayMode
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.util.plus
 
@@ -42,6 +47,7 @@ fun LibraryPager(
     onClickManga: (Category, LibraryManga) -> Unit,
     onLongClickManga: (Category, LibraryManga) -> Unit,
     onClickContinueReading: ((LibraryManga) -> Unit)?,
+    filterToken: String = "",
 ) {
     HorizontalPager(
         modifier = Modifier.fillMaxSize(),
@@ -52,60 +58,44 @@ fun LibraryPager(
             // To make sure only one offscreen page is being composed
             return@HorizontalPager
         }
+        val parentActive = LocalScrollChromeActive.current
+        val isPageActive = remember(state, page, parentActive) {
+            { parentActive() && state.currentPage == page }
+        }
         val category = getCategoryForPage(page)
         val items = getItemsForCategory(category)
 
-        if (items.isEmpty()) {
-            LibraryPagerEmptyScreen(
-                searchQuery = searchQuery,
-                hasActiveFilters = hasActiveFilters,
-                contentPadding = contentPadding,
-                onGlobalSearchClicked = onGlobalSearchClicked,
-            )
-            return@HorizontalPager
+        val gridState = rememberSaveable(
+            category.id,
+            category.flags,
+            filterToken,
+            saver = LazyGridState.Saver,
+        ) {
+            LazyGridState()
         }
 
-        val displayMode by getDisplayMode(page)
-        val columns by if (displayMode != LibraryDisplayMode.List) {
-            val configuration = LocalConfiguration.current
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-            remember(isLandscape) { getColumnsForOrientation(isLandscape) }
-        } else {
-            remember { mutableIntStateOf(0) }
-        }
-
-        val onClickManga: (LibraryManga) -> Unit = { onClickManga(category, it) }
-        val onLongClickManga: (LibraryManga) -> Unit = { onLongClickManga(category, it) }
-
-        when (displayMode) {
-            LibraryDisplayMode.List -> {
-                LibraryList(
-                    items = items,
-                    contentPadding = contentPadding,
-                    selection = selection,
-                    onClick = onClickManga,
-                    onLongClick = onLongClickManga,
-                    onClickContinueReading = onClickContinueReading,
+        CompositionLocalProvider(LocalScrollChromeActive provides isPageActive) {
+            if (items.isEmpty()) {
+                LibraryPagerEmptyScreen(
                     searchQuery = searchQuery,
+                    hasActiveFilters = hasActiveFilters,
+                    contentPadding = contentPadding,
                     onGlobalSearchClicked = onGlobalSearchClicked,
                 )
-            }
-            LibraryDisplayMode.CompactGrid, LibraryDisplayMode.CoverOnlyGrid -> {
-                LibraryCompactGrid(
-                    items = items,
-                    showTitle = displayMode is LibraryDisplayMode.CompactGrid,
-                    columns = columns,
-                    contentPadding = contentPadding,
-                    selection = selection,
-                    onClick = onClickManga,
-                    onLongClick = onLongClickManga,
-                    onClickContinueReading = onClickContinueReading,
-                    searchQuery = searchQuery,
-                    onGlobalSearchClicked = onGlobalSearchClicked,
-                )
-            }
-            LibraryDisplayMode.ComfortableGrid -> {
+            } else {
+                val displayMode by getDisplayMode(page)
+                val columns by if (displayMode != LibraryDisplayMode.List) {
+                    val configuration = LocalConfiguration.current
+                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+                    remember(isLandscape) { getColumnsForOrientation(isLandscape) }
+                } else {
+                    remember { mutableIntStateOf(0) }
+                }
+
+                val onClickManga: (LibraryManga) -> Unit = { onClickManga(category, it) }
+                val onLongClickManga: (LibraryManga) -> Unit = { onLongClickManga(category, it) }
+
                 LibraryComfortableGrid(
                     items = items,
                     columns = columns,
@@ -116,6 +106,7 @@ fun LibraryPager(
                     onClickContinueReading = onClickContinueReading,
                     searchQuery = searchQuery,
                     onGlobalSearchClicked = onGlobalSearchClicked,
+                    state = gridState,
                 )
             }
         }
@@ -134,12 +125,14 @@ private fun LibraryPagerEmptyScreen(
         hasActiveFilters -> MR.strings.error_no_match
         else -> MR.strings.information_no_manga_category
     }
+    val scrollState = rememberScrollState()
+    ObserveScrollChromeBoundary(state = scrollState)
 
     Column(
         modifier = Modifier
             .padding(contentPadding + PaddingValues(8.dp))
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
     ) {
         if (!searchQuery.isNullOrEmpty()) {
             GlobalSearchItem(
@@ -154,6 +147,7 @@ private fun LibraryPagerEmptyScreen(
         EmptyScreen(
             stringRes = msg,
             modifier = Modifier.weight(1f),
+            observeScrollChrome = false,
         )
     }
 }

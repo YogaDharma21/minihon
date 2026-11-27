@@ -27,12 +27,33 @@ class SetReadStatus(
     }
 
     suspend fun await(read: Boolean, vararg chapters: Chapter): Result {
-        val chaptersToUpdate = chapters.filter {
+        val siblingChapters = try {
+            val chaptersWithNumber = chapters.filter { it.chapterNumber > 0.0 }
+            if (chaptersWithNumber.isNotEmpty()) {
+                chaptersWithNumber
+                    .groupBy { it.mangaId }
+                    .flatMap { (mangaId, mangaChapters) ->
+                        val numbers = mangaChapters.map { it.chapterNumber }.toSet()
+                        chapterRepository.getChapterByMangaId(mangaId)
+                            .filter { it.chapterNumber in numbers }
+                    }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            return Result.InternalError(e)
+        }
+
+        val allChapters = (chapters.asSequence() + siblingChapters).distinctBy { it.id }
+
+        val chaptersToUpdate = allChapters.filter {
             when (read) {
                 true -> !it.read
                 false -> it.read || it.lastPageRead > 0
             }
-        }
+        }.toList()
+
         if (chaptersToUpdate.isEmpty()) {
             return Result.NoChapters
         }

@@ -40,6 +40,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +61,6 @@ import tachiyomi.domain.source.model.Source
 import tachiyomi.domain.source.model.SourceWithCount
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.LazyColumnWithAction
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -137,8 +137,8 @@ class ClearDatabaseScreen : Screen() {
                     )
                 }
 
-                Scaffold(
-                    topBar = { scrollBehavior ->
+                ScrollChromeScaffold(
+                    topBar = {
                         AppBar(
                             title = stringResource(MR.strings.pref_clear_database),
                             navigateUp = navigator::pop,
@@ -160,7 +160,6 @@ class ClearDatabaseScreen : Screen() {
                                     )
                                 }
                             },
-                            scrollBehavior = scrollBehavior,
                         )
                     },
                 ) { contentPadding ->

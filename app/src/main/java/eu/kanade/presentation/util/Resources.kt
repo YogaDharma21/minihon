@@ -9,6 +9,17 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import java.util.concurrent.ConcurrentHashMap
+
+private val resourceBitmapPainterCache = ConcurrentHashMap<Int, BitmapPainter>()
+
+fun getResourceBitmapPainter(context: android.content.Context, @DrawableRes id: Int): BitmapPainter {
+    return resourceBitmapPainterCache.getOrPut(id) {
+        val drawable = ContextCompat.getDrawable(context.applicationContext, id)
+            ?: throw Resources.NotFoundException()
+        BitmapPainter(drawable.toBitmap().asImageBitmap())
+    }
+}
 
 /**
  * Create a BitmapPainter from a drawable resource.
@@ -22,8 +33,6 @@ import androidx.core.graphics.drawable.toBitmap
 fun rememberResourceBitmapPainter(@DrawableRes id: Int): BitmapPainter {
     val context = LocalContext.current
     return remember(id) {
-        val drawable = ContextCompat.getDrawable(context, id)
-            ?: throw Resources.NotFoundException()
-        BitmapPainter(drawable.toBitmap().asImageBitmap())
+        getResourceBitmapPainter(context, id)
     }
 }

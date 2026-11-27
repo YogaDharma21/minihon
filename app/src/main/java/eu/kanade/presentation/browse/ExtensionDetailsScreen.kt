@@ -389,7 +389,7 @@ private fun InfoText(
         Text(
             text = primaryText,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
             color = primaryTextColor,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

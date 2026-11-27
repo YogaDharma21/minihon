@@ -10,12 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import eu.kanade.presentation.category.components.CategoryFloatingActionButton
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoreScreenState
 import mihon.domain.extension.model.ExtensionStore
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
 import tachiyomi.presentation.core.i18n.stringResource
@@ -34,12 +35,11 @@ fun ExtensionStoresScreen(
     navigateUp: () -> Unit,
 ) {
     val lazyListState = rememberLazyListState()
-    Scaffold(
-        topBar = { scrollBehavior ->
+    ScrollChromeScaffold(
+        topBar = {
             AppBar(
                 navigateUp = navigateUp,
                 title = stringResource(MR.strings.extensionStores),
-                scrollBehavior = scrollBehavior,
                 actions = {
                     IconButton(onClick = onClickRefresh) {
                         Icon(
@@ -62,8 +62,10 @@ fun ExtensionStoresScreen(
                 MR.strings.extensionStoresScreen_emptyLabel,
                 modifier = Modifier.padding(paddingValues),
             )
-            return@Scaffold
+            return@ScrollChromeScaffold
         }
+
+        ObserveScrollChromeBoundary(state = lazyListState)
 
         ExtensionStoresContent(
             repos = state.stores,

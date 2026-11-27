@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,11 +30,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,11 +46,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastMap
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.components.relativeDateText
 import eu.kanade.presentation.manga.components.ChapterDownloadAction
+import eu.kanade.presentation.manga.components.ChapterGroupHeader
 import eu.kanade.presentation.manga.components.ChapterHeader
 import eu.kanade.presentation.manga.components.ExpandableMangaDescription
 import eu.kanade.presentation.manga.components.MangaActionRow
@@ -55,12 +63,14 @@ import eu.kanade.presentation.manga.components.MangaChapterListItem
 import eu.kanade.presentation.manga.components.MangaInfoBox
 import eu.kanade.presentation.manga.components.MangaToolbar
 import eu.kanade.presentation.manga.components.MissingChapterCountListItem
+import eu.kanade.presentation.util.ProvideCascadeScrollDirection
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.download.model.Download
-import eu.kanade.tachiyomi.source.getNameForMangaInfo
 import eu.kanade.tachiyomi.ui.manga.ChapterList
 import eu.kanade.tachiyomi.ui.manga.MangaViewModel
 import eu.kanade.tachiyomi.util.system.copyToClipboard
+import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.chapter.model.Chapter
@@ -68,20 +78,18 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.VerticalFastScroller
 import tachiyomi.presentation.core.components.material.PullRefresh
-import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.shouldExpandFAB
 import tachiyomi.source.local.isLocal
-import kotlin.time.Instant
 
 @Composable
 fun MangaScreen(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
-    nextUpdate: Instant?,
     isTabletUi: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
@@ -109,7 +117,6 @@ fun MangaScreen(
     onShareClicked: (() -> Unit)?,
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
     onEditCategoryClicked: (() -> Unit)?,
-    onEditFetchIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
 
@@ -126,6 +133,8 @@ fun MangaScreen(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit = {},
+    onToggleDuplicateChapterExpanded: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val onCopyTagToClipboard: (tag: String) -> Unit = {
@@ -138,7 +147,6 @@ fun MangaScreen(
         MangaScreenSmallImpl(
             state = state,
             snackbarHostState = snackbarHostState,
-            nextUpdate = nextUpdate,
             chapterSwipeStartAction = chapterSwipeStartAction,
             chapterSwipeEndAction = chapterSwipeEndAction,
             navigateUp = navigateUp,
@@ -159,7 +167,6 @@ fun MangaScreen(
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
             onEditCategoryClicked = onEditCategoryClicked,
-            onEditIntervalClicked = onEditFetchIntervalClicked,
             onMigrateClicked = onMigrateClicked,
             onEditNotesClicked = onEditNotesClicked,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
@@ -170,6 +177,8 @@ fun MangaScreen(
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
+            onSearchQueryChange = onSearchQueryChange,
+            onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
         )
     } else {
         MangaScreenLargeImpl(
@@ -177,7 +186,6 @@ fun MangaScreen(
             snackbarHostState = snackbarHostState,
             chapterSwipeStartAction = chapterSwipeStartAction,
             chapterSwipeEndAction = chapterSwipeEndAction,
-            nextUpdate = nextUpdate,
             navigateUp = navigateUp,
             onChapterClicked = onChapterClicked,
             onDownloadChapter = onDownloadChapter,
@@ -196,7 +204,6 @@ fun MangaScreen(
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
             onEditCategoryClicked = onEditCategoryClicked,
-            onEditIntervalClicked = onEditFetchIntervalClicked,
             onMigrateClicked = onMigrateClicked,
             onEditNotesClicked = onEditNotesClicked,
             onMultiBookmarkClicked = onMultiBookmarkClicked,
@@ -207,15 +214,23 @@ fun MangaScreen(
             onChapterSelected = onChapterSelected,
             onAllChapterSelected = onAllChapterSelected,
             onInvertSelection = onInvertSelection,
+            onSearchQueryChange = onSearchQueryChange,
+            onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
         )
     }
 }
+
+internal fun toolbarTitleAlpha(firstVisibleItemIndex: Int): Float =
+    if (firstVisibleItemIndex == 0) 0f else 1f
+
+private const val CHAPTER_STREAM_INITIAL_BATCH = 35
+private const val CHAPTER_STREAM_BATCH_SIZE = 25
+private const val CHAPTER_STREAM_PREFETCH_DISTANCE = 10
 
 @Composable
 private fun MangaScreenSmallImpl(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
-    nextUpdate: Instant?,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     navigateUp: () -> Unit,
@@ -243,7 +258,6 @@ private fun MangaScreenSmallImpl(
     onShareClicked: (() -> Unit)?,
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
     onEditCategoryClicked: (() -> Unit)?,
-    onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
 
@@ -260,8 +274,11 @@ private fun MangaScreenSmallImpl(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
 ) {
     val chapterListState = rememberLazyListState()
+    val assemblyState = rememberMangaDetailAssemblyState(key = state.manga.id)
 
     val (chapters, listItem, isAnySelected) = remember(state) {
         Triple(
@@ -271,27 +288,43 @@ private fun MangaScreenSmallImpl(
         )
     }
 
+    var streamingVisibleCount by remember(state.manga.id, state.searchQuery, state.filterActive) {
+        mutableIntStateOf(CHAPTER_STREAM_INITIAL_BATCH)
+    }
+    LaunchedEffect(chapterListState, listItem.size) {
+        snapshotFlow {
+            val layoutInfo = chapterListState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total to lastVisible
+        }.collect { (total, lastVisible) ->
+            if (streamingVisibleCount < listItem.size && lastVisible >= total - CHAPTER_STREAM_PREFETCH_DISTANCE) {
+                streamingVisibleCount = (streamingVisibleCount + CHAPTER_STREAM_BATCH_SIZE).coerceAtMost(listItem.size)
+            }
+        }
+    }
+    val streamedChapterListItems = remember(listItem, streamingVisibleCount) {
+        if (listItem.size <= CHAPTER_STREAM_INITIAL_BATCH) {
+            listItem
+        } else {
+            listItem.take(streamingVisibleCount)
+        }
+    }
+
     BackHandler(enabled = isAnySelected) {
         onAllChapterSelected(false)
     }
 
-    Scaffold(
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    ScrollChromeScaffold(
+        isTopBarPinned = state.selectedChapters.isNotEmpty() || isSearchActive || state.searchQuery.isNotEmpty(),
         topBar = {
-            val isFirstItemVisible by remember {
-                derivedStateOf { chapterListState.firstVisibleItemIndex == 0 }
+            val titleAlpha by remember {
+                derivedStateOf { toolbarTitleAlpha(chapterListState.firstVisibleItemIndex) }
             }
-            val isFirstItemScrolled by remember {
-                derivedStateOf { chapterListState.firstVisibleItemScrollOffset > 0 }
-            }
-            val titleAlpha by animateFloatAsState(
-                if (!isFirstItemVisible) 1f else 0f,
-                label = "Top Bar Title",
-            )
-            val backgroundAlpha by animateFloatAsState(
-                if (!isFirstItemVisible || isFirstItemScrolled) 1f else 0f,
-                label = "Top Bar Background",
-            )
             MangaToolbar(
+                modifier = assemblyState.topBarModifier,
                 title = state.manga.title,
                 hasFilters = state.filterActive,
                 navigateUp = navigateUp,
@@ -307,7 +340,16 @@ private fun MangaScreenSmallImpl(
                 onSelectAll = { onAllChapterSelected(true) },
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { titleAlpha },
-                backgroundAlphaProvider = { backgroundAlpha },
+                searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
+                onSearchQueryChange = { query ->
+                    if (query == null) {
+                        isSearchActive = false
+                        onSearchQueryChange("")
+                    } else {
+                        isSearchActive = true
+                        onSearchQueryChange(query)
+                    }
+                },
             )
         },
         bottomBar = {
@@ -323,23 +365,21 @@ private fun MangaScreenSmallImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.hasUnreadChapters && !isAnySelected
-            SmallExtendedFloatingActionButton(
-                text = {
-                    Text(
-                        text = stringResource(
-                            if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
-                        ),
-                    )
-                },
-                icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                ),
-            )
+            if (state.chapters.isNotEmpty() && !isAnySelected) {
+                SmallExtendedFloatingActionButton(
+                    text = {
+                        Text(
+                            text = stringResource(
+                                if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
+                    },
+                    icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                    modifier = assemblyState.fabModifier,
+                )
+            }
         },
     ) { contentPadding ->
         val topPadding = contentPadding.calculateTopPadding()
@@ -351,93 +391,109 @@ private fun MangaScreenSmallImpl(
             indicatorPadding = PaddingValues(top = topPadding),
         ) {
             val layoutDirection = LocalLayoutDirection.current
-            VerticalFastScroller(
-                listState = chapterListState,
-                topContentPadding = topPadding,
-                endContentPadding = contentPadding.calculateEndPadding(layoutDirection),
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxHeight(),
-                    state = chapterListState,
-                    contentPadding = PaddingValues(
-                        start = contentPadding.calculateStartPadding(layoutDirection),
-                        end = contentPadding.calculateEndPadding(layoutDirection),
-                        bottom = contentPadding.calculateBottomPadding(),
-                    ),
+            ObserveScrollChromeBoundary(
+                state = chapterListState,
+                hasPendingItems = { streamingVisibleCount < listItem.size },
+            )
+            ProvideCascadeScrollDirection(resetKey = state.manga.id) { cascadeScrollModifier ->
+                VerticalFastScroller(
+                    listState = chapterListState,
+                    topContentPadding = topPadding,
+                    endContentPadding = contentPadding.calculateEndPadding(layoutDirection),
                 ) {
-                    item(
-                        key = MangaScreenItem.INFO_BOX,
-                        contentType = MangaScreenItem.INFO_BOX,
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .then(cascadeScrollModifier),
+                        state = chapterListState,
+                        contentPadding = PaddingValues(
+                            start = contentPadding.calculateStartPadding(layoutDirection),
+                            end = contentPadding.calculateEndPadding(layoutDirection),
+                            bottom = contentPadding.calculateBottomPadding(),
+                        ),
                     ) {
-                        MangaInfoBox(
-                            isTabletUi = false,
-                            appBarPadding = topPadding,
+                        item(
+                            key = MangaScreenItem.INFO_BOX,
+                            contentType = MangaScreenItem.INFO_BOX,
+                        ) {
+                            MangaInfoBox(
+                                isTabletUi = false,
+                                appBarPadding = topPadding,
+                                manga = state.manga,
+                                source = remember { state.source },
+                                sourceName = state.sourceName,
+                                isStubSource = remember { state.source is StubSource },
+                                chapterCount = state.chapters.size,
+                                onCoverClick = onCoverClicked,
+                                doSearch = onSearch,
+                                coverModifier = assemblyState.coverModifier,
+                                titlesModifier = assemblyState.titlesModifier,
+                            )
+                        }
+
+                        item(
+                            key = MangaScreenItem.ACTION_ROW,
+                            contentType = MangaScreenItem.ACTION_ROW,
+                        ) {
+                            MangaActionRow(
+                                favorite = state.manga.favorite,
+                                trackingCount = state.trackingCount,
+                                onAddToLibraryClicked = onAddToLibraryClicked,
+                                onWebViewClicked = onWebViewClicked,
+                                onWebViewLongClicked = onWebViewLongClicked,
+                                onTrackingClicked = onTrackingClicked,
+                                onEditCategory = onEditCategoryClicked,
+                                modifier = assemblyState.actionButtonsModifier,
+                            )
+                        }
+
+                        item(
+                            key = MangaScreenItem.DESCRIPTION_WITH_TAG,
+                            contentType = MangaScreenItem.DESCRIPTION_WITH_TAG,
+                        ) {
+                            ExpandableMangaDescription(
+                                defaultExpandState = state.isFromSource,
+                                description = state.manga.description,
+                                tagsProvider = { state.manga.genre },
+                                notes = state.manga.notes,
+                                onTagSearch = onTagSearch,
+                                onCopyTagToClipboard = onCopyTagToClipboard,
+                                onEditNotes = onEditNotesClicked,
+                                modifier = assemblyState.descriptionModifier,
+                            )
+                        }
+
+                        item(
+                            key = MangaScreenItem.CHAPTER_HEADER,
+                            contentType = MangaScreenItem.CHAPTER_HEADER,
+                        ) {
+                            ChapterHeader(
+                                enabled = !isAnySelected,
+                                chapterCount = chapters.size,
+                                missingChapterCount = state.missingChapterCount,
+                                searchQuery = state.searchQuery,
+                                onSearchQueryChange = null,
+                                onClick = onFilterClicked,
+                                modifier = assemblyState.chaptersModifier,
+                            )
+                        }
+
+                        sharedChapterItems(
                             manga = state.manga,
-                            source = remember { state.source },
-                            sourceName = state.sourceName,
-                            isStubSource = remember { state.source is StubSource },
-                            onCoverClick = onCoverClicked,
-                            doSearch = onSearch,
+                            chapters = streamedChapterListItems,
+                            isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
+                            chapterSwipeStartAction = chapterSwipeStartAction,
+                            chapterSwipeEndAction = chapterSwipeEndAction,
+                            expandedDuplicateChapterIds = state.expandedDuplicateChapterIds,
+                            onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
+                            onChapterClicked = onChapterClicked,
+                            onDownloadChapter = onDownloadChapter,
+                            downloadProgressProvider = downloadProgressProvider,
+                            onChapterSelected = onChapterSelected,
+                            onChapterSwipe = onChapterSwipe,
+                            itemModifier = assemblyState.chaptersModifier,
                         )
                     }
-
-                    item(
-                        key = MangaScreenItem.ACTION_ROW,
-                        contentType = MangaScreenItem.ACTION_ROW,
-                    ) {
-                        MangaActionRow(
-                            favorite = state.manga.favorite,
-                            trackingCount = state.trackingCount,
-                            nextUpdate = nextUpdate,
-                            isUserIntervalMode = state.manga.fetchInterval < 0,
-                            onAddToLibraryClicked = onAddToLibraryClicked,
-                            onWebViewClicked = onWebViewClicked,
-                            onWebViewLongClicked = onWebViewLongClicked,
-                            onTrackingClicked = onTrackingClicked,
-                            onEditIntervalClicked = onEditIntervalClicked,
-                            onEditCategory = onEditCategoryClicked,
-                        )
-                    }
-
-                    item(
-                        key = MangaScreenItem.DESCRIPTION_WITH_TAG,
-                        contentType = MangaScreenItem.DESCRIPTION_WITH_TAG,
-                    ) {
-                        ExpandableMangaDescription(
-                            defaultExpandState = state.isFromSource,
-                            description = state.manga.description,
-                            tagsProvider = { state.manga.genre },
-                            notes = state.manga.notes,
-                            onTagSearch = onTagSearch,
-                            onCopyTagToClipboard = onCopyTagToClipboard,
-                            onEditNotes = onEditNotesClicked,
-                        )
-                    }
-
-                    item(
-                        key = MangaScreenItem.CHAPTER_HEADER,
-                        contentType = MangaScreenItem.CHAPTER_HEADER,
-                    ) {
-                        ChapterHeader(
-                            enabled = !isAnySelected,
-                            chapterCount = chapters.size,
-                            missingChapterCount = state.missingChapterCount,
-                            onClick = onFilterClicked,
-                        )
-                    }
-
-                    sharedChapterItems(
-                        manga = state.manga,
-                        chapters = listItem,
-                        isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
-                        chapterSwipeStartAction = chapterSwipeStartAction,
-                        chapterSwipeEndAction = chapterSwipeEndAction,
-                        onChapterClicked = onChapterClicked,
-                        onDownloadChapter = onDownloadChapter,
-                        downloadProgressProvider = downloadProgressProvider,
-                        onChapterSelected = onChapterSelected,
-                        onChapterSwipe = onChapterSwipe,
-                    )
                 }
             }
         }
@@ -448,7 +504,6 @@ private fun MangaScreenSmallImpl(
 fun MangaScreenLargeImpl(
     state: MangaViewModel.State.Success,
     snackbarHostState: SnackbarHostState,
-    nextUpdate: Instant?,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
     navigateUp: () -> Unit,
@@ -476,7 +531,6 @@ fun MangaScreenLargeImpl(
     onShareClicked: (() -> Unit)?,
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
     onEditCategoryClicked: (() -> Unit)?,
-    onEditIntervalClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
     onEditNotesClicked: () -> Unit,
 
@@ -493,6 +547,8 @@ fun MangaScreenLargeImpl(
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onAllChapterSelected: (Boolean) -> Unit,
     onInvertSelection: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val density = LocalDensity.current
@@ -505,19 +561,49 @@ fun MangaScreenLargeImpl(
         )
     }
 
+    val chapterListState = rememberLazyListState()
+
+    var streamingVisibleCount by remember(state.manga.id, state.searchQuery, state.filterActive) {
+        mutableIntStateOf(CHAPTER_STREAM_INITIAL_BATCH)
+    }
+    LaunchedEffect(chapterListState, listItem.size) {
+        snapshotFlow {
+            val layoutInfo = chapterListState.layoutInfo
+            val total = layoutInfo.totalItemsCount
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total to lastVisible
+        }.collect { (total, lastVisible) ->
+            if (streamingVisibleCount < listItem.size && lastVisible >= total - CHAPTER_STREAM_PREFETCH_DISTANCE) {
+                streamingVisibleCount = (streamingVisibleCount + CHAPTER_STREAM_BATCH_SIZE).coerceAtMost(listItem.size)
+            }
+        }
+    }
+    val streamedChapterListItems = remember(listItem, streamingVisibleCount) {
+        if (listItem.size <= CHAPTER_STREAM_INITIAL_BATCH) {
+            listItem
+        } else {
+            listItem.take(streamingVisibleCount)
+        }
+    }
+
     val insetPadding = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal).asPaddingValues()
     var topBarHeight by remember { mutableIntStateOf(0) }
 
-    val chapterListState = rememberLazyListState()
+    val assemblyState = rememberMangaDetailAssemblyState(key = state.manga.id)
 
     BackHandler(enabled = isAnySelected) {
         onAllChapterSelected(false)
     }
 
-    Scaffold(
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    ScrollChromeScaffold(
+        isTopBarPinned = isAnySelected || isSearchActive || state.searchQuery.isNotEmpty(),
         topBar = {
             MangaToolbar(
-                modifier = Modifier.onSizeChanged { topBarHeight = it.height },
+                modifier = Modifier
+                    .onSizeChanged { topBarHeight = it.height }
+                    .then(assemblyState.topBarModifier),
                 title = state.manga.title,
                 hasFilters = state.filterActive,
                 navigateUp = navigateUp,
@@ -533,7 +619,16 @@ fun MangaScreenLargeImpl(
                 onSelectAll = { onAllChapterSelected(true) },
                 onInvertSelection = { onInvertSelection() },
                 titleAlphaProvider = { 1f },
-                backgroundAlphaProvider = { 1f },
+                searchQuery = if (isSearchActive || state.searchQuery.isNotEmpty()) state.searchQuery else null,
+                onSearchQueryChange = { query ->
+                    if (query == null) {
+                        isSearchActive = false
+                        onSearchQueryChange("")
+                    } else {
+                        isSearchActive = true
+                        onSearchQueryChange(query)
+                    }
+                },
             )
         },
         bottomBar = {
@@ -554,23 +649,21 @@ fun MangaScreenLargeImpl(
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            val isFABVisible = state.hasUnreadChapters && !isAnySelected
-            SmallExtendedFloatingActionButton(
-                text = {
-                    Text(
-                        text = stringResource(
-                            if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
-                        ),
-                    )
-                },
-                icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
-                onClick = onContinueReading,
-                expanded = chapterListState.shouldExpandFAB(),
-                modifier = Modifier.animateFloatingActionButton(
-                    visible = isFABVisible,
-                    alignment = Alignment.BottomEnd,
-                ),
-            )
+            if (state.chapters.isNotEmpty() && !isAnySelected) {
+                SmallExtendedFloatingActionButton(
+                    text = {
+                        Text(
+                            text = stringResource(
+                                if (state.hasReadChapters) MR.strings.action_resume else MR.strings.action_start,
+                            ),
+                        )
+                    },
+                    icon = { Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null) },
+                    onClick = onContinueReading,
+                    expanded = chapterListState.shouldExpandFAB(),
+                    modifier = assemblyState.fabModifier,
+                )
+            }
         },
     ) { contentPadding ->
         PullRefresh(
@@ -601,20 +694,21 @@ fun MangaScreenLargeImpl(
                             source = remember { state.source },
                             sourceName = state.sourceName,
                             isStubSource = remember { state.source is StubSource },
+                            chapterCount = state.chapters.size,
                             onCoverClick = onCoverClicked,
                             doSearch = onSearch,
+                            coverModifier = assemblyState.coverModifier,
+                            titlesModifier = assemblyState.titlesModifier,
                         )
                         MangaActionRow(
                             favorite = state.manga.favorite,
                             trackingCount = state.trackingCount,
-                            nextUpdate = nextUpdate,
-                            isUserIntervalMode = state.manga.fetchInterval < 0,
                             onAddToLibraryClicked = onAddToLibraryClicked,
                             onWebViewClicked = onWebViewClicked,
                             onWebViewLongClicked = onWebViewLongClicked,
                             onTrackingClicked = onTrackingClicked,
-                            onEditIntervalClicked = onEditIntervalClicked,
                             onEditCategory = onEditCategoryClicked,
+                            modifier = assemblyState.actionButtonsModifier,
                         )
                         ExpandableMangaDescription(
                             defaultExpandState = true,
@@ -624,46 +718,60 @@ fun MangaScreenLargeImpl(
                             onTagSearch = onTagSearch,
                             onCopyTagToClipboard = onCopyTagToClipboard,
                             onEditNotes = onEditNotesClicked,
+                            modifier = assemblyState.descriptionModifier,
                         )
                     }
                 },
                 endContent = {
-                    VerticalFastScroller(
-                        listState = chapterListState,
-                        topContentPadding = contentPadding.calculateTopPadding(),
-                    ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxHeight(),
-                            state = chapterListState,
-                            contentPadding = PaddingValues(
-                                top = contentPadding.calculateTopPadding(),
-                                bottom = contentPadding.calculateBottomPadding(),
-                            ),
+                    ObserveScrollChromeBoundary(
+                        state = chapterListState,
+                        hasPendingItems = { streamingVisibleCount < listItem.size },
+                    )
+                    ProvideCascadeScrollDirection(resetKey = state.manga.id) { cascadeScrollModifier ->
+                        VerticalFastScroller(
+                            listState = chapterListState,
+                            topContentPadding = contentPadding.calculateTopPadding(),
+                            modifier = assemblyState.chaptersModifier,
                         ) {
-                            item(
-                                key = MangaScreenItem.CHAPTER_HEADER,
-                                contentType = MangaScreenItem.CHAPTER_HEADER,
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .then(cascadeScrollModifier),
+                                state = chapterListState,
+                                contentPadding = PaddingValues(
+                                    top = contentPadding.calculateTopPadding(),
+                                    bottom = contentPadding.calculateBottomPadding(),
+                                ),
                             ) {
-                                ChapterHeader(
-                                    enabled = !isAnySelected,
-                                    chapterCount = chapters.size,
-                                    missingChapterCount = state.missingChapterCount,
-                                    onClick = onFilterButtonClicked,
+                                item(
+                                    key = MangaScreenItem.CHAPTER_HEADER,
+                                    contentType = MangaScreenItem.CHAPTER_HEADER,
+                                ) {
+                                    ChapterHeader(
+                                        enabled = !isAnySelected,
+                                        chapterCount = chapters.size,
+                                        missingChapterCount = state.missingChapterCount,
+                                        searchQuery = state.searchQuery,
+                                        onSearchQueryChange = null,
+                                        onClick = onFilterButtonClicked,
+                                    )
+                                }
+
+                                sharedChapterItems(
+                                    manga = state.manga,
+                                    chapters = streamedChapterListItems,
+                                    isAnyChapterSelected = state.isAnySelected,
+                                    chapterSwipeStartAction = chapterSwipeStartAction,
+                                    chapterSwipeEndAction = chapterSwipeEndAction,
+                                    expandedDuplicateChapterIds = state.expandedDuplicateChapterIds,
+                                    onToggleDuplicateChapterExpanded = onToggleDuplicateChapterExpanded,
+                                    onChapterClicked = onChapterClicked,
+                                    onDownloadChapter = onDownloadChapter,
+                                    downloadProgressProvider = downloadProgressProvider,
+                                    onChapterSelected = onChapterSelected,
+                                    onChapterSwipe = onChapterSwipe,
                                 )
                             }
-
-                            sharedChapterItems(
-                                manga = state.manga,
-                                chapters = listItem,
-                                isAnyChapterSelected = state.selectedChapters.isNotEmpty(),
-                                chapterSwipeStartAction = chapterSwipeStartAction,
-                                chapterSwipeEndAction = chapterSwipeEndAction,
-                                onChapterClicked = onChapterClicked,
-                                onDownloadChapter = onDownloadChapter,
-                                downloadProgressProvider = downloadProgressProvider,
-                                onChapterSelected = onChapterSelected,
-                                onChapterSwipe = onChapterSwipe,
-                            )
                         }
                     }
                 },
@@ -720,29 +828,49 @@ private fun LazyListScope.sharedChapterItems(
     isAnyChapterSelected: Boolean,
     chapterSwipeStartAction: LibraryPreferences.ChapterSwipeAction,
     chapterSwipeEndAction: LibraryPreferences.ChapterSwipeAction,
+    expandedDuplicateChapterIds: Set<Long>,
+    onToggleDuplicateChapterExpanded: (Long) -> Unit,
     onChapterClicked: (Chapter) -> Unit,
     onDownloadChapter: ((List<ChapterList.Item>, ChapterDownloadAction) -> Unit)?,
     downloadProgressProvider: (chapterId: Long) -> Int,
     onChapterSelected: (ChapterList.Item, Boolean, Boolean) -> Unit,
     onChapterSwipe: (ChapterList.Item, LibraryPreferences.ChapterSwipeAction) -> Unit,
+    itemModifier: Modifier = Modifier,
 ) {
-    items(
+    itemsIndexed(
         items = chapters,
-        key = { item ->
+        key = { _, item ->
             when (item) {
                 is ChapterList.MissingCount -> "missing-count-${item.id}"
+                is ChapterList.GroupHeader -> item.id
                 is ChapterList.Item -> "chapter-${item.id}"
             }
         },
-        contentType = { MangaScreenItem.CHAPTER },
-    ) { item ->
+        contentType = { _, item ->
+            when (item) {
+                is ChapterList.GroupHeader -> MangaScreenItem.CHAPTER_GROUP_HEADER
+                else -> MangaScreenItem.CHAPTER
+            }
+        },
+    ) { index, item ->
         val haptic = LocalHapticFeedback.current
+        val motionModifier = itemModifier.cascadeItemMotion(index = index)
 
         when (item) {
             is ChapterList.MissingCount -> {
-                MissingChapterCountListItem(count = item.count)
+                MissingChapterCountListItem(
+                    count = item.count,
+                    modifier = motionModifier,
+                )
+            }
+            is ChapterList.GroupHeader -> {
+                ChapterGroupHeader(
+                    title = item.label,
+                    modifier = motionModifier,
+                )
             }
             is ChapterList.Item -> {
+                val isExpanded = item.id in expandedDuplicateChapterIds
                 MangaChapterListItem(
                     title = if (manga.displayMode == Manga.CHAPTER_DISPLAY_NUMBER) {
                         stringResource(
@@ -790,6 +918,29 @@ private fun LazyListScope.sharedChapterItems(
                     onChapterSwipe = {
                         onChapterSwipe(item, it)
                     },
+                    versions = item.versions,
+                    isExpanded = isExpanded,
+                    onToggleExpand = { onToggleDuplicateChapterExpanded(item.id) },
+                    onVersionClick = { version ->
+                        onChapterItemClick(
+                            chapterItem = version,
+                            isAnyChapterSelected = isAnyChapterSelected,
+                            onToggleSelection = { onChapterSelected(version, !version.selected, false) },
+                            onChapterClicked = onChapterClicked,
+                        )
+                    },
+                    onVersionLongClick = { version ->
+                        onChapterSelected(version, !version.selected, true)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onVersionDownloadClick = if (onDownloadChapter != null) {
+                        { version, action -> onDownloadChapter(listOf(version), action) }
+                    } else {
+                        null
+                    },
+                    versionDownloadProgressProvider = downloadProgressProvider,
+                    isSubChapter = item.isSubChapter,
+                    modifier = motionModifier,
                 )
             }
         }

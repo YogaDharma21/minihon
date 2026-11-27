@@ -1,5 +1,6 @@
 package tachiyomi.presentation.core.screens
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import dev.icerock.moko.resources.StringResource
 import tachiyomi.presentation.core.components.ActionButton
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.secondaryItemAlpha
@@ -39,11 +41,15 @@ fun EmptyScreen(
     stringRes: StringResource,
     modifier: Modifier = Modifier,
     actions: List<EmptyScreenAction>? = null,
+    scrollState: ScrollState = rememberScrollState(),
+    observeScrollChrome: Boolean = true,
 ) {
     EmptyScreen(
         message = stringResource(stringRes),
         modifier = modifier,
         actions = actions,
+        scrollState = scrollState,
+        observeScrollChrome = observeScrollChrome,
     )
 }
 
@@ -52,12 +58,18 @@ fun EmptyScreen(
     message: String,
     modifier: Modifier = Modifier,
     actions: List<EmptyScreenAction>? = null,
+    scrollState: ScrollState = rememberScrollState(),
+    observeScrollChrome: Boolean = true,
 ) {
+    ObserveScrollChromeBoundary(
+        state = scrollState,
+        enabled = observeScrollChrome,
+    )
     val face = remember { getRandomErrorFace() }
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

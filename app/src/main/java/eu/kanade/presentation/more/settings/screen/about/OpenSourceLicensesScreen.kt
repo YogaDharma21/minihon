@@ -1,6 +1,7 @@
 package eu.kanade.presentation.more.settings.screen.about
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -10,10 +11,11 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.variant.LibraryDetailMode
 import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.R
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 class OpenSourceLicensesScreen : Screen() {
@@ -21,20 +23,22 @@ class OpenSourceLicensesScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        Scaffold(
-            topBar = { scrollBehavior ->
+        ScrollChromeScaffold(
+            topBar = {
                 AppBar(
                     title = stringResource(MR.strings.licenses),
                     navigateUp = navigator::pop,
-                    scrollBehavior = scrollBehavior,
                 )
             },
         ) { contentPadding ->
+            val listState = rememberLazyListState()
+            ObserveScrollChromeBoundary(state = listState)
             val libraries by produceLibraries(R.raw.aboutlibraries)
             LibrariesContainer(
                 libraries = libraries,
                 modifier = Modifier
                     .fillMaxSize(),
+                lazyListState = listState,
                 contentPadding = contentPadding,
                 detailMode = LibraryDetailMode.Sheet,
             )

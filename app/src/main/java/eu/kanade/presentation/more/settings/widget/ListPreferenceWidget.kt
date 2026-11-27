@@ -74,7 +74,10 @@ fun <T> ListPreferenceDialog(
                 if (message != null) PreferenceDialogMessage(message)
                 Box(modifier = Modifier.weight(1f, fill = false)) {
                     val state = rememberLazyListState()
-                    ScrollbarLazyColumn(state = state) {
+                    ScrollbarLazyColumn(
+                        state = state,
+                        observeScrollChrome = false,
+                    ) {
                         entries.forEach { current ->
                             val isSelected = value == current.key
                             item {

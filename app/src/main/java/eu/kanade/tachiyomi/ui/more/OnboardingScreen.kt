@@ -2,18 +2,17 @@ package eu.kanade.tachiyomi.ui.more
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.onboarding.OnboardingScreen
-import eu.kanade.presentation.more.settings.screen.SearchableSettings
-import eu.kanade.presentation.more.settings.screen.SettingsDataScreen
+import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.setting.SettingsScreen
+import eu.kanade.tachiyomi.ui.main.MainActivity
 import mihon.app.di.appGraph
-import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 
 class OnboardingScreen : Screen() {
@@ -31,18 +30,19 @@ class OnboardingScreen : Screen() {
             navigator.pop()
         }
 
-        val restoreSettingKey = stringResource(SettingsDataScreen.restorePreferenceKeyString)
-
         BackHandler(enabled = !shownOnboardingFlow) {
             // Prevent exiting if onboarding hasn't been completed
         }
 
+        LaunchedEffect(Unit) {
+            (context as? MainActivity)?.ready = true
+        }
+
         OnboardingScreen(
             onComplete = finishOnboarding,
-            onRestoreBackup = {
+            onRestoreBackup = { uri ->
                 finishOnboarding()
-                SearchableSettings.highlightKey = restoreSettingKey
-                navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage))
+                navigator.push(RestoreBackupScreen(uri.toString()))
             },
         )
     }

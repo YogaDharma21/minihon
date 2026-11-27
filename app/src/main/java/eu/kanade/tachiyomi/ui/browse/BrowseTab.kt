@@ -6,6 +6,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.Navigator
@@ -18,14 +21,15 @@ import eu.kanade.presentation.util.rememberAnimatedVectorPainter
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.browse.extension.ExtensionsViewModel
 import eu.kanade.tachiyomi.ui.browse.extension.extensionsTab
-import eu.kanade.tachiyomi.ui.browse.migration.sources.migrateSourceTab
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.sourcesTab
+import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 
@@ -48,15 +52,23 @@ data object BrowseTab : Tab {
         navigator.push(GlobalSearchScreen())
     }
 
-    private val switchToExtensionTabChannel = Channel<Unit>(1, BufferOverflow.DROP_OLDEST)
+    private val switchTabChannel = Channel<Int>(1, BufferOverflow.DROP_OLDEST)
+    private var requestedPage by mutableIntStateOf(0)
+
+    fun showSources() {
+        requestedPage = 0
+        switchTabChannel.trySend(0)
+    }
 
     fun showExtension() {
-        switchToExtensionTabChannel.trySend(Unit)
+        requestedPage = 1
+        switchTabChannel.trySend(1)
     }
 
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
 
         // Hoisted for extensions tab's search bar
         val extensionsViewModel = metroViewModel<ExtensionsViewModel>()
@@ -65,10 +77,9 @@ data object BrowseTab : Tab {
         val tabs = listOf(
             sourcesTab(),
             extensionsTab(extensionsViewModel),
-            migrateSourceTab(),
         )
 
-        val state = rememberPagerState { tabs.size }
+        val state = rememberPagerState(initialPage = requestedPage) { tabs.size }
 
         TabbedScreen(
             titleRes = MR.strings.browse,
@@ -76,10 +87,22 @@ data object BrowseTab : Tab {
             state = state,
             searchQuery = extensionsSearchQuery,
             onChangeSearchQuery = extensionsViewModel::search,
+            onSwipePastStart = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.History) }
+            },
+            onSwipePastEnd = {
+                scope.launch { HomeScreen.openTab(HomeScreen.Tab.Library(fromBrowse = true)) }
+            },
         )
-        LaunchedEffect(Unit) {
-            switchToExtensionTabChannel.receiveAsFlow()
-                .collectLatest { state.scrollToPage(1) }
+        LaunchedEffect(state) {
+            switchTabChannel.receiveAsFlow().collectLatest { targetPage ->
+                if (state.currentPage != targetPage) {
+                    state.animateScrollToPage(targetPage)
+                }
+            }
+        }
+        LaunchedEffect(state.currentPage) {
+            requestedPage = state.currentPage
         }
 
         LaunchedEffect(Unit) {

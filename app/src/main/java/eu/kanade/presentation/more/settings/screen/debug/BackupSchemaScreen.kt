@@ -14,6 +14,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -21,7 +22,7 @@ import kotlinx.serialization.protobuf.schema.ProtoBufSchemaGenerator
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.ContentCopy
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 class BackupSchemaScreen : Screen() {
@@ -37,7 +38,7 @@ class BackupSchemaScreen : Screen() {
 
         val schema = remember { ProtoBufSchemaGenerator.generateSchemaText(Backup.serializer().descriptor) }
 
-        Scaffold(
+        ScrollChromeScaffold(
             topBar = {
                 AppBar(
                     title = TITLE,
@@ -55,14 +56,15 @@ class BackupSchemaScreen : Screen() {
                             ),
                         )
                     },
-                    scrollBehavior = it,
                 )
             },
         ) { contentPadding ->
+            val scrollState = rememberScrollState()
+            ObserveScrollChromeBoundary(state = scrollState)
             Text(
                 text = schema,
                 modifier = Modifier
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(contentPadding)
                     .padding(16.dp),
                 fontFamily = FontFamily.Monospace,

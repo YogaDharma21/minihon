@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -94,7 +93,6 @@ import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
-import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.updaterEnabled
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.CancellationException
@@ -203,9 +201,12 @@ class MainActivity : BaseActivity() {
                     migratingSince = null
                 }
             }
+
             if (migrating || migratingSince != null) {
-                AppMigratingScreen()
-                // Release the splash screen so the reason for the wait shows
+                AppMigratingScreen(
+                    isDatabaseMigrating = databaseMigrating,
+                    isAppMigrating = appMigrating,
+                )
                 LaunchedEffect(Unit) { ready = true }
                 return@setComposeContent
             }
@@ -233,8 +234,15 @@ class MainActivity : BaseActivity() {
                 )
             }
 
+            val initialScreens = remember {
+                if (!preferences.shownOnboardingFlow.get()) {
+                    listOf(HomeScreen, OnboardingScreen())
+                } else {
+                    listOf(HomeScreen)
+                }
+            }
             Navigator(
-                screen = HomeScreen,
+                screens = initialScreens,
                 disposeBehavior = NavigatorDisposeBehavior(disposeNestedNavigators = false, disposeSteps = true),
             ) { navigator ->
                 LaunchedEffect(navigator) {
@@ -247,6 +255,9 @@ class MainActivity : BaseActivity() {
                         // Reset Incognito Mode on relaunch
                         preferences.incognitoMode.set(false)
                     }
+                }
+                LaunchedEffect(Unit) {
+                    ready = true
                 }
                 LaunchedEffect(navigator.lastItem) {
                     (navigator.lastItem as? BrowseSourceScreen)?.sourceId
@@ -275,18 +286,6 @@ class MainActivity : BaseActivity() {
                                 .padding(contentPadding)
                                 .consumeWindowInsets(contentPadding),
                         )
-
-                        // Draw navigation bar scrim when needed
-                        if (remember { isNavigationBarNeedsScrim() }) {
-                            Spacer(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
-                                    .alpha(0.8f)
-                                    .background(MaterialTheme.colorScheme.surfaceContainer),
-                            )
-                        }
                     }
                 }
 
@@ -416,7 +415,7 @@ class MainActivity : BaseActivity() {
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
-            if (!preferences.shownOnboardingFlow.get() && navigator.lastItem !is OnboardingScreen) {
+            if (!preferences.shownOnboardingFlow.get() && navigator.items.none { it is OnboardingScreen }) {
                 navigator.push(OnboardingScreen())
             }
         }
@@ -545,38 +544,80 @@ class MainActivity : BaseActivity() {
     /**
      * Sets custom splash screen exit animation on devices prior to Android 12.
      *
-     * When custom animation is used, status and navigation bar color will be set to transparent and will be restored
-     * after the animation is finished.
+     * Features playful icon scale anticipation, pop-out, and alpha fade,
+     * with a smooth translation and alpha handoff into activity content.
      */
     @Suppress("Deprecation")
     private fun setSplashScreenExitAnimation(splashScreen: SplashScreen?) {
-        val root = findViewById<View>(android.R.id.content)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && splashScreen != null) {
+        val root = findViewById<View>(android.R.id.content) ?: return
+        if (splashScreen == null) return
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             window.statusBarColor = Color.TRANSPARENT
             window.navigationBarColor = Color.TRANSPARENT
 
             splashScreen.setOnExitAnimationListener { splashProvider ->
-                // For some reason the SplashScreen applies (incorrect) Y translation to the iconView
+                // SplashScreen compat can apply incorrect Y translation to iconView
                 splashProvider.iconView.translationY = 0F
 
-                val activityAnim = ValueAnimator.ofFloat(1F, 0F).apply {
+                val activityAnim = ValueAnimator.ofFloat(0F, 1F).apply {
                     interpolator = LinearOutSlowInInterpolator()
                     duration = SPLASH_EXIT_ANIM_DURATION
                     addUpdateListener { va ->
-                        val value = va.animatedValue as Float
-                        root.translationY = value * 16.dpToPx
+                        val fraction = va.animatedFraction
+                        root.translationY = (1f - fraction) * 16.dpToPx
+                        root.alpha = 0.85f + (0.15f * fraction)
                     }
                 }
 
-                val splashAnim = ValueAnimator.ofFloat(1F, 0F).apply {
+                val splashAnim = ValueAnimator.ofFloat(0F, 1F).apply {
                     interpolator = FastOutSlowInInterpolator()
                     duration = SPLASH_EXIT_ANIM_DURATION
                     addUpdateListener { va ->
-                        val value = va.animatedValue as Float
-                        splashProvider.view.alpha = value
+                        val fraction = va.animatedFraction
+
+                        // Playful scale anticipation and pop-out
+                        val scale = when {
+                            fraction < 0.25f -> {
+                                val t = fraction / 0.25f
+                                1.0f - (0.12f * t)
+                            }
+                            fraction < 0.70f -> {
+                                val t = (fraction - 0.25f) / 0.45f
+                                0.88f + (0.37f * t)
+                            }
+                            else -> {
+                                val t = (fraction - 0.70f) / 0.30f
+                                1.25f + (0.10f * t)
+                            }
+                        }
+                        splashProvider.iconView.scaleX = scale
+                        splashProvider.iconView.scaleY = scale
+
+                        // Alpha fade: hold during anticipation, fade during pop-out
+                        val iconAlpha = when {
+                            fraction < 0.35f -> 1.0f
+                            else -> {
+                                val t = (fraction - 0.35f) / 0.65f
+                                (1.0f - t).coerceIn(0f, 1f)
+                            }
+                        }
+                        splashProvider.iconView.alpha = iconAlpha
+
+                        // Background fade out
+                        val bgAlpha = when {
+                            fraction < 0.30f -> 1.0f
+                            else -> {
+                                val t = (fraction - 0.30f) / 0.70f
+                                (1.0f - t).coerceIn(0f, 1f)
+                            }
+                        }
+                        splashProvider.view.alpha = bgAlpha
                     }
                     doOnEnd {
                         splashProvider.remove()
+                        root.translationY = 0F
+                        root.alpha = 1F
                     }
                 }
 

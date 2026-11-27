@@ -2,10 +2,10 @@ package eu.kanade.presentation.reader.appbars
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.FormatListBulleted
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import tachiyomi.i18n.MR
@@ -21,11 +21,11 @@ fun ReaderTopBar(
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
+    onClickChapterList: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     AppBar(
         modifier = modifier,
-        backgroundColor = Color.Transparent,
         title = mangaTitle,
         subtitle = chapterTitle,
         navigateUp = navigateUp,

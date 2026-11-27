@@ -1,5 +1,6 @@
 package eu.kanade.presentation.more.settings.screen.browse
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +26,8 @@ class ExtensionStoresScreen(
     override fun Content() {
         val context = LocalContext.current
         val navigator = LocalNavigator.currentOrThrow
+
+        BackHandler(onBack = navigator::pop)
 
         val viewModel = metroViewModel<ExtensionStoresViewModel>()
         val state by viewModel.state.collectAsStateWithLifecycle()

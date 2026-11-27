@@ -32,7 +32,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +65,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.DropdownMenu
+import eu.kanade.presentation.components.DropdownMenuItem
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.theme.TachiyomiPreviewTheme
 import eu.kanade.tachiyomi.data.track.model.TrackSearch
@@ -207,11 +207,13 @@ fun TrackerSearch(
                     EmptyScreen(
                         modifier = Modifier.padding(innerPadding),
                         stringRes = MR.strings.no_results_found,
+                        observeScrollChrome = false,
                     )
                 } else {
                     ScrollbarLazyColumn(
                         contentPadding = innerPadding + PaddingValues(vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
+                        observeScrollChrome = false,
                     ) {
                         items(
                             items = availableTracks,
@@ -230,6 +232,7 @@ fun TrackerSearch(
                     modifier = Modifier.padding(innerPadding),
                     message = queryResult.exceptionOrNull()?.message
                         ?: stringResource(MR.strings.unknown_error),
+                    observeScrollChrome = false,
                 )
             }
         }

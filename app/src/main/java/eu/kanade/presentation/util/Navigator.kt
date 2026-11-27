@@ -4,18 +4,38 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.core.screen.ScreenKey
 import cafe.adriel.voyager.core.screen.uniqueScreenKey
 import cafe.adriel.voyager.core.stack.StackEvent
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.ScreenTransitionContent
-import soup.compose.material.motion.animation.materialSharedAxisX
-import soup.compose.material.motion.animation.rememberSlideDistance
+import eu.kanade.presentation.theme.springLowStiffness
+import eu.kanade.tachiyomi.ui.manga.MangaScreen
 
 /**
  * For invoking back press to the parent activity
@@ -35,19 +55,38 @@ interface AssistContentScreen {
     fun onProvideAssistUrl(): String?
 }
 
+private val NAV_EASING = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
+
 @Composable
 fun DefaultNavigatorScreenTransition(
     navigator: Navigator,
     modifier: Modifier = Modifier,
 ) {
-    val slideDistance = rememberSlideDistance()
     ScreenTransition(
         navigator = navigator,
         transition = {
-            materialSharedAxisX(
-                forward = navigator.lastEvent != StackEvent.Pop,
-                slideDistance = slideDistance,
-            )
+            val isPush = navigator.lastEvent == StackEvent.Push
+            if (isPush) {
+                (
+                    slideInVertically(
+                        animationSpec = tween(700, easing = NAV_EASING),
+                        initialOffsetY = { (it * 0.10f).toInt() },
+                    ) + fadeIn(animationSpec = tween(450, easing = NAV_EASING))
+                ) togetherWith (
+                    fadeOut(animationSpec = tween(350, easing = NAV_EASING)) +
+                        scaleOut(targetScale = 0.96f, animationSpec = tween(500, easing = NAV_EASING))
+                )
+            } else {
+                (
+                    scaleIn(initialScale = 0.96f, animationSpec = tween(500, easing = NAV_EASING)) +
+                        fadeIn(animationSpec = tween(450, easing = NAV_EASING))
+                ) togetherWith (
+                    slideOutVertically(
+                        animationSpec = tween(550, easing = NAV_EASING),
+                        targetOffsetY = { (it * 0.10f).toInt() },
+                    ) + fadeOut(animationSpec = tween(350, easing = NAV_EASING))
+                )
+            }
         },
         modifier = modifier,
     )
@@ -66,8 +105,31 @@ fun ScreenTransition(
         modifier = modifier,
         label = "transition",
     ) { screen ->
+        val isCurrentScreen = screen == navigator.lastItem
         navigator.saveableState("transition", screen) {
-            content(screen)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (isCurrentScreen) {
+                            Modifier
+                        } else {
+                            // The outgoing screen stays composed during the transition. Consume
+                            // pointers so taps and drags cannot reach controls that are leaving.
+                            Modifier.pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent(PointerEventPass.Initial)
+                                            .changes
+                                            .forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        },
+                    ),
+            ) {
+                content(screen)
+            }
         }
     }
 

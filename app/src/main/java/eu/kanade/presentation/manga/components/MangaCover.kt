@@ -28,6 +28,15 @@ enum class MangaCover(val ratio: Float) {
         shape: Shape = MaterialTheme.shapes.extraSmall,
         onClick: (() -> Unit)? = null,
     ) {
+        val clickModifier = if (onClick != null) {
+            Modifier.clickable(
+                role = Role.Button,
+                onClick = onClick,
+            )
+        } else {
+            Modifier
+        }
+
         AsyncImage(
             model = data,
             placeholder = ColorPainter(CoverPlaceholderColor),
@@ -36,16 +45,7 @@ enum class MangaCover(val ratio: Float) {
             modifier = modifier
                 .aspectRatio(ratio)
                 .clip(shape)
-                .then(
-                    if (onClick != null) {
-                        Modifier.clickable(
-                            role = Role.Button,
-                            onClick = onClick,
-                        )
-                    } else {
-                        Modifier
-                    },
-                ),
+                .then(clickModifier),
             contentScale = ContentScale.Crop,
         )
     }

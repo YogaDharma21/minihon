@@ -38,14 +38,19 @@ object LocaleHelper {
         }
     }
 
-    fun getDisplayName(lang: String): String {
-        val normalizedLang = when (lang) {
-            "zh-CN" -> "zh-Hans"
-            "zh-TW" -> "zh-Hant"
-            else -> lang
-        }
+    private val displayNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val localizedDisplayNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-        return Locale.forLanguageTag(normalizedLang).displayName
+    fun getDisplayName(lang: String): String {
+        return displayNameCache.getOrPut(lang) {
+            val normalizedLang = when (lang) {
+                "zh-CN" -> "zh-Hans"
+                "zh-TW" -> "zh-Hant"
+                else -> lang
+            }
+
+            Locale.forLanguageTag(normalizedLang).displayName
+        }
     }
 
     fun getShortDisplayName(lang: String?, uppercase: Boolean = false): String {
@@ -69,13 +74,15 @@ object LocaleHelper {
             return ""
         }
 
-        val locale = when (lang) {
-            "" -> LocaleListCompat.getAdjustedDefault()[0]
-            "zh-CN" -> Locale.forLanguageTag("zh-Hans")
-            "zh-TW" -> Locale.forLanguageTag("zh-Hant")
-            else -> Locale.forLanguageTag(lang)
+        return localizedDisplayNameCache.getOrPut(lang) {
+            val locale = when (lang) {
+                "" -> LocaleListCompat.getAdjustedDefault()[0]
+                "zh-CN" -> Locale.forLanguageTag("zh-Hans")
+                "zh-TW" -> Locale.forLanguageTag("zh-Hant")
+                else -> Locale.forLanguageTag(lang)
+            }
+            locale!!.getDisplayName(locale).replaceFirstChar { it.uppercase(locale) }
         }
-        return locale!!.getDisplayName(locale).replaceFirstChar { it.uppercase(locale) }
     }
 
     /**

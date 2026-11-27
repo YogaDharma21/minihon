@@ -1,31 +1,97 @@
 package eu.kanade.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
+import eu.kanade.presentation.theme.HorizontalSwipeConnection
+import eu.kanade.presentation.theme.LocalScrollChromeState
+import eu.kanade.presentation.theme.rememberScrollChromeState
+import eu.kanade.presentation.theme.topAppBarEnterTransition
+import eu.kanade.presentation.theme.topAppBarExitTransition
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.automirroredrounded.ArrowBack
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.Search
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.clearFocusOnSoftKeyboardHide
+import tachiyomi.presentation.core.util.runOnEnterKeyPressed
+import tachiyomi.presentation.core.util.showSoftKeyboard
+
+private var cachedTabbedHeaderHeightPx: Int = 0
 
 @Composable
 fun TabbedScreen(
@@ -34,55 +100,404 @@ fun TabbedScreen(
     state: PagerState = rememberPagerState { tabs.size },
     searchQuery: String? = null,
     onChangeSearchQuery: (String?) -> Unit = {},
+    onSwipePastStart: (() -> Unit)? = null,
+    onSwipePastEnd: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
-        topBar = {
-            val tab = tabs[state.currentPage]
-            val searchEnabled = tab.searchEnabled
-
-            SearchToolbar(
-                titleContent = { AppBarTitle(stringResource(titleRes)) },
-                searchEnabled = searchEnabled,
-                searchQuery = if (searchEnabled) searchQuery else null,
-                onChangeSearchQuery = onChangeSearchQuery,
-                actions = { AppBarActions(tab.actions) },
-            )
-        },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { contentPadding ->
-        Column(
-            modifier = Modifier.padding(
-                top = contentPadding.calculateTopPadding(),
-                start = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
-                end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
-            ),
+        var baseHeaderHeightPx by rememberSaveable { mutableIntStateOf(cachedTabbedHeaderHeightPx) }
+        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val fallbackHeight = statusBarTop + 114.dp
+        val headerHeight = if (baseHeaderHeightPx > 0) {
+            with(LocalDensity.current) { baseHeaderHeightPx.toDp() }
+        } else {
+            fallbackHeight
+        }
+        val parentChromeState = LocalScrollChromeState.current
+        val chromeState = parentChromeState ?: rememberScrollChromeState()
+        val tab = tabs[state.currentPage]
+        val searchEnabled = tab.searchEnabled
+        val isSearching = searchEnabled && searchQuery != null
+        val isChromePinned by rememberUpdatedState(isSearching || tab.isActionMode)
+        val currentIsActive by rememberUpdatedState(LocalScrollChromeActive.current)
+
+        DisposableEffect(chromeState) {
+            val unregister = chromeState.registerPin { currentIsActive() && isChromePinned }
+            onDispose(unregister)
+        }
+
+        // Keyed on page only so fling start/stop doesn't re-show the header mid scroll.
+        LaunchedEffect(state.currentPage) {
+            if (currentIsActive()) {
+                chromeState.reveal()
+                chromeState.notifyBoundaryChanged()
+            }
+        }
+
+        LaunchedEffect(isSearching, tab.isActionMode) {
+            if (currentIsActive()) {
+                chromeState.reveal()
+                chromeState.notifyBoundaryChanged()
+            }
+        }
+
+        val swipeConnection = remember(onSwipePastStart, onSwipePastEnd, state, tab.isActionMode, isSearching) {
+            if (tab.isActionMode || isSearching || (onSwipePastStart == null && onSwipePastEnd == null)) {
+                null
+            } else {
+                HorizontalSwipeConnection(
+                    onSwipeLeft = {
+                        if (state.currentPage == tabs.size - 1) {
+                            onSwipePastEnd?.invoke()
+                        }
+                    },
+                    onSwipeRight = {
+                        if (state.currentPage == 0) {
+                            onSwipePastStart?.invoke()
+                        }
+                    },
+                )
+            }
+        }
+
+        CompositionLocalProvider(
+            LocalScrollChromeState provides chromeState,
+            LocalScrollChromeObserver provides chromeState,
         ) {
-            PrimaryTabRow(
-                selectedTabIndex = state.currentPage,
-                modifier = Modifier.zIndex(1f),
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    Tab(
-                        selected = state.currentPage == index,
-                        onClick = { scope.launch { state.animateScrollToPage(index) } },
-                        text = { TabText(text = stringResource(tab.titleRes), badgeCount = tab.badgeNumber) },
-                        unselectedContentColor = MaterialTheme.colorScheme.onSurface,
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (parentChromeState == null) {
+                            Modifier.nestedScroll(chromeState.nestedScrollConnection)
+                        } else {
+                            Modifier
+                        },
                     )
+                    .then(
+                        if (swipeConnection != null) {
+                            Modifier.nestedScroll(swipeConnection)
+                        } else {
+                            Modifier
+                        },
+                    ),
+            ) {
+                HorizontalPager(
+                    modifier = Modifier.fillMaxSize(),
+                    state = state,
+                    userScrollEnabled = !tab.isActionMode,
+                    verticalAlignment = Alignment.Top,
+                ) { page ->
+                    val parentActive = LocalScrollChromeActive.current
+                    val isPageActive = remember(state, page, parentActive) {
+                        { parentActive() && state.currentPage == page }
+                    }
+                    CompositionLocalProvider(LocalScrollChromeActive provides isPageActive) {
+                        tabs[page].content(
+                            PaddingValues(
+                                top = headerHeight,
+                                bottom = contentPadding.calculateBottomPadding(),
+                            ),
+                            snackbarHostState,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .zIndex(10f),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    AnimatedVisibility(
+                        visible = chromeState.isVisible || isSearching || tab.isActionMode,
+                        enter = topAppBarEnterTransition,
+                        exit = topAppBarExitTransition,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged {
+                                    if (it.height > 0) {
+                                        baseHeaderHeightPx = it.height
+                                        cachedTabbedHeaderHeightPx = it.height
+                                    }
+                                },
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                shadowElevation = 8.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .windowInsetsPadding(WindowInsets.statusBars)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 3.dp),
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (tab.isActionMode) {
+                                            IconButton(onClick = { tab.onCancelActionMode?.invoke() }) {
+                                                Icon(
+                                                    imageVector = MaterialSymbols.Rounded.Close,
+                                                    contentDescription = stringResource(MR.strings.action_cancel),
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                            Text(
+                                                text = "${tab.actionModeCounter}",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 19.sp,
+                                                    letterSpacing = (-0.02).sp,
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(start = 8.dp),
+                                            )
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                AppBarActions(tab.actionModeActions)
+                                            }
+                                        } else if (isSearching) {
+                                            SearchRow(
+                                                searchQuery = searchQuery.orEmpty(),
+                                                onChangeSearchQuery = onChangeSearchQuery,
+                                            )
+                                        } else {
+                                            Text(
+                                                text = stringResource(titleRes),
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 19.sp,
+                                                    letterSpacing = (-0.02).sp,
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(start = 8.dp),
+                                            )
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                if (searchEnabled) {
+                                                    IconButton(onClick = { onChangeSearchQuery("") }) {
+                                                        Icon(
+                                                            imageVector = MaterialSymbols.Rounded.Search,
+                                                            contentDescription = stringResource(
+                                                                MR.strings.action_search,
+                                                            ),
+                                                            tint = MaterialTheme.colorScheme.onSurface,
+                                                        )
+                                                    }
+                                                }
+                                                AppBarActions(tab.actions)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0x0EFFFFFF),
+                                        border = BorderStroke(1.dp, Color(0x10FFFFFF)),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            tabs.forEachIndexed { index, tabItem ->
+                                                SegmentedTabButton(
+                                                    selected = state.currentPage == index,
+                                                    onClick = {
+                                                        if (tab.isActionMode) {
+                                                            tab.onCancelActionMode?.invoke()
+                                                        }
+                                                        scope.launch { state.animateScrollToPage(index) }
+                                                    },
+                                                    title = stringResource(tabItem.titleRes),
+                                                    badgeCount = tabItem.badgeNumber,
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        }
+    }
+}
 
-            HorizontalPager(
-                modifier = Modifier.fillMaxSize(),
-                state = state,
-                verticalAlignment = Alignment.Top,
-            ) { page ->
-                tabs[page].content(
-                    PaddingValues(bottom = contentPadding.calculateBottomPadding()),
-                    snackbarHostState,
+@Composable
+private fun SearchRow(
+    searchQuery: String,
+    onChangeSearchQuery: (String?) -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val searchFieldState = rememberTextFieldState(searchQuery)
+    val currentOnChangeSearchQuery by rememberUpdatedState(onChangeSearchQuery)
+
+    LaunchedEffect(searchFieldState) {
+        snapshotFlow { searchFieldState.text.toString() }
+            .drop(1)
+            .collect { currentOnChangeSearchQuery(it) }
+    }
+    LaunchedEffect(searchQuery) {
+        if (searchQuery != searchFieldState.text.toString()) {
+            searchFieldState.setTextAndPlaceCursorAtEnd(searchQuery)
+        }
+    }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = { onChangeSearchQuery(null) }) {
+            Icon(
+                imageVector = MaterialSymbols.AutoMirroredRounded.ArrowBack,
+                contentDescription = stringResource(MR.strings.action_cancel),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        BasicTextField(
+            state = searchFieldState,
+            modifier = Modifier
+                .weight(1f)
+                .focusRequester(focusRequester)
+                .runOnEnterKeyPressed {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }
+                .showSoftKeyboard(searchQuery.isEmpty())
+                .clearFocusOnSoftKeyboardHide(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            onKeyboardAction = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            },
+            lineLimits = TextFieldLineLimits.SingleLine,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorator = { innerTextField ->
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (searchFieldState.text.isEmpty()) {
+                        Text(
+                            text = stringResource(MR.strings.action_search_hint),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
+        )
+
+        if (searchFieldState.text.isNotEmpty()) {
+            IconButton(onClick = { searchFieldState.clearText() }) {
+                Icon(
+                    imageVector = MaterialSymbols.Rounded.Close,
+                    contentDescription = stringResource(MR.strings.action_reset),
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+    }
+}
+
+@Composable
+fun SegmentedTabButton(
+    selected: Boolean,
+    onClick: () -> Unit,
+    title: String,
+    badgeCount: Int? = null,
+    modifier: Modifier = Modifier,
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        },
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "tabBg",
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "tabContent",
+    )
+
+    Surface(
+        selected = selected,
+        onClick = onClick,
+        shape = CircleShape,
+        color = backgroundColor,
+        contentColor = contentColor,
+        modifier = modifier.height(34.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CompositionLocalProvider(LocalContentColor provides contentColor) {
+                ProvideTextStyle(
+                    MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.2.sp,
+                    ),
+                ) {
+                    TabText(text = title, badgeCount = badgeCount)
+                }
             }
         }
     }
@@ -93,5 +508,9 @@ data class TabContent(
     val badgeNumber: Int? = null,
     val searchEnabled: Boolean = false,
     val actions: List<AppBar.AppBarAction> = listOf(),
+    val isActionMode: Boolean = false,
+    val actionModeCounter: Int = 0,
+    val onCancelActionMode: (() -> Unit)? = null,
+    val actionModeActions: List<AppBar.AppBarAction> = listOf(),
     val content: @Composable (contentPadding: PaddingValues, snackbarHostState: SnackbarHostState) -> Unit,
 )

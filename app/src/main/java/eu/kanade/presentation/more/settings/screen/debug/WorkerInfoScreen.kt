@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberIs24HourSystem
 import eu.kanade.tachiyomi.util.lang.toDateTimestampString
@@ -47,7 +49,7 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.ContentCopy
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.plus
 import java.time.format.DateTimeFormatter
@@ -76,7 +78,7 @@ class WorkerInfoScreen : Screen() {
         val finished by viewModel.finished.collectAsState()
         val running by viewModel.running.collectAsState()
 
-        Scaffold(
+        ScrollChromeScaffold(
             topBar = {
                 AppBar(
                     title = TITLE,
@@ -94,11 +96,13 @@ class WorkerInfoScreen : Screen() {
                             ),
                         )
                     },
-                    scrollBehavior = it,
                 )
             },
         ) { contentPadding ->
+            val listState = rememberLazyListState()
+            ObserveScrollChromeBoundary(state = listState)
             LazyColumn(
+                state = listState,
                 contentPadding = contentPadding + PaddingValues(horizontal = 16.dp),
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
             ) {
