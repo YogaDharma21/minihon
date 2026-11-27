@@ -16,8 +16,16 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
@@ -26,6 +34,9 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
+import kotlinx.coroutines.flow.distinctUntilChanged
+import tachiyomi.presentation.core.components.ScrollChromeBoundaryEntry
+import tachiyomi.presentation.core.components.ScrollChromeObserver
 
 fun <T> springLowStiffness(): SpringSpec<T> = spring(
     stiffness = Spring.StiffnessMediumLow,
@@ -85,12 +96,27 @@ fun Modifier.bouncyClickable(
 class ScrollChromeConnection(
     private val onVisibilityChanged: (Boolean) -> Unit,
     private val thresholdPx: Float = 96f,
+    private val isAtBoundary: () -> Boolean = { false },
 ) : NestedScrollConnection {
 
     private var accumulatedDelta = 0f
 
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        val dy = -available.y
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource,
+    ): Offset {
+        if (isAtBoundary()) {
+            accumulatedDelta = 0f
+            onVisibilityChanged(true)
+            return Offset.Zero
+        }
+
+        val dy = -consumed.y
+        if (dy == 0f) {
+            return Offset.Zero
+        }
+
         if ((dy > 0f && accumulatedDelta < 0f) || (dy < 0f && accumulatedDelta > 0f)) {
             accumulatedDelta = 0f
         }
@@ -110,6 +136,86 @@ class ScrollChromeConnection(
     fun reset() {
         accumulatedDelta = 0f
     }
+}
+
+@Stable
+class ScrollChromeState(
+    initialVisible: Boolean = true,
+    thresholdPx: Float = 96f,
+    private val isPinned: () -> Boolean = { false },
+) : ScrollChromeObserver {
+
+    var isVisible by mutableStateOf(initialVisible)
+        private set
+
+    private val entries = mutableListOf<ScrollChromeBoundaryEntry>()
+    private val pinChecks = mutableListOf<() -> Boolean>()
+
+    val nestedScrollConnection: ScrollChromeConnection = ScrollChromeConnection(
+        onVisibilityChanged = { visible ->
+            if (visible || (!isPinnedNow() && !isActiveAtBoundary())) {
+                isVisible = visible
+            }
+        },
+        thresholdPx = thresholdPx,
+        isAtBoundary = { isPinnedNow() || isActiveAtBoundary() },
+    )
+
+    fun reveal() {
+        isVisible = true
+        nestedScrollConnection.reset()
+    }
+
+    fun registerPin(pinCheck: () -> Boolean): () -> Unit {
+        pinChecks.add(pinCheck)
+        return { pinChecks.remove(pinCheck) }
+    }
+
+    override fun register(entry: ScrollChromeBoundaryEntry): () -> Unit {
+        entries.add(entry)
+        return { entries.remove(entry) }
+    }
+
+    override fun notifyBoundaryChanged() {
+        if (isPinnedNow() || isActiveAtBoundary()) {
+            reveal()
+        }
+    }
+
+    private fun isPinnedNow(): Boolean = isPinned() || pinChecks.any { it() }
+
+    private fun isActiveAtBoundary(): Boolean {
+        val active = entries.filter { it.isActive() }
+        return active.isEmpty() || active.any { it.isAtBoundary() }
+    }
+}
+
+val LocalScrollChromeState = staticCompositionLocalOf<ScrollChromeState?> { null }
+
+@Composable
+fun rememberScrollChromeState(
+    initialVisible: Boolean = true,
+    thresholdPx: Float = 96f,
+    isPinned: () -> Boolean = { false },
+): ScrollChromeState {
+    val currentIsPinned by rememberUpdatedState(isPinned)
+    val state = remember(thresholdPx) {
+        ScrollChromeState(
+            initialVisible = initialVisible,
+            thresholdPx = thresholdPx,
+            isPinned = { currentIsPinned() },
+        )
+    }
+    LaunchedEffect(state) {
+        snapshotFlow { currentIsPinned() }
+            .distinctUntilChanged()
+            .collect { pinned ->
+                if (pinned) {
+                    state.reveal()
+                }
+            }
+    }
+    return state
 }
 
 class HorizontalSwipeConnection(
