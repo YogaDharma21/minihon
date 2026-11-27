@@ -57,9 +57,10 @@ import eu.kanade.presentation.browse.components.BrowseSkeletonScreen
 import eu.kanade.presentation.browse.components.CatalogRowContainer
 import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.ExtensionIcon
-import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
+import eu.kanade.presentation.util.ProvideCascadeScrollDirection
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
@@ -280,150 +281,153 @@ private fun ExtensionContent(
         }
     }
 
-    FastScrollLazyColumn(
-        state = extensionListState,
-        contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
-    ) {
-        if (!installGranted && state.installer?.requiresSystemPermission == true) {
-            item(key = "extension-permissions-warning") {
-                WarningBanner(
-                    textRes = MR.strings.ext_permission_install_apps_warning,
-                    modifier = Modifier.clickable {
-                        context.launchRequestPackageInstallsPermission()
-                    },
-                )
+    ProvideCascadeScrollDirection { cascadeScrollModifier ->
+        FastScrollLazyColumn(
+            modifier = cascadeScrollModifier,
+            state = extensionListState,
+            contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
+        ) {
+            if (!installGranted && state.installer?.requiresSystemPermission == true) {
+                item(key = "extension-permissions-warning") {
+                    WarningBanner(
+                        textRes = MR.strings.ext_permission_install_apps_warning,
+                        modifier = Modifier.clickable {
+                            context.launchRequestPackageInstallsPermission()
+                        },
+                    )
+                }
             }
-        }
 
-        if (installedItems.isNotEmpty()) {
-            item(
-                contentType = "header",
-                key = "extensionHeader-installed",
-            ) {
-                val hasAnyUpdate = updateItems.isNotEmpty()
-                val action: @Composable RowScope.() -> Unit = {
-                    if (hasAnyUpdate) {
-                        Surface(
-                            onClick = { onClickUpdateAll() },
-                            shape = RoundedCornerShape(9999.dp),
-                            color = Color(0x1FD2BD93),
-                            border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
-                        ) {
-                            Text(
-                                text = stringResource(MR.strings.ext_update_all),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    color = Color(0xFFD2BD93),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFeatureSettings = "tnum",
-                                ),
+            if (installedItems.isNotEmpty()) {
+                item(
+                    contentType = "header",
+                    key = "extensionHeader-installed",
+                ) {
+                    val hasAnyUpdate = updateItems.isNotEmpty()
+                    val action: @Composable RowScope.() -> Unit = {
+                        if (hasAnyUpdate) {
+                            Surface(
+                                onClick = { onClickUpdateAll() },
+                                shape = RoundedCornerShape(9999.dp),
+                                color = Color(0x1FD2BD93),
+                                border = BorderStroke(1.dp, Color(0xFFD2BD93).copy(alpha = 0.25f)),
+                            ) {
+                                Text(
+                                    text = stringResource(MR.strings.ext_update_all),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = Color(0xFFD2BD93),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontFeatureSettings = "tnum",
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    ExtensionHeader(
+                        text = formatInstalledEnginesHeader(installedItems.size),
+                        action = action,
+                    )
+                }
+
+                itemsIndexed(
+                    items = installedRows,
+                    contentType = { _, _ -> "bento-deck-row" },
+                    key = { _, row -> "bento-row-" + row.first().extension.pkgName },
+                ) { rowIndex, row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .cascadeItemMotion(index = rowIndex),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        for (item in row) {
+                            val extension = item.extension
+                            val hasUpdate = (extension as? Extension.Installed)?.hasUpdate == true
+                            BentoExtensionCard(
+                                modifier = Modifier.weight(1f),
+                                item = item,
+                                hasUpdate = hasUpdate,
+                                onClickItem = {
+                                    when (it) {
+                                        is Extension.Available -> onInstallExtension(it)
+                                        is Extension.Loaded -> onOpenExtension(it)
+                                        is Extension.NotLoaded -> {
+                                            notLoadedState = it
+                                        }
+                                    }
+                                },
+                                onLongClickItem = onLongClickItem,
+                                onOpenExtension = onOpenExtension,
+                                onUpdateExtension = onUpdateExtension,
+                                onClickItemCancel = onClickItemCancel,
                             )
+                        }
+                        if (row.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
-                ExtensionHeader(
-                    text = formatInstalledEnginesHeader(installedItems.size),
-                    action = action,
-                )
             }
 
-            itemsIndexed(
-                items = installedRows,
-                contentType = { _, _ -> "bento-deck-row" },
-                key = { _, row -> "bento-row-" + row.first().extension.pkgName },
-            ) { rowIndex, row ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .cascadeItemMotion(index = rowIndex),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            if (filterChips.isNotEmpty()) {
+                item(
+                    contentType = "filter-rail",
+                    key = "extension-filter-rail",
                 ) {
-                    for (item in row) {
-                        val extension = item.extension
-                        val hasUpdate = (extension as? Extension.Installed)?.hasUpdate == true
-                        BentoExtensionCard(
-                            modifier = Modifier.weight(1f),
+                    ExtensionsFilterRail(
+                        chips = filterChips,
+                        selectedFilterId = effectiveFilterId,
+                        onSelectFilter = { selectedFilterId = it.id },
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
+            }
+
+            streamedCatalogEntries.forEach { (header, items) ->
+                item(
+                    contentType = "header",
+                    key = "catalogHeader-${header.hashCode()}",
+                ) {
+                    when (header) {
+                        is ExtensionUiModel.Header.Resource -> ExtensionHeader(
+                            textRes = header.textRes,
+                        )
+                        is ExtensionUiModel.Header.Text -> ExtensionHeader(
+                            text = header.text,
+                        )
+                    }
+                }
+
+                itemsIndexed(
+                    items = items,
+                    contentType = { _, _ -> "catalog-row" },
+                    key = { _, item -> "catalog-ext-${item.extension.key()}" },
+                ) { index, item ->
+                    CatalogRowContainer(
+                        position = CatalogRowPosition.from(index, items.size),
+                        modifier = Modifier.cascadeItemMotion(index = index),
+                    ) {
+                        CatalogExtensionRow(
                             item = item,
-                            hasUpdate = hasUpdate,
                             onClickItem = {
                                 when (it) {
                                     is Extension.Available -> onInstallExtension(it)
                                     is Extension.Loaded -> onOpenExtension(it)
-                                    is Extension.NotLoaded -> {
-                                        notLoadedState = it
-                                    }
+                                    is Extension.NotLoaded -> notLoadedState = it
                                 }
                             },
                             onLongClickItem = onLongClickItem,
-                            onOpenExtension = onOpenExtension,
-                            onUpdateExtension = onUpdateExtension,
+                            onClickItemSecondaryAction = {
+                                when (it) {
+                                    is Extension.Available -> onOpenWebView(it)
+                                    is Extension.Installed -> onUninstallExtension(it)
+                                }
+                            },
                             onClickItemCancel = onClickItemCancel,
                         )
                     }
-                    if (row.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-
-        if (filterChips.isNotEmpty()) {
-            item(
-                contentType = "filter-rail",
-                key = "extension-filter-rail",
-            ) {
-                ExtensionsFilterRail(
-                    chips = filterChips,
-                    selectedFilterId = effectiveFilterId,
-                    onSelectFilter = { selectedFilterId = it.id },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-            }
-        }
-
-        streamedCatalogEntries.forEach { (header, items) ->
-            item(
-                contentType = "header",
-                key = "catalogHeader-${header.hashCode()}",
-            ) {
-                when (header) {
-                    is ExtensionUiModel.Header.Resource -> ExtensionHeader(
-                        textRes = header.textRes,
-                    )
-                    is ExtensionUiModel.Header.Text -> ExtensionHeader(
-                        text = header.text,
-                    )
-                }
-            }
-
-            itemsIndexed(
-                items = items,
-                contentType = { _, _ -> "catalog-row" },
-                key = { _, item -> "catalog-ext-${item.extension.key()}" },
-            ) { index, item ->
-                CatalogRowContainer(
-                    position = CatalogRowPosition.from(index, items.size),
-                    modifier = Modifier.cascadeItemMotion(index = index),
-                ) {
-                    CatalogExtensionRow(
-                        item = item,
-                        onClickItem = {
-                            when (it) {
-                                is Extension.Available -> onInstallExtension(it)
-                                is Extension.Loaded -> onOpenExtension(it)
-                                is Extension.NotLoaded -> notLoadedState = it
-                            }
-                        },
-                        onLongClickItem = onLongClickItem,
-                        onClickItemSecondaryAction = {
-                            when (it) {
-                                is Extension.Available -> onOpenWebView(it)
-                                is Extension.Installed -> onUninstallExtension(it)
-                            }
-                        },
-                        onClickItemCancel = onClickItemCancel,
-                    )
                 }
             }
         }

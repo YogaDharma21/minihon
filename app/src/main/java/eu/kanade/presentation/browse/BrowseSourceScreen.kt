@@ -17,6 +17,7 @@ import eu.kanade.presentation.browse.components.BrowseSourceCompactGrid
 import eu.kanade.presentation.browse.components.BrowseSourceList
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
+import eu.kanade.presentation.util.ProvideCascadeScrollDirection
 import eu.kanade.presentation.util.formattedMessage
 import eu.kanade.tachiyomi.source.Source
 import kotlinx.coroutines.flow.StateFlow
@@ -118,13 +119,16 @@ fun BrowseSourceContent(
         return
     }
 
-    BrowseSourceComfortableGrid(
-        mangaList = mangaList,
-        columns = columns,
-        contentPadding = contentPadding,
-        onMangaClick = onMangaClick,
-        onMangaLongClick = onMangaLongClick,
-    )
+    ProvideCascadeScrollDirection { cascadeScrollModifier ->
+        BrowseSourceComfortableGrid(
+            mangaList = mangaList,
+            columns = columns,
+            contentPadding = contentPadding,
+            onMangaClick = onMangaClick,
+            onMangaLongClick = onMangaLongClick,
+            modifier = cascadeScrollModifier,
+        )
+    }
 }
 
 @Composable

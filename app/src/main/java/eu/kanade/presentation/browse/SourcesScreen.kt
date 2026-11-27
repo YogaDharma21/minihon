@@ -40,6 +40,7 @@ import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.SourceIcon
 import eu.kanade.presentation.browse.components.SourceLatestButton
 import eu.kanade.presentation.browse.components.SourcePinButton
+import eu.kanade.presentation.util.ProvideCascadeScrollDirection
 import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.tachiyomi.ui.browse.source.SourcesViewModel
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceViewModel.Listing
@@ -180,75 +181,78 @@ fun SourcesScreen(
                 groupSourcesByLanguage(catalogSources)
             }
 
-            ScrollbarLazyColumn(
-                contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
-            ) {
-                if (pinnedSources.isNotEmpty()) {
-                    item(
-                        contentType = "header",
-                        key = "pinned-sources-header",
-                    ) {
-                        SourceHeader(
-                            text = formatPinnedEnginesHeader(pinnedSources.size),
-                        )
+            ProvideCascadeScrollDirection { cascadeScrollModifier ->
+                ScrollbarLazyColumn(
+                    modifier = cascadeScrollModifier,
+                    contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
+                ) {
+                    if (pinnedSources.isNotEmpty()) {
+                        item(
+                            contentType = "header",
+                            key = "pinned-sources-header",
+                        ) {
+                            SourceHeader(
+                                text = formatPinnedEnginesHeader(pinnedSources.size),
+                            )
+                        }
+
+                        val chunkedPinned = pinnedSources.chunked(2)
+                        itemsIndexed(
+                            items = chunkedPinned,
+                            contentType = { _, _ -> "bento-deck-row" },
+                            key = { _, row -> "bento-row-" + row.joinToString("-") { it.key() } },
+                        ) { rowIndex, row ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .cascadeItemMotion(index = rowIndex),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                for (source in row) {
+                                    BentoSourceCard(
+                                        source = source,
+                                        version = sourceVersions[source.id],
+                                        onClickItem = onClickItem,
+                                        onLongClickItem = onLongClickItem,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (row.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
 
-                    val chunkedPinned = pinnedSources.chunked(2)
-                    itemsIndexed(
-                        items = chunkedPinned,
-                        contentType = { _, _ -> "bento-deck-row" },
-                        key = { _, row -> "bento-row-" + row.joinToString("-") { it.key() } },
-                    ) { rowIndex, row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .cascadeItemMotion(index = rowIndex),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    groupedCatalog.forEach { (lang, sources) ->
+                        item(
+                            contentType = "header",
+                            key = "catalog-header-$lang",
                         ) {
-                            for (source in row) {
-                                BentoSourceCard(
+                            val languageDisplayName = LocaleHelper.getSourceDisplayName(lang, context)
+                            SourceHeader(
+                                text = formatCatalogLanguageHeader(languageDisplayName, sources.size),
+                            )
+                        }
+
+                        itemsIndexed(
+                            items = sources,
+                            contentType = { _, _ -> "catalog-source-row" },
+                            key = { _, source -> "catalog-source-${source.key()}" },
+                        ) { index, source ->
+                            CatalogRowContainer(
+                                position = CatalogRowPosition.from(index, sources.size),
+                                modifier = Modifier.cascadeItemMotion(index = index),
+                            ) {
+                                CatalogSourceRow(
                                     source = source,
                                     version = sourceVersions[source.id],
                                     onClickItem = onClickItem,
                                     onLongClickItem = onLongClickItem,
-                                    modifier = Modifier.weight(1f),
+                                    onClickPin = onClickPin,
                                 )
                             }
-                            if (row.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-
-                groupedCatalog.forEach { (lang, sources) ->
-                    item(
-                        contentType = "header",
-                        key = "catalog-header-$lang",
-                    ) {
-                        val languageDisplayName = LocaleHelper.getSourceDisplayName(lang, context)
-                        SourceHeader(
-                            text = formatCatalogLanguageHeader(languageDisplayName, sources.size),
-                        )
-                    }
-
-                    itemsIndexed(
-                        items = sources,
-                        contentType = { _, _ -> "catalog-source-row" },
-                        key = { _, source -> "catalog-source-${source.key()}" },
-                    ) { index, source ->
-                        CatalogRowContainer(
-                            position = CatalogRowPosition.from(index, sources.size),
-                            modifier = Modifier.cascadeItemMotion(index = index),
-                        ) {
-                            CatalogSourceRow(
-                                source = source,
-                                version = sourceVersions[source.id],
-                                onClickItem = onClickItem,
-                                onLongClickItem = onLongClickItem,
-                                onClickPin = onClickPin,
-                            )
                         }
                     }
                 }

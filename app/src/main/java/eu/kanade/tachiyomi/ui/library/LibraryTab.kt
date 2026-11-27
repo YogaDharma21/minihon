@@ -61,6 +61,7 @@ import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
 import eu.kanade.presentation.util.CascadeSurface
 import eu.kanade.presentation.util.LocalCascadeMotionTrigger
+import eu.kanade.presentation.util.ProvideCascadeScrollDirection
 import eu.kanade.presentation.util.Tab
 import eu.kanade.presentation.util.rememberCascadeMotionTrigger
 import eu.kanade.tachiyomi.R
@@ -229,158 +230,161 @@ data object LibraryTab : Tab {
                     HomeScreen.showBottomNav(!state.selectionMode)
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .nestedScroll(topBarScrollConnection)
-                        .then(
-                            if (swipeNavigationConnection != null) {
-                                Modifier.nestedScroll(swipeNavigationConnection)
-                            } else {
-                                Modifier
-                            },
-                        ),
-                ) {
-                    when {
-                        state.isLoading -> {
-                            LoadingScreen(
-                                Modifier.padding(
-                                    PaddingValues(
-                                        top = headerHeight,
-                                        bottom = contentPadding.calculateBottomPadding(),
-                                    ),
-                                ),
-                            )
-                        }
-                        state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
-                            val handler = LocalUriHandler.current
-                            EmptyScreen(
-                                stringRes = MR.strings.information_empty_library,
-                                modifier = Modifier.padding(
-                                    PaddingValues(
-                                        top = headerHeight,
-                                        bottom = contentPadding.calculateBottomPadding(),
-                                    ),
-                                ),
-                                actions = listOf(
-                                    EmptyScreenAction(
-                                        stringRes = MR.strings.getting_started_guide,
-                                        icon = MaterialSymbols.AutoMirroredRounded.Help,
-                                        onClick = { handler.openUri(GETTING_STARTED_URL) },
-                                    ),
-                                ),
-                            )
-                        }
-                        else -> {
-                            LibraryContent(
-                                categories = state.displayedCategories,
-                                searchQuery = state.searchQuery,
-                                selection = state.selection,
-                                contentPadding = PaddingValues(
-                                    top = headerHeight,
-                                    bottom = contentPadding.calculateBottomPadding(),
-                                ),
-                                currentPage = state.coercedActiveCategoryIndex,
-                                hasActiveFilters = state.hasActiveFilters,
-                                showPageTabs = showCategoryTabs,
-                                onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
-                                onClickManga = { navigator.push(MangaScreen(it)) },
-                                onContinueReadingClicked = { it: LibraryManga ->
-                                    scope.launch {
-                                        val chapter = viewModel.getNextUnreadChapter(it.manga)
-                                        if (chapter != null) {
-                                            context.startActivity(
-                                                ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
-                                            )
-                                        } else {
-                                            snackbarHostState.showSnackbar(
-                                                context.stringResource(MR.strings.no_next_chapter),
-                                            )
-                                        }
-                                    }
-                                    Unit
-                                }.takeIf { state.showMangaContinueButton },
-                                onToggleSelection = viewModel::toggleSelection,
-                                onToggleRangeSelection = { category, manga ->
-                                    viewModel.toggleRangeSelection(category, manga)
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                },
-                                onRefresh = { onClickRefresh(state.activeCategory) },
-                                onGlobalSearchClicked = {
-                                    navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
-                                },
-                                getItemCountForCategory = { state.getItemCountForCategory(it) },
-                                getDisplayMode = { viewModel.getDisplayMode() },
-                                getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
-                                getItemsForCategory = { state.getItemsForCategory(it) },
-                                pagerState = pagerState,
-                                filterToken = state.filterToken,
-                            )
-                        }
-                    }
-
+                ProvideCascadeScrollDirection(resetKey = pagerState.currentPage) { cascadeScrollModifier ->
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.TopCenter)
-                            .zIndex(10f),
-                        contentAlignment = Alignment.TopCenter,
+                            .fillMaxSize()
+                            .nestedScroll(topBarScrollConnection)
+                            .then(cascadeScrollModifier)
+                            .then(
+                                if (swipeNavigationConnection != null) {
+                                    Modifier.nestedScroll(swipeNavigationConnection)
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
-                        AnimatedVisibility(
-                            visible = showTopBar || isSearching || state.selectionMode,
-                            enter = topAppBarEnterTransition,
-                            exit = topAppBarExitTransition,
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .onSizeChanged {
-                                        if (it.height > 0) {
-                                            baseHeaderHeightPx = it.height
-                                            if (showCategoryTabs) {
-                                                cachedLibraryWithTabsHeaderHeightPx = it.height
-                                            } else {
-                                                cachedLibraryNoTabsHeaderHeightPx = it.height
-                                            }
-                                        }
-                                    },
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                LibraryToolbar(
+                        when {
+                            state.isLoading -> {
+                                LoadingScreen(
+                                    Modifier.padding(
+                                        PaddingValues(
+                                            top = headerHeight,
+                                            bottom = contentPadding.calculateBottomPadding(),
+                                        ),
+                                    ),
+                                )
+                            }
+                            state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
+                                val handler = LocalUriHandler.current
+                                EmptyScreen(
+                                    stringRes = MR.strings.information_empty_library,
+                                    modifier = Modifier.padding(
+                                        PaddingValues(
+                                            top = headerHeight,
+                                            bottom = contentPadding.calculateBottomPadding(),
+                                        ),
+                                    ),
+                                    actions = listOf(
+                                        EmptyScreenAction(
+                                            stringRes = MR.strings.getting_started_guide,
+                                            icon = MaterialSymbols.AutoMirroredRounded.Help,
+                                            onClick = { handler.openUri(GETTING_STARTED_URL) },
+                                        ),
+                                    ),
+                                )
+                            }
+                            else -> {
+                                LibraryContent(
+                                    categories = state.displayedCategories,
+                                    searchQuery = state.searchQuery,
+                                    selection = state.selection,
+                                    contentPadding = PaddingValues(
+                                        top = headerHeight,
+                                        bottom = contentPadding.calculateBottomPadding(),
+                                    ),
+                                    currentPage = state.coercedActiveCategoryIndex,
                                     hasActiveFilters = state.hasActiveFilters,
-                                    selectedCount = state.selection.size,
-                                    title = title,
-                                    onClickUnselectAll = viewModel::clearSelection,
-                                    onClickSelectAll = viewModel::selectAll,
-                                    onClickInvertSelection = viewModel::invertSelection,
-                                    onClickFilter = viewModel::showSettingsDialog,
-                                    onClickRefresh = { scope.launch { onClickRefresh(state.activeCategory) } },
-                                    onClickGlobalUpdate = { scope.launch { onClickRefresh(null) } },
-                                    onClickOpenRandomManga = {
+                                    showPageTabs = showCategoryTabs,
+                                    onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
+                                    onClickManga = { navigator.push(MangaScreen(it)) },
+                                    onContinueReadingClicked = { it: LibraryManga ->
                                         scope.launch {
-                                            val randomItem = viewModel.getRandomLibraryItemForCurrentCategory()
-                                            if (randomItem != null) {
-                                                navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                            val chapter = viewModel.getNextUnreadChapter(it.manga)
+                                            if (chapter != null) {
+                                                context.startActivity(
+                                                    ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
+                                                )
                                             } else {
                                                 snackbarHostState.showSnackbar(
-                                                    context.stringResource(MR.strings.information_no_entries_found),
+                                                    context.stringResource(MR.strings.no_next_chapter),
                                                 )
                                             }
                                         }
+                                        Unit
+                                    }.takeIf { state.showMangaContinueButton },
+                                    onToggleSelection = viewModel::toggleSelection,
+                                    onToggleRangeSelection = { category, manga ->
+                                        viewModel.toggleRangeSelection(category, manga)
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     },
-                                    searchQuery = state.searchQuery,
-                                    onSearchQueryChange = viewModel::search,
-                                    onClickSettings = null,
-                                    scrollBehavior = null,
+                                    onRefresh = { onClickRefresh(state.activeCategory) },
+                                    onGlobalSearchClicked = {
+                                        navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
+                                    },
+                                    getItemCountForCategory = { state.getItemCountForCategory(it) },
+                                    getDisplayMode = { viewModel.getDisplayMode() },
+                                    getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
+                                    getItemsForCategory = { state.getItemsForCategory(it) },
+                                    pagerState = pagerState,
+                                    filterToken = state.filterToken,
                                 )
+                            }
+                        }
 
-                                if (showCategoryTabs) {
-                                    LibraryTabs(
-                                        categories = state.displayedCategories,
-                                        pagerState = pagerState,
-                                        getItemCountForCategory = { state.getItemCountForCategory(it) },
-                                        onTabItemClick = { scope.launch { pagerState.animateScrollToPage(it) } },
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.TopCenter)
+                                .zIndex(10f),
+                            contentAlignment = Alignment.TopCenter,
+                        ) {
+                            AnimatedVisibility(
+                                visible = showTopBar || isSearching || state.selectionMode,
+                                enter = topAppBarEnterTransition,
+                                exit = topAppBarExitTransition,
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onSizeChanged {
+                                            if (it.height > 0) {
+                                                baseHeaderHeightPx = it.height
+                                                if (showCategoryTabs) {
+                                                    cachedLibraryWithTabsHeaderHeightPx = it.height
+                                                } else {
+                                                    cachedLibraryNoTabsHeaderHeightPx = it.height
+                                                }
+                                            }
+                                        },
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    LibraryToolbar(
+                                        hasActiveFilters = state.hasActiveFilters,
+                                        selectedCount = state.selection.size,
+                                        title = title,
+                                        onClickUnselectAll = viewModel::clearSelection,
+                                        onClickSelectAll = viewModel::selectAll,
+                                        onClickInvertSelection = viewModel::invertSelection,
+                                        onClickFilter = viewModel::showSettingsDialog,
+                                        onClickRefresh = { scope.launch { onClickRefresh(state.activeCategory) } },
+                                        onClickGlobalUpdate = { scope.launch { onClickRefresh(null) } },
+                                        onClickOpenRandomManga = {
+                                            scope.launch {
+                                                val randomItem = viewModel.getRandomLibraryItemForCurrentCategory()
+                                                if (randomItem != null) {
+                                                    navigator.push(MangaScreen(randomItem.libraryManga.manga.id))
+                                                } else {
+                                                    snackbarHostState.showSnackbar(
+                                                        context.stringResource(MR.strings.information_no_entries_found),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        searchQuery = state.searchQuery,
+                                        onSearchQueryChange = viewModel::search,
+                                        onClickSettings = null,
+                                        scrollBehavior = null,
                                     )
+
+                                    if (showCategoryTabs) {
+                                        LibraryTabs(
+                                            categories = state.displayedCategories,
+                                            pagerState = pagerState,
+                                            getItemCountForCategory = { state.getItemCountForCategory(it) },
+                                            onTabItemClick = { scope.launch { pagerState.animateScrollToPage(it) } },
+                                        )
+                                    }
                                 }
                             }
                         }

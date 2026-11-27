@@ -7,14 +7,20 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -89,6 +95,32 @@ class CascadeScrollConnection(
             onDirectionChanged(CascadeDirection.FromTop)
         }
         return Offset.Zero
+    }
+}
+
+@Stable
+internal class CascadeScrollDirectionState(
+    initialDirection: CascadeDirection = CascadeDirection.FromBottom,
+) {
+    var direction: CascadeDirection by mutableStateOf(initialDirection)
+        private set
+
+    val connection: CascadeScrollConnection = CascadeScrollConnection { nextDirection ->
+        if (direction != nextDirection) {
+            direction = nextDirection
+        }
+    }
+}
+
+@Composable
+fun ProvideCascadeScrollDirection(
+    resetKey: Any? = Unit,
+    content: @Composable (Modifier) -> Unit,
+) {
+    val state = remember(resetKey) { CascadeScrollDirectionState() }
+    val scrollModifier = remember(state) { Modifier.nestedScroll(state.connection) }
+    CompositionLocalProvider(LocalCascadeDirection provides state.direction) {
+        content(scrollModifier)
     }
 }
 

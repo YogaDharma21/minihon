@@ -281,4 +281,22 @@ class CascadeMotionTest {
         connection.onPreScroll(Offset(0f, 8.1f), NestedScrollSource.UserInput) shouldBe Offset.Zero
         directions shouldBe listOf(CascadeDirection.FromBottom, CascadeDirection.FromTop)
     }
+
+    @Test
+    fun `scroll direction state starts from bottom and tracks bi-directional scroll`() {
+        val state = CascadeScrollDirectionState()
+        state.direction shouldBe CascadeDirection.FromBottom
+
+        state.connection.onPreScroll(Offset(0f, 5f), NestedScrollSource.UserInput)
+        state.direction shouldBe CascadeDirection.FromBottom
+
+        state.connection.onPreScroll(Offset(0f, 12f), NestedScrollSource.UserInput)
+        state.direction shouldBe CascadeDirection.FromTop
+
+        state.connection.onPreScroll(Offset(0f, -4f), NestedScrollSource.UserInput)
+        state.direction shouldBe CascadeDirection.FromTop
+
+        state.connection.onPreScroll(Offset(0f, -12f), NestedScrollSource.UserInput)
+        state.direction shouldBe CascadeDirection.FromBottom
+    }
 }
