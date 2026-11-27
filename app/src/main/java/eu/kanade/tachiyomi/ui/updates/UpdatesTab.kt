@@ -10,11 +10,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -193,15 +191,17 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
 
                 val currentIsActive by rememberUpdatedState(LocalScrollChromeActive.current)
                 val currentSelectionMode by rememberUpdatedState(state.selectionMode)
-                var hasSuppressedBottomNav by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
+                    var hasSuppressedBottomNav = false
                     snapshotFlow { currentIsActive() to currentSelectionMode }
                         .distinctUntilChanged()
                         .collect { (active, selectionMode) ->
-                            if (active && selectionMode) {
+                            if (!active) {
+                                hasSuppressedBottomNav = false
+                            } else if (selectionMode) {
                                 hasSuppressedBottomNav = true
                                 HomeScreen.showBottomNav(false)
-                            } else if (active || hasSuppressedBottomNav) {
+                            } else if (hasSuppressedBottomNav) {
                                 hasSuppressedBottomNav = false
                                 HomeScreen.showBottomNav(true)
                             }

@@ -182,11 +182,24 @@ class ScrollChromeState(
         }
     }
 
-    private fun isPinnedNow(): Boolean = isPinned() || pinChecks.any { it() }
+    private fun isPinnedNow(): Boolean {
+        if (isPinned()) return true
+        for (i in pinChecks.indices) {
+            if (pinChecks[i]()) return true
+        }
+        return false
+    }
 
     private fun isActiveAtBoundary(): Boolean {
-        val active = entries.filter { it.isActive() }
-        return active.isEmpty() || active.any { it.isAtBoundary() }
+        var hasActive = false
+        for (i in entries.indices) {
+            val entry = entries[i]
+            if (entry.isActive()) {
+                if (entry.isAtBoundary()) return true
+                hasActive = true
+            }
+        }
+        return !hasActive
     }
 }
 

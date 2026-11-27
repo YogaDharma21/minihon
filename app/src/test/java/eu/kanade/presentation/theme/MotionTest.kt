@@ -231,6 +231,60 @@ class MotionTest {
     }
 
     @Test
+    fun `ScrollChromeState reveals when switching active entry to one at boundary`() {
+        var activeIndex = 0
+        val state = ScrollChromeState(thresholdPx = 48f)
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { activeIndex == 0 },
+                isAtBoundary = { false },
+            ),
+        )
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { activeIndex == 1 },
+                isAtBoundary = { true },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+        state.isVisible shouldBe false
+
+        activeIndex = 1
+        state.notifyBoundaryChanged()
+        state.isVisible shouldBe true
+    }
+
+    @Test
+    fun `ScrollChromeState keeps chrome visible when one of two active entries is at boundary`() {
+        val state = ScrollChromeState(thresholdPx = 48f)
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { false },
+            ),
+        )
+        state.register(
+            ScrollChromeBoundaryEntry(
+                isActive = { true },
+                isAtBoundary = { true },
+            ),
+        )
+
+        state.nestedScrollConnection.onPostScroll(
+            consumed = Offset(0f, -60f),
+            available = Offset.Zero,
+            source = NestedScrollSource.UserInput,
+        )
+
+        state.isVisible shouldBe true
+    }
+
+    @Test
     fun `ScrollChromeState blocks hiding when pinned via constructor or registerPin`() {
         var ctorPinned = true
         val stateWithCtorPin = ScrollChromeState(
