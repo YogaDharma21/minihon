@@ -53,7 +53,10 @@ fun TrackStatusSelector(
         title = stringResource(MR.strings.status),
         content = {
             val state = rememberLazyListState()
-            ScrollbarLazyColumn(state = state) {
+            ScrollbarLazyColumn(
+                state = state,
+                observeScrollChrome = false,
+            ) {
                 selections.forEach { (key, value) ->
                     val isSelected = selection == key
                     item {

@@ -30,8 +30,15 @@ fun FastScrollLazyVerticalGrid(
         if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
     userScrollEnabled: Boolean = true,
+    observeScrollChrome: Boolean = true,
+    hasPendingItems: () -> Boolean = { false },
     content: LazyGridScope.() -> Unit,
 ) {
+    ObserveScrollChromeBoundary(
+        state = state,
+        hasPendingItems = hasPendingItems,
+        enabled = observeScrollChrome,
+    )
     VerticalGridFastScroller(
         state = state,
         modifier = modifier,

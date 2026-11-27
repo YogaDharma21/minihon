@@ -207,11 +207,13 @@ fun TrackerSearch(
                     EmptyScreen(
                         modifier = Modifier.padding(innerPadding),
                         stringRes = MR.strings.no_results_found,
+                        observeScrollChrome = false,
                     )
                 } else {
                     ScrollbarLazyColumn(
                         contentPadding = innerPadding + PaddingValues(vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
+                        observeScrollChrome = false,
                     ) {
                         items(
                             items = availableTracks,
@@ -230,6 +232,7 @@ fun TrackerSearch(
                     modifier = Modifier.padding(innerPadding),
                     message = queryResult.exceptionOrNull()?.message
                         ?: stringResource(MR.strings.unknown_error),
+                    observeScrollChrome = false,
                 )
             }
         }

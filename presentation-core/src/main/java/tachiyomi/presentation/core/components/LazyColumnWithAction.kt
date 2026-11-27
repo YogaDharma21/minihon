@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -22,8 +24,14 @@ fun LazyColumnWithAction(
     onClickAction: () -> Unit,
     modifier: Modifier = Modifier,
     actionEnabled: Boolean = true,
+    state: LazyListState = rememberLazyListState(),
+    observeScrollChrome: Boolean = true,
     content: LazyListScope.() -> Unit,
 ) {
+    ObserveScrollChromeBoundary(
+        state = state,
+        enabled = observeScrollChrome,
+    )
     Column(
         modifier = modifier
             .padding(contentPadding)
@@ -31,6 +39,7 @@ fun LazyColumnWithAction(
     ) {
         LazyColumn(
             modifier = Modifier.weight(1f),
+            state = state,
             content = content,
         )
 
