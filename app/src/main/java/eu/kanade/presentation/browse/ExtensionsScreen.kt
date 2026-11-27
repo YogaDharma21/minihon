@@ -286,6 +286,7 @@ private fun ExtensionContent(
             modifier = cascadeScrollModifier,
             state = extensionListState,
             contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
+            hasPendingItems = { streamingVisibleCount < totalCatalogItemsCount },
         ) {
             if (!installGranted && state.installer?.requiresSystemPermission == true) {
                 item(key = "extension-permissions-warning") {

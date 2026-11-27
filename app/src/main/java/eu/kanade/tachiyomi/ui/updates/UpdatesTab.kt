@@ -10,8 +10,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.core.screen.Screen
@@ -39,6 +43,7 @@ import eu.kanade.tachiyomi.ui.more.MoreTab
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.updates.UpdatesViewModel.Event
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.FilterList
@@ -50,6 +55,7 @@ import mihon.icons.materialsymbols.rounded.UnfoldLess
 import mihon.icons.materialsymbols.rounded.UnfoldMore
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
 import tachiyomi.presentation.core.i18n.stringResource
 
 data object UpdatesTab : Tab {
@@ -185,8 +191,21 @@ fun Screen.updatesTab(viewModel: UpdatesViewModel): TabContent {
                     }
                 }
 
-                LaunchedEffect(state.selectionMode) {
-                    HomeScreen.showBottomNav(!state.selectionMode)
+                val currentIsActive by rememberUpdatedState(LocalScrollChromeActive.current)
+                val currentSelectionMode by rememberUpdatedState(state.selectionMode)
+                var hasSuppressedBottomNav by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    snapshotFlow { currentIsActive() to currentSelectionMode }
+                        .distinctUntilChanged()
+                        .collect { (active, selectionMode) ->
+                            if (active && selectionMode) {
+                                hasSuppressedBottomNav = true
+                                HomeScreen.showBottomNav(false)
+                            } else if (active || hasSuppressedBottomNav) {
+                                hasSuppressedBottomNav = false
+                                HomeScreen.showBottomNav(true)
+                            }
+                        }
                 }
 
                 LaunchedEffect(state.isLoading) {
