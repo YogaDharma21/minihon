@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +83,7 @@ data class CascadeMotionTrigger(
 }
 
 val LocalCascadeMotionTrigger = staticCompositionLocalOf { CascadeMotionTrigger() }
-val LocalCascadeDirection = staticCompositionLocalOf { CascadeDirection.FromBottom }
+val LocalCascadeDirection = compositionLocalOf { CascadeDirection.FromBottom }
 
 class CascadeScrollConnection(
     private val onDirectionChanged: (CascadeDirection) -> Unit,
@@ -284,7 +285,7 @@ fun Modifier.cascadeItemMotion(
             animatable.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
-                    durationMillis = CASCADE_DURATION_MILLIS,
+                    durationMillis = plan.remainingDurationMillis,
                     easing = CASCADE_EASING,
                 ),
             )
