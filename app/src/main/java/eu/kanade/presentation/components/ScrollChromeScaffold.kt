@@ -40,6 +40,7 @@ import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.Scaffold
 
 private var cachedScrollChromeHeaderHeightPx: Int = 0
+private val AlwaysActive: () -> Boolean = { true }
 
 @Composable
 fun ScrollChromeScaffold(
@@ -68,9 +69,7 @@ fun ScrollChromeScaffold(
     val chromeState = rememberScrollChromeState(isPinned = { currentPinned })
 
     LaunchedEffect(isTopBarPinned) {
-        if (isTopBarPinned) {
-            chromeState.reveal()
-        } else {
+        if (!isTopBarPinned) {
             chromeState.notifyBoundaryChanged()
         }
     }
@@ -96,7 +95,7 @@ fun ScrollChromeScaffold(
         CompositionLocalProvider(
             LocalScrollChromeObserver provides chromeState,
             LocalScrollChromeState provides chromeState,
-            LocalScrollChromeActive provides { true },
+            LocalScrollChromeActive provides AlwaysActive,
         ) {
             Box(
                 modifier = Modifier

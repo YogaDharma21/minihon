@@ -27,6 +27,11 @@ val LocalScrollChromeObserver = staticCompositionLocalOf<ScrollChromeObserver?> 
 
 val LocalScrollChromeActive = staticCompositionLocalOf<() -> Boolean> { { true } }
 
+internal fun isScrollableAtBoundary(
+    state: ScrollableState,
+    hasPendingItems: Boolean = false,
+): Boolean = !state.canScrollBackward || (!state.canScrollForward && !hasPendingItems)
+
 @Composable
 fun ObserveScrollChromeBoundary(
     state: ScrollableState,
@@ -42,7 +47,7 @@ fun ObserveScrollChromeBoundary(
     val entry = remember(observer, state) {
         ScrollChromeBoundaryEntry(
             isActive = { currentIsActive() },
-            isAtBoundary = { !state.canScrollBackward || (!state.canScrollForward && !currentHasPendingItems()) },
+            isAtBoundary = { isScrollableAtBoundary(state, currentHasPendingItems()) },
         )
     }
 
