@@ -26,8 +26,15 @@ fun ScrollbarLazyColumn(
         if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     userScrollEnabled: Boolean = true,
+    observeScrollChrome: Boolean = true,
+    hasPendingItems: () -> Boolean = { false },
     content: LazyListScope.() -> Unit,
 ) {
+    ObserveScrollChromeBoundary(
+        state = state,
+        hasPendingItems = hasPendingItems,
+        enabled = observeScrollChrome,
+    )
     LazyColumn(
         modifier = modifier,
         state = state,
@@ -53,8 +60,15 @@ fun FastScrollLazyColumn(
         if (!reverseLayout) Arrangement.Top else Arrangement.Bottom,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
     userScrollEnabled: Boolean = true,
+    observeScrollChrome: Boolean = true,
+    hasPendingItems: () -> Boolean = { false },
     content: LazyListScope.() -> Unit,
 ) {
+    ObserveScrollChromeBoundary(
+        state = state,
+        hasPendingItems = hasPendingItems,
+        enabled = observeScrollChrome,
+    )
     VerticalFastScroller(
         listState = state,
         modifier = modifier,
