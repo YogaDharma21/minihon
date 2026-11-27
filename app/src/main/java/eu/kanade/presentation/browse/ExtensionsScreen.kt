@@ -57,9 +57,9 @@ import eu.kanade.presentation.browse.components.BrowseSkeletonScreen
 import eu.kanade.presentation.browse.components.CatalogRowContainer
 import eu.kanade.presentation.browse.components.CatalogRowPosition
 import eu.kanade.presentation.browse.components.ExtensionIcon
-import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.components.WarningBanner
 import eu.kanade.presentation.more.settings.screen.browse.ExtensionStoresScreen
+import eu.kanade.presentation.util.cascadeItemMotion
 import eu.kanade.presentation.util.rememberRequestPackageInstallsPermissionState
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
@@ -283,6 +283,7 @@ private fun ExtensionContent(
     FastScrollLazyColumn(
         state = extensionListState,
         contentPadding = contentPadding + topSmallPaddingValues + PaddingValues(bottom = 96.dp),
+        hasPendingItems = { streamingVisibleCount < totalCatalogItemsCount },
     ) {
         if (!installGranted && state.installer?.requiresSystemPermission == true) {
             item(key = "extension-permissions-warning") {

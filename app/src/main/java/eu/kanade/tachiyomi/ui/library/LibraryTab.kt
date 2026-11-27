@@ -20,12 +20,13 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,7 +57,8 @@ import eu.kanade.presentation.library.components.LibraryToolbar
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.theme.HorizontalSwipeConnection
-import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.LocalScrollChromeState
+import eu.kanade.presentation.theme.rememberScrollChromeState
 import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
 import eu.kanade.presentation.util.CascadeSurface
@@ -85,6 +87,8 @@ import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -153,6 +157,7 @@ data object LibraryTab : Tab {
                 defaultCategoryTitle = stringResource(MR.strings.label_default),
                 page = state.coercedActiveCategoryIndex,
             )
+            val currentIsActive by rememberUpdatedState(LocalScrollChromeActive.current)
 
             Scaffold(
                 bottomBar = {
@@ -186,22 +191,16 @@ data object LibraryTab : Tab {
                 } else {
                     fallbackHeight
                 }
-                var showTopBar by remember { mutableStateOf(true) }
+                val parentChromeState = LocalScrollChromeState.current
+                val chromeState = parentChromeState ?: rememberScrollChromeState()
                 val isSearching = state.searchQuery != null
-                val topBarScrollConnection = remember(state.selectionMode) {
-                    ScrollChromeConnection(
-                        onVisibilityChanged = { show ->
-                            if (!state.selectionMode && showTopBar != show) {
-                                showTopBar = show
-                            }
-                            if (!state.selectionMode) {
-                                scope.launch {
-                                    HomeScreen.showBottomNav(show)
-                                }
-                            }
-                        },
-                    )
+                val isChromePinned by rememberUpdatedState(isSearching || state.selectionMode)
+
+                DisposableEffect(chromeState) {
+                    val unregister = chromeState.registerPin { currentIsActive() && isChromePinned }
+                    onDispose(unregister)
                 }
+
                 val swipeNavigationConnection =
                     remember(state.selectionMode, isSearching, pagerState, state.displayedCategories.size) {
                         if (state.selectionMode || isSearching) {
@@ -224,15 +223,30 @@ data object LibraryTab : Tab {
                     }
 
                 LaunchedEffect(pagerState.currentPage) {
-                    showTopBar = true
-                    topBarScrollConnection.reset()
-                    HomeScreen.showBottomNav(!state.selectionMode)
+                    if (currentIsActive()) {
+                        chromeState.reveal()
+                        chromeState.notifyBoundaryChanged()
+                        HomeScreen.showBottomNav(!state.selectionMode)
+                    }
+                }
+
+                LaunchedEffect(isSearching, state.selectionMode) {
+                    if (currentIsActive()) {
+                        chromeState.reveal()
+                        chromeState.notifyBoundaryChanged()
+                    }
                 }
 
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(topBarScrollConnection)
+                        .then(
+                            if (parentChromeState == null) {
+                                Modifier.nestedScroll(chromeState.nestedScrollConnection)
+                            } else {
+                                Modifier
+                            },
+                        )
                         .then(
                             if (swipeNavigationConnection != null) {
                                 Modifier.nestedScroll(swipeNavigationConnection)
@@ -241,81 +255,86 @@ data object LibraryTab : Tab {
                             },
                         ),
                 ) {
-                    when {
-                        state.isLoading -> {
-                            LoadingScreen(
-                                Modifier.padding(
-                                    PaddingValues(
+                    CompositionLocalProvider(
+                        LocalScrollChromeState provides chromeState,
+                        LocalScrollChromeObserver provides chromeState,
+                    ) {
+                        when {
+                            state.isLoading -> {
+                                LoadingScreen(
+                                    Modifier.padding(
+                                        PaddingValues(
+                                            top = headerHeight,
+                                            bottom = contentPadding.calculateBottomPadding(),
+                                        ),
+                                    ),
+                                )
+                            }
+                            state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
+                                val handler = LocalUriHandler.current
+                                EmptyScreen(
+                                    stringRes = MR.strings.information_empty_library,
+                                    modifier = Modifier.padding(
+                                        PaddingValues(
+                                            top = headerHeight,
+                                            bottom = contentPadding.calculateBottomPadding(),
+                                        ),
+                                    ),
+                                    actions = listOf(
+                                        EmptyScreenAction(
+                                            stringRes = MR.strings.getting_started_guide,
+                                            icon = MaterialSymbols.AutoMirroredRounded.Help,
+                                            onClick = { handler.openUri(GETTING_STARTED_URL) },
+                                        ),
+                                    ),
+                                )
+                            }
+                            else -> {
+                                LibraryContent(
+                                    categories = state.displayedCategories,
+                                    searchQuery = state.searchQuery,
+                                    selection = state.selection,
+                                    contentPadding = PaddingValues(
                                         top = headerHeight,
                                         bottom = contentPadding.calculateBottomPadding(),
                                     ),
-                                ),
-                            )
-                        }
-                        state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
-                            val handler = LocalUriHandler.current
-                            EmptyScreen(
-                                stringRes = MR.strings.information_empty_library,
-                                modifier = Modifier.padding(
-                                    PaddingValues(
-                                        top = headerHeight,
-                                        bottom = contentPadding.calculateBottomPadding(),
-                                    ),
-                                ),
-                                actions = listOf(
-                                    EmptyScreenAction(
-                                        stringRes = MR.strings.getting_started_guide,
-                                        icon = MaterialSymbols.AutoMirroredRounded.Help,
-                                        onClick = { handler.openUri(GETTING_STARTED_URL) },
-                                    ),
-                                ),
-                            )
-                        }
-                        else -> {
-                            LibraryContent(
-                                categories = state.displayedCategories,
-                                searchQuery = state.searchQuery,
-                                selection = state.selection,
-                                contentPadding = PaddingValues(
-                                    top = headerHeight,
-                                    bottom = contentPadding.calculateBottomPadding(),
-                                ),
-                                currentPage = state.coercedActiveCategoryIndex,
-                                hasActiveFilters = state.hasActiveFilters,
-                                showPageTabs = showCategoryTabs,
-                                onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
-                                onClickManga = { navigator.push(MangaScreen(it)) },
-                                onContinueReadingClicked = { it: LibraryManga ->
-                                    scope.launch {
-                                        val chapter = viewModel.getNextUnreadChapter(it.manga)
-                                        if (chapter != null) {
-                                            context.startActivity(
-                                                ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
-                                            )
-                                        } else {
-                                            snackbarHostState.showSnackbar(
-                                                context.stringResource(MR.strings.no_next_chapter),
-                                            )
+                                    currentPage = state.coercedActiveCategoryIndex,
+                                    hasActiveFilters = state.hasActiveFilters,
+                                    showPageTabs = showCategoryTabs,
+                                    onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
+                                    onClickManga = { navigator.push(MangaScreen(it)) },
+                                    onContinueReadingClicked = { it: LibraryManga ->
+                                        scope.launch {
+                                            val chapter = viewModel.getNextUnreadChapter(it.manga)
+                                            if (chapter != null) {
+                                                context.startActivity(
+                                                    ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
+                                                )
+                                            } else {
+                                                snackbarHostState.showSnackbar(
+                                                    context.stringResource(MR.strings.no_next_chapter),
+                                                )
+                                            }
                                         }
-                                    }
-                                    Unit
-                                }.takeIf { state.showMangaContinueButton },
-                                onToggleSelection = viewModel::toggleSelection,
-                                onToggleRangeSelection = { category, manga ->
-                                    viewModel.toggleRangeSelection(category, manga)
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                },
-                                onRefresh = { onClickRefresh(state.activeCategory) },
-                                onGlobalSearchClicked = {
-                                    navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
-                                },
-                                getItemCountForCategory = { state.getItemCountForCategory(it) },
-                                getDisplayMode = { viewModel.getDisplayMode() },
-                                getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
-                                getItemsForCategory = { state.getItemsForCategory(it) },
-                                pagerState = pagerState,
-                                filterToken = state.filterToken,
-                            )
+                                        Unit
+                                    }.takeIf { state.showMangaContinueButton },
+                                    onToggleSelection = viewModel::toggleSelection,
+                                    onToggleRangeSelection = { category, manga ->
+                                        viewModel.toggleRangeSelection(category, manga)
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onRefresh = { onClickRefresh(state.activeCategory) },
+                                    onGlobalSearchClicked = {
+                                        navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
+                                    },
+                                    getItemCountForCategory = { state.getItemCountForCategory(it) },
+                                    getDisplayMode = { viewModel.getDisplayMode() },
+                                    getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
+                                    getItemsForCategory = { state.getItemsForCategory(it) },
+                                    pagerState = pagerState,
+                                    filterToken = state.filterToken,
+                                )
+                            }
                         }
                     }
 
@@ -327,7 +346,7 @@ data object LibraryTab : Tab {
                         contentAlignment = Alignment.TopCenter,
                     ) {
                         AnimatedVisibility(
-                            visible = showTopBar || isSearching || state.selectionMode,
+                            visible = chromeState.isVisible || isSearching || state.selectionMode,
                             enter = topAppBarEnterTransition,
                             exit = topAppBarExitTransition,
                         ) {
@@ -432,7 +451,9 @@ data object LibraryTab : Tab {
             }
 
             LaunchedEffect(state.selectionMode, state.dialog) {
-                HomeScreen.showBottomNav(!state.selectionMode)
+                if (currentIsActive()) {
+                    HomeScreen.showBottomNav(!state.selectionMode)
+                }
             }
 
             LaunchedEffect(state.isLoading) {

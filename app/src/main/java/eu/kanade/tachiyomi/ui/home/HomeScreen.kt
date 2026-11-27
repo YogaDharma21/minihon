@@ -73,9 +73,10 @@ import androidx.compose.ui.util.fastForEach
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.TabNavigator
-import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.LocalScrollChromeState
 import eu.kanade.presentation.theme.bottomAppBarEnterTransition
 import eu.kanade.presentation.theme.bottomAppBarExitTransition
+import eu.kanade.presentation.theme.rememberScrollChromeState
 import eu.kanade.presentation.theme.springLowStiffness
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.rememberAnimatedVectorPainter
@@ -102,6 +103,8 @@ import mihon.icons.materialsymbols.rounded.Settings
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.LocalFloatingDockBottomPadding
 import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
@@ -136,27 +139,19 @@ object HomeScreen : Screen() {
             key = TabNavigatorKey,
         ) { tabNavigator ->
             var transitionDirection by remember { mutableStateOf(TabTransitionDirection.Forward) }
-            var showBottomNav by remember { mutableStateOf(true) }
-            val scrollChromeConnection = remember {
-                ScrollChromeConnection(
-                    onVisibilityChanged = { show ->
-                        if (showBottomNav != show) {
-                            showBottomNav = show
-                        }
-                    },
-                )
-            }
+            val scrollChromeState = rememberScrollChromeState()
+            var isBottomNavSuppressed by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 showBottomNavEvent.receiveAsFlow().collectLatest { show ->
-                    showBottomNav = show
+                    isBottomNavSuppressed = !show
                     if (show) {
-                        scrollChromeConnection.reset()
+                        scrollChromeState.reveal()
                     }
                 }
             }
             LaunchedEffect(tabNavigator.current) {
-                showBottomNav = true
-                scrollChromeConnection.reset()
+                isBottomNavSuppressed = false
+                scrollChromeState.reveal()
             }
 
             val context = LocalContext.current
@@ -190,11 +185,13 @@ object HomeScreen : Screen() {
             CompositionLocalProvider(
                 LocalNavigator provides navigator,
                 LocalFloatingDockBottomPadding provides 80.dp,
+                LocalScrollChromeState provides scrollChromeState,
+                LocalScrollChromeObserver provides scrollChromeState,
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(scrollChromeConnection),
+                        .nestedScroll(scrollChromeState.nestedScrollConnection),
                 ) {
                     AnimatedContent(
                         targetState = tabNavigator.current,
@@ -214,8 +211,15 @@ object HomeScreen : Screen() {
                         modifier = Modifier.fillMaxSize(),
                         label = "tabContent",
                     ) {
-                        tabNavigator.saveableState(key = it.key, it) {
-                            it.Content()
+                        val isTabActive = remember(tabNavigator, it) {
+                            { tabNavigator.current::class == it::class }
+                        }
+                        CompositionLocalProvider(
+                            LocalScrollChromeActive provides isTabActive,
+                        ) {
+                            tabNavigator.saveableState(key = it.key, it) {
+                                it.Content()
+                            }
                         }
                     }
 
@@ -233,7 +237,7 @@ object HomeScreen : Screen() {
                     }
 
                     AnimatedVisibility(
-                        visible = showBottomNav,
+                        visible = scrollChromeState.isVisible && !isBottomNavSuppressed,
                         enter = bottomAppBarEnterTransition,
                         exit = bottomAppBarExitTransition,
                         modifier = Modifier

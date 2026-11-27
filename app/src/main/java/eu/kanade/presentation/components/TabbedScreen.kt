@@ -42,10 +42,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -71,8 +71,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.presentation.theme.HorizontalSwipeConnection
-import eu.kanade.presentation.theme.ScrollChromeConnection
-import eu.kanade.presentation.theme.springLowStiffness
+import eu.kanade.presentation.theme.LocalScrollChromeState
+import eu.kanade.presentation.theme.rememberScrollChromeState
 import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
 import kotlinx.coroutines.flow.drop
@@ -82,6 +82,8 @@ import mihon.icons.materialsymbols.automirroredrounded.ArrowBack
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Search
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
@@ -115,26 +117,34 @@ fun TabbedScreen(
         } else {
             fallbackHeight
         }
-        var showTopBar by remember { mutableStateOf(true) }
+        val parentChromeState = LocalScrollChromeState.current
+        val chromeState = parentChromeState ?: rememberScrollChromeState()
         val tab = tabs[state.currentPage]
-        val topBarScrollConnection = remember(tab.isActionMode) {
-            ScrollChromeConnection(
-                onVisibilityChanged = { show ->
-                    if (!tab.isActionMode && showTopBar != show) {
-                        showTopBar = show
-                    }
-                },
-            )
+        val searchEnabled = tab.searchEnabled
+        val isSearching = searchEnabled && searchQuery != null
+        val isChromePinned by rememberUpdatedState(isSearching || tab.isActionMode)
+        val currentIsActive by rememberUpdatedState(LocalScrollChromeActive.current)
+
+        DisposableEffect(chromeState) {
+            val unregister = chromeState.registerPin { currentIsActive() && isChromePinned }
+            onDispose(unregister)
         }
 
         // Keyed on page only so fling start/stop doesn't re-show the header mid scroll.
         LaunchedEffect(state.currentPage) {
-            showTopBar = true
-            topBarScrollConnection.reset()
+            if (currentIsActive()) {
+                chromeState.reveal()
+                chromeState.notifyBoundaryChanged()
+            }
         }
 
-        val searchEnabled = tab.searchEnabled
-        val isSearching = searchEnabled && searchQuery != null
+        LaunchedEffect(isSearching, tab.isActionMode) {
+            if (currentIsActive()) {
+                chromeState.reveal()
+                chromeState.notifyBoundaryChanged()
+            }
+        }
+
         val swipeConnection = remember(onSwipePastStart, onSwipePastEnd, state, tab.isActionMode, isSearching) {
             if (tab.isActionMode || isSearching || (onSwipePastStart == null && onSwipePastEnd == null)) {
                 null
@@ -154,170 +164,189 @@ fun TabbedScreen(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(topBarScrollConnection)
-                .then(
-                    if (swipeConnection != null) {
-                        Modifier.nestedScroll(swipeConnection)
-                    } else {
-                        Modifier
-                    },
-                ),
+        CompositionLocalProvider(
+            LocalScrollChromeState provides chromeState,
+            LocalScrollChromeObserver provides chromeState,
         ) {
-            HorizontalPager(
-                modifier = Modifier.fillMaxSize(),
-                state = state,
-                userScrollEnabled = !tab.isActionMode,
-                verticalAlignment = Alignment.Top,
-            ) { page ->
-                tabs[page].content(
-                    PaddingValues(
-                        top = headerHeight,
-                        bottom = contentPadding.calculateBottomPadding(),
-                    ),
-                    snackbarHostState,
-                )
-            }
-
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .zIndex(10f),
-                contentAlignment = Alignment.TopCenter,
+                    .fillMaxSize()
+                    .then(
+                        if (parentChromeState == null) {
+                            Modifier.nestedScroll(chromeState.nestedScrollConnection)
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .then(
+                        if (swipeConnection != null) {
+                            Modifier.nestedScroll(swipeConnection)
+                        } else {
+                            Modifier
+                        },
+                    ),
             ) {
-                AnimatedVisibility(
-                    visible = showTopBar || isSearching || tab.isActionMode,
-                    enter = topAppBarEnterTransition,
-                    exit = topAppBarExitTransition,
+                HorizontalPager(
+                    modifier = Modifier.fillMaxSize(),
+                    state = state,
+                    userScrollEnabled = !tab.isActionMode,
+                    verticalAlignment = Alignment.Top,
+                ) { page ->
+                    val parentActive = LocalScrollChromeActive.current
+                    val isPageActive = remember(state, page, parentActive) {
+                        { parentActive() && state.currentPage == page }
+                    }
+                    CompositionLocalProvider(LocalScrollChromeActive provides isPageActive) {
+                        tabs[page].content(
+                            PaddingValues(
+                                top = headerHeight,
+                                bottom = contentPadding.calculateBottomPadding(),
+                            ),
+                            snackbarHostState,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .zIndex(10f),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onSizeChanged {
-                                if (it.height > 0) {
-                                    baseHeaderHeightPx = it.height
-                                    cachedTabbedHeaderHeightPx = it.height
-                                }
-                            },
+                    AnimatedVisibility(
+                        visible = chromeState.isVisible || isSearching || tab.isActionMode,
+                        enter = topAppBarEnterTransition,
+                        exit = topAppBarExitTransition,
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(24.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            border = BorderStroke(1.dp, Color(0x12FFFFFF)),
-                            shadowElevation = 8.dp,
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .windowInsetsPadding(WindowInsets.statusBars)
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                .onSizeChanged {
+                                    if (it.height > 0) {
+                                        baseHeaderHeightPx = it.height
+                                        cachedTabbedHeaderHeightPx = it.height
+                                    }
+                                },
                         ) {
-                            Column(
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(1.dp, Color(0x12FFFFFF)),
+                                shadowElevation = 8.dp,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 4.dp, vertical = 3.dp),
+                                    .windowInsetsPadding(WindowInsets.statusBars)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(48.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    if (tab.isActionMode) {
-                                        IconButton(onClick = { tab.onCancelActionMode?.invoke() }) {
-                                            Icon(
-                                                imageVector = MaterialSymbols.Rounded.Close,
-                                                contentDescription = stringResource(MR.strings.action_cancel),
-                                                tint = MaterialTheme.colorScheme.onSurface,
-                                            )
-                                        }
-                                        Text(
-                                            text = "${tab.actionModeCounter}",
-                                            style = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 19.sp,
-                                                letterSpacing = (-0.02).sp,
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .padding(start = 8.dp),
-                                        )
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            AppBarActions(tab.actionModeActions)
-                                        }
-                                    } else if (isSearching) {
-                                        SearchRow(
-                                            searchQuery = searchQuery.orEmpty(),
-                                            onChangeSearchQuery = onChangeSearchQuery,
-                                        )
-                                    } else {
-                                        Text(
-                                            text = stringResource(titleRes),
-                                            style = MaterialTheme.typography.titleMedium.copy(
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 19.sp,
-                                                letterSpacing = (-0.02).sp,
-                                            ),
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .padding(start = 8.dp),
-                                        )
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            if (searchEnabled) {
-                                                IconButton(onClick = { onChangeSearchQuery("") }) {
-                                                    Icon(
-                                                        imageVector = MaterialSymbols.Rounded.Search,
-                                                        contentDescription = stringResource(MR.strings.action_search),
-                                                        tint = MaterialTheme.colorScheme.onSurface,
-                                                    )
-                                                }
-                                            }
-                                            AppBarActions(tab.actions)
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color(0x0EFFFFFF),
-                                    border = BorderStroke(1.dp, Color(0x10FFFFFF)),
-                                    modifier = Modifier.fillMaxWidth(),
+                                        .padding(horizontal = 4.dp, vertical = 3.dp),
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(4.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            .height(48.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        tabs.forEachIndexed { index, tabItem ->
-                                            SegmentedTabButton(
-                                                selected = state.currentPage == index,
-                                                onClick = {
-                                                    if (tab.isActionMode) {
-                                                        tab.onCancelActionMode?.invoke()
-                                                    }
-                                                    scope.launch { state.animateScrollToPage(index) }
-                                                },
-                                                title = stringResource(tabItem.titleRes),
-                                                badgeCount = tabItem.badgeNumber,
-                                                modifier = Modifier.weight(1f),
+                                        if (tab.isActionMode) {
+                                            IconButton(onClick = { tab.onCancelActionMode?.invoke() }) {
+                                                Icon(
+                                                    imageVector = MaterialSymbols.Rounded.Close,
+                                                    contentDescription = stringResource(MR.strings.action_cancel),
+                                                    tint = MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            }
+                                            Text(
+                                                text = "${tab.actionModeCounter}",
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 19.sp,
+                                                    letterSpacing = (-0.02).sp,
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(start = 8.dp),
                                             )
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                AppBarActions(tab.actionModeActions)
+                                            }
+                                        } else if (isSearching) {
+                                            SearchRow(
+                                                searchQuery = searchQuery.orEmpty(),
+                                                onChangeSearchQuery = onChangeSearchQuery,
+                                            )
+                                        } else {
+                                            Text(
+                                                text = stringResource(titleRes),
+                                                style = MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 19.sp,
+                                                    letterSpacing = (-0.02).sp,
+                                                ),
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(start = 8.dp),
+                                            )
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                if (searchEnabled) {
+                                                    IconButton(onClick = { onChangeSearchQuery("") }) {
+                                                        Icon(
+                                                            imageVector = MaterialSymbols.Rounded.Search,
+                                                            contentDescription = stringResource(
+                                                                MR.strings.action_search,
+                                                            ),
+                                                            tint = MaterialTheme.colorScheme.onSurface,
+                                                        )
+                                                    }
+                                                }
+                                                AppBarActions(tab.actions)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color(0x0EFFFFFF),
+                                        border = BorderStroke(1.dp, Color(0x10FFFFFF)),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            tabs.forEachIndexed { index, tabItem ->
+                                                SegmentedTabButton(
+                                                    selected = state.currentPage == index,
+                                                    onClick = {
+                                                        if (tab.isActionMode) {
+                                                            tab.onCancelActionMode?.invoke()
+                                                        }
+                                                        scope.launch { state.animateScrollToPage(index) }
+                                                    },
+                                                    title = stringResource(tabItem.titleRes),
+                                                    badgeCount = tabItem.badgeNumber,
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                            }
                                         }
                                     }
                                 }
