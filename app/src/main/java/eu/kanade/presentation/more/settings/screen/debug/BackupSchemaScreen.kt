@@ -22,6 +22,7 @@ import kotlinx.serialization.protobuf.schema.ProtoBufSchemaGenerator
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.ContentCopy
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 class BackupSchemaScreen : Screen() {
@@ -58,10 +59,12 @@ class BackupSchemaScreen : Screen() {
                 )
             },
         ) { contentPadding ->
+            val scrollState = rememberScrollState()
+            ObserveScrollChromeBoundary(state = scrollState)
             Text(
                 text = schema,
                 modifier = Modifier
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(contentPadding)
                     .padding(16.dp),
                 fontFamily = FontFamily.Monospace,

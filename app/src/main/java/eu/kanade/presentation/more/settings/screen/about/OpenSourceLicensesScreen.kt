@@ -1,6 +1,7 @@
 package eu.kanade.presentation.more.settings.screen.about
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -14,6 +15,7 @@ import eu.kanade.presentation.components.ScrollChromeScaffold
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.R
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 class OpenSourceLicensesScreen : Screen() {
@@ -29,11 +31,14 @@ class OpenSourceLicensesScreen : Screen() {
                 )
             },
         ) { contentPadding ->
+            val listState = rememberLazyListState()
+            ObserveScrollChromeBoundary(state = listState)
             val libraries by produceLibraries(R.raw.aboutlibraries)
             LibrariesContainer(
                 libraries = libraries,
                 modifier = Modifier
                     .fillMaxSize(),
+                lazyListState = listState,
                 contentPadding = contentPadding,
                 detailMode = LibraryDetailMode.Sheet,
             )

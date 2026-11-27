@@ -15,11 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,9 +31,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import eu.kanade.presentation.theme.ScrollChromeConnection
+import eu.kanade.presentation.theme.LocalScrollChromeState
+import eu.kanade.presentation.theme.rememberScrollChromeState
 import eu.kanade.presentation.theme.topAppBarEnterTransition
 import eu.kanade.presentation.theme.topAppBarExitTransition
+import tachiyomi.presentation.core.components.LocalScrollChromeActive
+import tachiyomi.presentation.core.components.LocalScrollChromeObserver
 import tachiyomi.presentation.core.components.material.Scaffold
 
 private var cachedScrollChromeHeaderHeightPx: Int = 0
@@ -61,21 +64,14 @@ fun ScrollChromeScaffold(
         fallbackHeight
     }
 
-    var showTopBar by remember { mutableStateOf(true) }
-    val topBarScrollConnection = remember(isTopBarPinned) {
-        ScrollChromeConnection(
-            onVisibilityChanged = { show ->
-                if (!isTopBarPinned && showTopBar != show) {
-                    showTopBar = show
-                }
-            },
-        )
-    }
+    val currentPinned by rememberUpdatedState(isTopBarPinned)
+    val chromeState = rememberScrollChromeState(isPinned = { currentPinned })
 
     LaunchedEffect(isTopBarPinned) {
         if (isTopBarPinned) {
-            showTopBar = true
-            topBarScrollConnection.reset()
+            chromeState.reveal()
+        } else {
+            chromeState.notifyBoundaryChanged()
         }
     }
 
@@ -97,36 +93,42 @@ fun ScrollChromeScaffold(
             bottom = contentPadding.calculateBottomPadding(),
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(topBarScrollConnection),
+        CompositionLocalProvider(
+            LocalScrollChromeObserver provides chromeState,
+            LocalScrollChromeState provides chromeState,
+            LocalScrollChromeActive provides { true },
         ) {
-            content(effectivePadding)
-
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter)
-                    .zIndex(10f),
-                contentAlignment = Alignment.TopCenter,
+                    .fillMaxSize()
+                    .nestedScroll(chromeState.nestedScrollConnection),
             ) {
-                AnimatedVisibility(
-                    visible = showTopBar || isTopBarPinned,
-                    enter = topAppBarEnterTransition,
-                    exit = topAppBarExitTransition,
+                content(effectivePadding)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .zIndex(10f),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onSizeChanged {
-                                if (it.height > 0) {
-                                    baseHeaderHeightPx = it.height
-                                    cachedScrollChromeHeaderHeightPx = it.height
-                                }
-                            },
+                    AnimatedVisibility(
+                        visible = chromeState.isVisible || isTopBarPinned,
+                        enter = topAppBarEnterTransition,
+                        exit = topAppBarExitTransition,
                     ) {
-                        topBar()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onSizeChanged {
+                                    if (it.height > 0) {
+                                        baseHeaderHeightPx = it.height
+                                        cachedScrollChromeHeaderHeightPx = it.height
+                                    }
+                                },
+                        ) {
+                            topBar()
+                        }
                     }
                 }
             }
