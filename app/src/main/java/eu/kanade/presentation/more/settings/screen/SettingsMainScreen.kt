@@ -44,6 +44,7 @@ import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.Sync
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 import cafe.adriel.voyager.core.screen.Screen as VoyagerScreen
 
@@ -107,6 +108,8 @@ object SettingsMainScreen : Screen() {
                 } else {
                     null
                 }
+
+                ObserveScrollChromeBoundary(state = state)
 
                 LazyColumn(
                     state = state,

@@ -78,6 +78,7 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.model.StubSource
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.components.TwoPanelBox
 import tachiyomi.presentation.core.components.VerticalFastScroller
 import tachiyomi.presentation.core.components.material.PullRefresh
@@ -390,6 +391,10 @@ private fun MangaScreenSmallImpl(
             indicatorPadding = PaddingValues(top = topPadding),
         ) {
             val layoutDirection = LocalLayoutDirection.current
+            ObserveScrollChromeBoundary(
+                state = chapterListState,
+                hasPendingItems = { streamingVisibleCount < listItem.size },
+            )
             ProvideCascadeScrollDirection(resetKey = state.manga.id) { cascadeScrollModifier ->
                 VerticalFastScroller(
                     listState = chapterListState,
@@ -718,6 +723,10 @@ fun MangaScreenLargeImpl(
                     }
                 },
                 endContent = {
+                    ObserveScrollChromeBoundary(
+                        state = chapterListState,
+                        hasPendingItems = { streamingVisibleCount < listItem.size },
+                    )
                     ProvideCascadeScrollDirection(resetKey = state.manga.id) { cascadeScrollModifier ->
                         VerticalFastScroller(
                             listState = chapterListState,

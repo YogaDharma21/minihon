@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import org.xmlpull.v1.XmlPullParser
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.R
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 class AppLanguageScreen : Screen() {
@@ -62,7 +64,10 @@ class AppLanguageScreen : Screen() {
                 )
             },
         ) { contentPadding ->
+            val listState = rememberLazyListState()
+            ObserveScrollChromeBoundary(state = listState)
             LazyColumn(
+                state = listState,
                 contentPadding = contentPadding,
             ) {
                 items(langs) {

@@ -16,6 +16,7 @@ import mihon.domain.extension.model.ExtensionStore
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.components.material.topSmallPaddingValues
 import tachiyomi.presentation.core.i18n.stringResource
@@ -63,6 +64,8 @@ fun ExtensionStoresScreen(
             )
             return@ScrollChromeScaffold
         }
+
+        ObserveScrollChromeBoundary(state = lazyListState)
 
         ExtensionStoresContent(
             repos = state.stores,

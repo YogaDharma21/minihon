@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -92,6 +93,7 @@ import mihon.icons.materialsymbols.roundedfilled.Error
 import mihon.icons.materialsymbols.roundedfilled.Extension
 import mihon.icons.materialsymbols.roundedfilled.Warning
 import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.components.ObserveScrollChromeBoundary
 import tachiyomi.presentation.core.i18n.stringResource
 
 private val CanvasColor = Color(0xFF08090B)
@@ -180,8 +182,11 @@ class RestoreBackupScreen(
             },
             containerColor = CanvasColor,
         ) { contentPadding ->
+            val listState = rememberLazyListState()
+            ObserveScrollChromeBoundary(state = listState)
             val layoutDirection = LocalLayoutDirection.current
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 16.dp + contentPadding.calculateStartPadding(layoutDirection),
