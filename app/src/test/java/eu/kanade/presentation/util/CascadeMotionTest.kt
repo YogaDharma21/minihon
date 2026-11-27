@@ -1,5 +1,7 @@
 package eu.kanade.presentation.util
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.unit.dp
 import io.kotest.matchers.floats.plusOrMinus
 import io.kotest.matchers.shouldBe
@@ -11,6 +13,7 @@ class CascadeMotionTest {
     fun `cascade constants match specification`() {
         CASCADE_DURATION_MILLIS shouldBe 700
         CASCADE_STAGGER_MILLIS shouldBe 70
+        CASCADE_INITIAL_WAVE_COUNT shouldBe 12
         CASCADE_RISE_DP shouldBe 40.dp
     }
 
@@ -197,5 +200,85 @@ class CascadeMotionTest {
         CascadeMotionSession.resetForTesting()
         val afterReset = resolveTrigger(CascadeSurface.Library)
         afterReset.disabled shouldBe false
+    }
+
+    @Test
+    fun `resolveCascadeReveal uses linear initial wave stagger for indices 0 through 11`() {
+        val start = 1000L
+
+        for (index in 0 until CASCADE_INITIAL_WAVE_COUNT) {
+            val plan = resolveCascadeReveal(
+                index = index,
+                startUptimeMillis = start,
+                currentUptimeMillis = start,
+            )
+            plan.isInitialCascade shouldBe true
+            plan.initialFraction shouldBe 0f
+            plan.remainingDelayMillis shouldBe index * 70L
+            plan.remainingDurationMillis shouldBe 700
+        }
+
+        val midWave = resolveCascadeReveal(
+            index = 2,
+            startUptimeMillis = start,
+            currentUptimeMillis = start + 490L,
+        )
+        midWave.isInitialCascade shouldBe true
+        midWave.initialFraction shouldBe (0.5f plusOrMinus 0.001f)
+        midWave.remainingDelayMillis shouldBe 0L
+        midWave.remainingDurationMillis shouldBe 350
+    }
+
+    @Test
+    fun `resolveCascadeReveal returns zero delay non-initial reveal for index 12 and above during initial wave`() {
+        val start = 1000L
+
+        listOf(-1, 12, 13, 24).forEach { index ->
+            val plan = resolveCascadeReveal(
+                index = index,
+                startUptimeMillis = start,
+                currentUptimeMillis = start,
+            )
+            plan.isInitialCascade shouldBe false
+            plan.initialFraction shouldBe 0f
+            plan.remainingDelayMillis shouldBe 0L
+            plan.remainingDurationMillis shouldBe 700
+        }
+    }
+
+    @Test
+    fun `resolveCascadeReveal returns zero delay across columns after initial wave completes`() {
+        val start = 1000L
+        val afterWave = start + 2000L
+
+        listOf(0, 1, 2, 12, 13, 14).forEach { index ->
+            val plan = resolveCascadeReveal(
+                index = index,
+                startUptimeMillis = start,
+                currentUptimeMillis = afterWave,
+            )
+            plan.isInitialCascade shouldBe false
+            plan.initialFraction shouldBe 0f
+            plan.remainingDelayMillis shouldBe 0L
+            plan.remainingDurationMillis shouldBe 700
+        }
+    }
+
+    @Test
+    fun `scroll connection switches direction past threshold and ignores jitter`() {
+        val directions = mutableListOf<CascadeDirection>()
+        val connection = CascadeScrollConnection { directions += it }
+
+        connection.onPreScroll(Offset(0f, -8f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        connection.onPreScroll(Offset(0f, 0f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        connection.onPreScroll(Offset(0f, 8f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        directions shouldBe emptyList()
+
+        connection.onPreScroll(Offset(0f, -8.1f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        connection.onPreScroll(Offset(0f, 5f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        directions shouldBe listOf(CascadeDirection.FromBottom)
+
+        connection.onPreScroll(Offset(0f, 8.1f), NestedScrollSource.UserInput) shouldBe Offset.Zero
+        directions shouldBe listOf(CascadeDirection.FromBottom, CascadeDirection.FromTop)
     }
 }

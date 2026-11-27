@@ -8,10 +8,7 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +25,7 @@ import java.util.Collections
 
 const val CASCADE_DURATION_MILLIS: Int = 700
 const val CASCADE_STAGGER_MILLIS: Int = 70
+const val CASCADE_INITIAL_WAVE_COUNT: Int = 12
 val CASCADE_EASING: Easing = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 val CASCADE_RISE_DP: Dp = 40.dp
 
@@ -173,6 +171,45 @@ fun calculateCascadeTiming(
     )
 }
 
+data class CascadeRevealPlan(
+    val isInitialCascade: Boolean,
+    val initialFraction: Float,
+    val remainingDelayMillis: Long,
+    val remainingDurationMillis: Int,
+)
+
+fun resolveCascadeReveal(
+    index: Int,
+    startUptimeMillis: Long,
+    currentUptimeMillis: Long,
+    durationMillis: Long = CASCADE_DURATION_MILLIS.toLong(),
+    staggerMillis: Long = CASCADE_STAGGER_MILLIS.toLong(),
+): CascadeRevealPlan {
+    if (index in 0 until CASCADE_INITIAL_WAVE_COUNT) {
+        val timing = calculateCascadeTiming(
+            index = index,
+            startUptimeMillis = startUptimeMillis,
+            currentUptimeMillis = currentUptimeMillis,
+            durationMillis = durationMillis,
+            staggerMillis = staggerMillis,
+        )
+        if (!timing.isCompleted) {
+            return CascadeRevealPlan(
+                isInitialCascade = true,
+                initialFraction = timing.initialFraction,
+                remainingDelayMillis = timing.remainingDelayMillis,
+                remainingDurationMillis = timing.remainingDurationMillis.toInt(),
+            )
+        }
+    }
+    return CascadeRevealPlan(
+        isInitialCascade = false,
+        initialFraction = 0f,
+        remainingDelayMillis = 0L,
+        remainingDurationMillis = durationMillis.toInt(),
+    )
+}
+
 @Composable
 fun Modifier.cascadeItemMotion(
     index: Int,
@@ -185,32 +222,26 @@ fun Modifier.cascadeItemMotion(
     val density = LocalDensity.current
     val risePx = remember(density) { with(density) { CASCADE_RISE_DP.toPx() } }
 
-    val staggerIndex = if (index >= 0) index % 6 else 0
-    val timing = remember(trigger.id, index) {
-        calculateCascadeTiming(
-            index = staggerIndex,
+    val plan = remember(trigger.id, index) {
+        resolveCascadeReveal(
+            index = index,
             startUptimeMillis = trigger.startUptimeMillis,
             currentUptimeMillis = defaultUptimeMillis(),
-            durationMillis = CASCADE_DURATION_MILLIS.toLong(),
-            staggerMillis = CASCADE_STAGGER_MILLIS.toLong(),
         )
     }
 
-    val isInitialCascade = !timing.isCompleted
-    val initialProgress = if (isInitialCascade) timing.initialFraction else 0f
-    val animatable = remember(trigger.id, index) { Animatable(initialProgress) }
+    val animatable = remember(trigger.id, index) { Animatable(plan.initialFraction) }
 
     LaunchedEffect(trigger.id, index) {
-        if (isInitialCascade) {
-            if (timing.remainingDelayMillis > 0L) {
-                delay(timing.remainingDelayMillis)
+        if (plan.isInitialCascade) {
+            if (plan.remainingDelayMillis > 0L) {
+                delay(plan.remainingDelayMillis)
             }
-            val remaining = timing.remainingDurationMillis.toInt()
-            if (remaining > 0) {
+            if (plan.remainingDurationMillis > 0) {
                 animatable.animateTo(
                     targetValue = 1f,
                     animationSpec = tween(
-                        durationMillis = remaining,
+                        durationMillis = plan.remainingDurationMillis,
                         easing = CASCADE_EASING,
                     ),
                 )
@@ -218,10 +249,6 @@ fun Modifier.cascadeItemMotion(
                 animatable.snapTo(1f)
             }
         } else if (animatable.value < 1f) {
-            val delayMs = (staggerIndex % 3) * CASCADE_STAGGER_MILLIS
-            if (delayMs > 0) {
-                delay(delayMs.toLong())
-            }
             animatable.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
